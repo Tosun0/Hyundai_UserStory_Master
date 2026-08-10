@@ -164,6 +164,7 @@ export const cubeSceneTheme = {
     radius: 0.45,
     segments: 2,
     opacity: 1,
+    playbookThumbnailOpacity: 0.92,
     shader: {
       roughness: 0.1,
       metallic: 0,

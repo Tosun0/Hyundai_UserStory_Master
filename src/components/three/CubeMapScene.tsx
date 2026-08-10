@@ -9,6 +9,7 @@ import {
   type AiChatSortStage,
 } from "../../data/aiChatSortConfig";
 import {
+  PLAYBOOK_CATALOG,
   getPlaybooksByFilter,
   getPlaybookByCubeKey,
   type PlaybookFilter,
@@ -331,6 +332,16 @@ async function loadStoryThumbnailTextures(srcs: readonly string[], loader: THREE
   const textures = await Promise.all(srcs.map((src) => loader.loadAsync(src)));
 
   return textures.map(configureStoryThumbnailTexture);
+}
+
+async function loadPlaybookThumbnailTextures(loader: THREE.TextureLoader) {
+  const sources = Array.from(new Set(PLAYBOOK_CATALOG.map((playbook) => playbook.thumbnailSrc)));
+  const textures = await loadStoryThumbnailTextures(sources, loader);
+  const texturesBySource = new Map(sources.map((source, index) => [source, textures[index]]));
+
+  return new Map(
+    PLAYBOOK_CATALOG.map((playbook) => [playbook.id, texturesBySource.get(playbook.thumbnailSrc)]),
+  );
 }
 
 function shuffleItems<T>(items: readonly T[]) {
@@ -1149,6 +1160,7 @@ export default function CubeMapScene({
     let orbitOpacityMaskTexture: THREE.Texture | null = null;
     let emissiveMaskTexture: THREE.Texture | null = null;
     let storyThumbnailTextures: THREE.Texture[] = [];
+    let playbookThumbnailTextures = new Map();
     let storyThumbnailCube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null = null;
     let storyThumbnailCubeParent: CubeMesh | null = null;
     let storyThumbnailCubeMode: StoryThumbnailCubeMode | null = null;
@@ -1189,6 +1201,10 @@ export default function CubeMapScene({
       const now = performance.now();
 
       overview.nodes.forEach((node, index) => {
+        const playbook = getPlaybookByCubeKey(node.key);
+        const thumbnailTexture = playbook
+          ? playbookThumbnailTextures.get(playbook.id) ?? null
+          : null;
         const basePosition = new THREE.Vector3(
           node.x * CUBE_MAP_UNIT,
           node.y * CUBE_MAP_UNIT,
@@ -1221,6 +1237,8 @@ export default function CubeMapScene({
           colorVibrance: shaderTheme.colorVibrance,
           opacityMap: opacityMask,
           orbitOpacityMap: orbitOpacityMask,
+          thumbnailMap: thumbnailTexture,
+          thumbnailOpacity: playbook ? cubeSceneTheme.cube.playbookThumbnailOpacity : 0,
           opacityMapMix: 0,
           opacityMaskStrength: cubeSceneTheme.mapView.opacityMaskStrength,
           emissiveMap: emissiveMask,
@@ -1250,7 +1268,7 @@ export default function CubeMapScene({
 
         mesh.userData = {
           ...node,
-          playbook: getPlaybookByCubeKey(node.key) ?? null,
+          playbook,
           basePosition,
           targetPosition: basePosition.clone(),
           targetScale: 1,
@@ -2273,7 +2291,14 @@ export default function CubeMapScene({
       const textureLoader = new THREE.TextureLoader();
 
       try {
-        const [geometry, opacityMask, orbitOpacityMask, emissiveMask, storyTextures] =
+        const [
+          geometry,
+          opacityMask,
+          orbitOpacityMask,
+          emissiveMask,
+          storyTextures,
+          playbookTextures,
+        ] =
           await Promise.all([
             loadCubeModelGeometry(cubeSceneTheme.cube.model.src),
             loadCubeMaskTexture(cubeSceneTheme.cube.model.opacityMaskSrc, textureLoader),
@@ -2283,6 +2308,7 @@ export default function CubeMapScene({
               cubeSceneTheme.orbitView.storyCube.textureSrcs,
               textureLoader,
             ),
+            loadPlaybookThumbnailTextures(textureLoader),
           ]);
 
         if (disposed) {
@@ -2291,10 +2317,12 @@ export default function CubeMapScene({
           orbitOpacityMask.dispose();
           emissiveMask.dispose();
           storyTextures.forEach((texture) => texture.dispose());
+          new Set(playbookTextures.values()).forEach((texture) => texture?.dispose());
           return;
         }
 
         storyThumbnailTextures = storyTextures;
+        playbookThumbnailTextures = playbookTextures;
         createCubeMeshes(geometry, opacityMask, orbitOpacityMask, emissiveMask);
         sceneReadyRef.current?.();
 

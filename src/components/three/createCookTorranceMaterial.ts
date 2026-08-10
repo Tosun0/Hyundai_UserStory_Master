@@ -25,6 +25,9 @@ const fragmentShader = `
   precision highp float;
 
   uniform vec3 uBaseColor;
+  uniform sampler2D uThumbnailMap;
+  uniform float uUseThumbnailMap;
+  uniform float uThumbnailOpacity;
   uniform float uRoughness;
   uniform float uMetallic;
   uniform vec3 uLightDirection;
@@ -153,6 +156,17 @@ const fragmentShader = `
   void main() {
     vec3 paletteColor = max(uBaseColor, vec3(0.0));
     vec2 faceUv = clamp(getFaceUv(vLocalPosition, vLocalNormal), vec2(-1.0), vec2(1.0));
+
+    if (uUseThumbnailMap > 0.5) {
+      vec2 thumbnailUv = faceUv * 0.5 + 0.5;
+      vec3 thumbnailColor = texture2D(uThumbnailMap, thumbnailUv).rgb;
+      paletteColor = mix(
+        paletteColor,
+        thumbnailColor,
+        clamp(uThumbnailOpacity, 0.0, 1.0)
+      );
+    }
+
     float faceEdgePower = max(uFaceEdgePower, 0.1);
     float edgeFactor = pow(clamp(max(abs(faceUv.x), abs(faceUv.y)), 0.0, 1.0), faceEdgePower);
     edgeFactor = smoothstep(0.02, 1.0, edgeFactor);
@@ -292,6 +306,8 @@ type CookTorranceMaterialOptions = {
   colorVibrance?: number;
   opacityMap?: THREE.Texture | null;
   orbitOpacityMap?: THREE.Texture | null;
+  thumbnailMap?: THREE.Texture | null;
+  thumbnailOpacity?: number;
   opacityMapMix?: number;
   opacityMaskStrength?: number;
   emissiveMap?: THREE.Texture | null;
@@ -330,6 +346,8 @@ export function createCookTorranceMaterial({
   colorVibrance = 0,
   opacityMap = null,
   orbitOpacityMap = null,
+  thumbnailMap = null,
+  thumbnailOpacity = 0,
   opacityMapMix = 0,
   opacityMaskStrength = 1,
   emissiveMap = null,
@@ -371,6 +389,9 @@ export function createCookTorranceMaterial({
       uUseOpacityMap: { value: opacityMap ? 1 : 0 },
       uOrbitOpacityMap: { value: orbitOpacityMap ?? opacityMap },
       uUseOrbitOpacityMap: { value: orbitOpacityMap ? 1 : 0 },
+      uThumbnailMap: { value: thumbnailMap },
+      uUseThumbnailMap: { value: thumbnailMap ? 1 : 0 },
+      uThumbnailOpacity: { value: thumbnailOpacity },
       uOpacityMapMix: { value: opacityMapMix },
       uOpacityMaskStrength: { value: opacityMaskStrength },
       uEmissiveMap: { value: emissiveMap },
