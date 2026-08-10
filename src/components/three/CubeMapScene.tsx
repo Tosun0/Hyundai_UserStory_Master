@@ -10,6 +10,7 @@ import {
 } from "../../data/aiChatSortConfig";
 import {
   PLAYBOOK_CATALOG,
+  getPlaybookThumbnailSrc,
   getPlaybooksByFilter,
   getPlaybookByCubeKey,
   type PlaybookFilter,
@@ -329,18 +330,39 @@ function configureStoryThumbnailTexture(texture: THREE.Texture) {
 }
 
 async function loadStoryThumbnailTextures(srcs: readonly string[], loader: THREE.TextureLoader) {
-  const textures = await Promise.all(srcs.map((src) => loader.loadAsync(src)));
+  const textures = await Promise.all(
+    srcs.map(async (src) => {
+      try {
+        return configureStoryThumbnailTexture(await loader.loadAsync(src));
+      } catch (error) {
+        console.warn(`Story thumbnail failed to load: ${src}`, error);
+        return null;
+      }
+    }),
+  );
 
-  return textures.map(configureStoryThumbnailTexture);
+  return textures.filter((texture): texture is THREE.Texture => texture !== null);
 }
 
 async function loadPlaybookThumbnailTextures(loader: THREE.TextureLoader) {
-  const sources = Array.from(new Set(PLAYBOOK_CATALOG.map((playbook) => playbook.thumbnailSrc)));
-  const textures = await loadStoryThumbnailTextures(sources, loader);
+  const sources = Array.from(new Set(PLAYBOOK_CATALOG.map(getPlaybookThumbnailSrc)));
+  const textures = await Promise.all(
+    sources.map(async (source) => {
+      try {
+        return configureStoryThumbnailTexture(await loader.loadAsync(source));
+      } catch (error) {
+        console.warn(`Playbook thumbnail failed to load: ${source}`, error);
+        return null;
+      }
+    }),
+  );
   const texturesBySource = new Map(sources.map((source, index) => [source, textures[index]]));
 
   return new Map(
-    PLAYBOOK_CATALOG.map((playbook) => [playbook.id, texturesBySource.get(playbook.thumbnailSrc)]),
+    PLAYBOOK_CATALOG.map((playbook) => [
+      playbook.id,
+      texturesBySource.get(getPlaybookThumbnailSrc(playbook)) ?? null,
+    ]),
   );
 }
 
@@ -1154,6 +1176,7 @@ export default function CubeMapScene({
     let emissiveMaskTexture: THREE.Texture | null = null;
     let storyThumbnailTextures: THREE.Texture[] = [];
     let playbookThumbnailTextures = new Map();
+    const playbookThumbnailMeshes = new Map();
     let storyThumbnailCube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null = null;
     let storyThumbnailCubeParent: CubeMesh | null = null;
     let storyThumbnailCubeMode: StoryThumbnailCubeMode | null = null;
@@ -1285,6 +1308,9 @@ export default function CubeMapScene({
         };
         nodesGroup.add(mesh);
         cubeMeshes.push(mesh);
+        if (playbook) {
+          playbookThumbnailMeshes.set(playbook.id, mesh);
+        }
       });
 
       cubeAssetsReady = true;
@@ -2290,7 +2316,6 @@ export default function CubeMapScene({
           orbitOpacityMask,
           emissiveMask,
           storyTextures,
-          playbookTextures,
         ] =
           await Promise.all([
             loadCubeModelGeometry(cubeSceneTheme.cube.model.src),
@@ -2301,7 +2326,6 @@ export default function CubeMapScene({
               cubeSceneTheme.orbitView.storyCube.textureSrcs,
               textureLoader,
             ),
-            loadPlaybookThumbnailTextures(textureLoader),
           ]);
 
         if (disposed) {
@@ -2310,14 +2334,30 @@ export default function CubeMapScene({
           orbitOpacityMask.dispose();
           emissiveMask.dispose();
           storyTextures.forEach((texture) => texture.dispose());
-          new Set(playbookTextures.values()).forEach((texture) => texture?.dispose());
           return;
         }
 
         storyThumbnailTextures = storyTextures;
-        playbookThumbnailTextures = playbookTextures;
         createCubeMeshes(geometry, opacityMask, orbitOpacityMask, emissiveMask);
         sceneReadyRef.current?.();
+
+        void loadPlaybookThumbnailTextures(textureLoader).then((playbookTextures) => {
+          if (disposed) {
+            new Set(playbookTextures.values()).forEach((texture) => texture?.dispose());
+            return;
+          }
+
+          playbookThumbnailTextures = playbookTextures;
+          playbookThumbnailMeshes.forEach((mesh, playbookId) => {
+            const thumbnailTexture = playbookTextures.get(playbookId);
+            if (!thumbnailTexture) {
+              return;
+            }
+
+            mesh.material.uniforms.uThumbnailMap.value = thumbnailTexture;
+            mesh.material.uniforms.uUseThumbnailMap.value = 1;
+          });
+        });
 
         if (pendingChatSortRequestRef.current) {
           const pendingRequest = pendingChatSortRequestRef.current;

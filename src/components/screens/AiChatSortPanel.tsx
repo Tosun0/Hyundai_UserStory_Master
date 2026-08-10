@@ -454,7 +454,15 @@ export function AiChatSortPanel({
                 ref={inputRef}
                 value={inputValue}
                 onChange={(event) => setInputValue(event.target.value)}
+                onFocus={(event) => {
+                  event.currentTarget.lang = "en";
+                }}
                 disabled={isInputDisabled}
+                lang="en"
+                inputMode="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 placeholder={
                   isComplete ? "최종 큐브를 선택하세요." : aiChatSortConfig.inputPlaceholder
                 }
