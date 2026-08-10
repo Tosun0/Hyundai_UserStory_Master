@@ -25,7 +25,7 @@ function getAttribute(tag: string, attributeName: string) {
 }
 
 function findOpenGraphImage(html: string, pageUrl: URL) {
-  const metaTags = html.match(/<meta\\b[^>]*>/gi) ?? [];
+  const metaTags = html.match(/<meta\b[^>]*>/gi) ?? [];
 
   for (const metaTag of metaTags) {
     const property = getAttribute(metaTag, "property") ?? getAttribute(metaTag, "name");
