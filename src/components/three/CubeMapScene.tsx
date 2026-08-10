@@ -1012,6 +1012,9 @@ export default function CubeMapScene({
     THREE.ColorManagement.enabled = true;
 
     const overview = buildCubeMapOverview();
+    const overviewNodes = PLAYBOOK_CATALOG.map((playbook) =>
+      overview.nodes.find((node) => node.key === playbook.cubeKey),
+    ).filter(Boolean) as CubeMapOverviewNode[];
     const scene = new THREE.Scene();
     scene.background = null;
     scene.fog = new THREE.FogExp2(cubeSceneTheme.background, cubeSceneTheme.fog.density);
@@ -1200,7 +1203,7 @@ export default function CubeMapScene({
 
       const now = performance.now();
 
-      overview.nodes.forEach((node, index) => {
+      overviewNodes.forEach((node, index) => {
         const playbook = getPlaybookByCubeKey(node.key);
         const thumbnailTexture = playbook
           ? playbookThumbnailTextures.get(playbook.id) ?? null

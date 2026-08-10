@@ -10,13 +10,14 @@ export type AiChatSortRequest = {
 
 export const aiChatSortConfig = {
   initialCandidateCubeKeys: [
-    "1,0,5",
-    "2,0,5",
-    "3,0,5",
-    "1,1,5",
-    "2,1,5",
-    "3,1,5",
-    "1,2,5",
+    "2,4,0",
+    "2,4,2",
+    "3,4,2",
+    "4,4,2",
+    "5,3,4",
+    "4,3,4",
+    "5,2,0",
+    "4,2,0",
   ],
   secondStageCount: 3,
   finalStageCount: 1,
