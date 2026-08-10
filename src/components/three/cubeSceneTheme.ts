@@ -280,6 +280,7 @@ export const cubeSceneTheme = {
     spreadFalloffUnits: 8.5,
     spreadMinInfluence: 0.18,
     dimScale: 0.75,
+    hoverScale: 1.08,
     dimOpacityMultiplier: 1,
     positionLerp: 0.09,
     scaleLerp: 0.14,

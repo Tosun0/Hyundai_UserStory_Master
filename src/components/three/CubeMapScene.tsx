@@ -9,6 +9,12 @@ import {
   type AiChatSortStage,
 } from "../../data/aiChatSortConfig";
 import {
+  getPlaybooksByFilter,
+  getPlaybookByCubeKey,
+  type PlaybookFilter,
+  type PlaybookItem,
+} from "../../data/playbookCatalog";
+import {
   buildCubeMapOverview,
   CUBE_MAP_STEPS,
   CUBE_MAP_UNIT,
@@ -889,6 +895,7 @@ type CubeMapSceneProps = {
   onOrbitViewChange?: (isOrbitView: boolean) => void;
   onParallaxViewUnavailable?: (reason: ParallaxUnavailableReason) => void;
   onOpenStoryDetail?: () => void;
+  onOpenPlaybook?: (playbook: PlaybookItem) => void;
   onSceneReady?: () => void;
 };
 
@@ -904,6 +911,7 @@ export default function CubeMapScene({
   onOrbitViewChange,
   onParallaxViewUnavailable,
   onOpenStoryDetail,
+  onOpenPlaybook,
   onSceneReady,
 }: CubeMapSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -913,6 +921,7 @@ export default function CubeMapScene({
   const orbitViewChangeRef = useRef(onOrbitViewChange);
   const parallaxViewUnavailableRef = useRef(onParallaxViewUnavailable);
   const openStoryDetailRef = useRef(onOpenStoryDetail);
+  const openPlaybookRef = useRef(onOpenPlaybook);
   const sceneReadyRef = useRef(onSceneReady);
   const sceneActiveRef = useRef(sceneActive);
   const parallaxViewEnabledRef = useRef(parallaxViewEnabled);
@@ -943,6 +952,10 @@ export default function CubeMapScene({
   useEffect(() => {
     openStoryDetailRef.current = onOpenStoryDetail;
   }, [onOpenStoryDetail]);
+
+  useEffect(() => {
+    openPlaybookRef.current = onOpenPlaybook;
+  }, [onOpenPlaybook]);
 
   useEffect(() => {
     parallaxViewEnabledRef.current = parallaxViewEnabled;
@@ -1237,6 +1250,7 @@ export default function CubeMapScene({
 
         mesh.userData = {
           ...node,
+          playbook: getPlaybookByCubeKey(node.key) ?? null,
           basePosition,
           targetPosition: basePosition.clone(),
           targetScale: 1,
@@ -1300,6 +1314,7 @@ export default function CubeMapScene({
     let selectedMesh: CubeMesh | null = null;
     let chatSortCandidateMeshes: CubeMesh[] = [];
     let chatSortStage: AiChatSortStage | null = null;
+    let chatSortFilter: PlaybookFilter | null = null;
     let chatSortFinalMesh: CubeMesh | null = null;
     let lastChatSortRequestId = 0;
     let hovered: CubeMesh | null = null;
@@ -1357,6 +1372,7 @@ export default function CubeMapScene({
         delete container.dataset.chatSortStage;
         delete container.dataset.chatSortCandidates;
         delete container.dataset.chatSortFinalKey;
+        delete container.dataset.chatSortFilter;
         return;
       }
 
@@ -1364,6 +1380,12 @@ export default function CubeMapScene({
       container.dataset.chatSortCandidates = chatSortCandidateMeshes
         .map((mesh) => mesh.userData.key)
         .join(",");
+
+      if (chatSortFilter) {
+        container.dataset.chatSortFilter = chatSortFilter;
+      } else {
+        delete container.dataset.chatSortFilter;
+      }
 
       if (chatSortFinalMesh) {
         container.dataset.chatSortFinalKey = chatSortFinalMesh.userData.key;
@@ -1806,7 +1828,8 @@ export default function CubeMapScene({
       const buildCandidates = (spreadMultiplier: number) =>
         cubeMeshes.map<TargetCandidate>((mesh) => {
           const basePosition = mesh.userData.basePosition;
-          const scale = mesh === anchorMesh ? 1 : cubeSceneTheme.hover.dimScale;
+          const scale =
+            mesh === anchorMesh ? cubeSceneTheme.hover.hoverScale : cubeSceneTheme.hover.dimScale;
           const position = basePosition.clone();
 
           if (mesh !== anchorMesh) {
@@ -1909,7 +1932,8 @@ export default function CubeMapScene({
 
       const candidateSet = new Set(chatSortCandidateMeshes);
       const isFinalStage = isChatSortFinalStage();
-      const shouldShowOrbitPreview = isFinalStage && chatSortFinalMesh !== null;
+      const isFilterMode = chatSortFilter !== null;
+      const shouldShowOrbitPreview = !isFilterMode && isFinalStage && chatSortFinalMesh !== null;
       setOutlineSources(chatSortCandidateMeshes);
 
       if (shouldShowOrbitPreview) {
@@ -1924,7 +1948,7 @@ export default function CubeMapScene({
         const isOrbitPreviewMesh = shouldShowOrbitPreview && mesh === chatSortFinalMesh;
         mesh.userData.targetPosition.copy(mesh.userData.basePosition);
         mesh.userData.targetScale =
-          isCandidate && (!isFinalStage || isHoveredCandidate)
+          isCandidate && (isFilterMode || !isFinalStage || isHoveredCandidate)
             ? cubeSceneTheme.hover.searchHighlightHoverScale
             : 1;
         mesh.userData.targetOpacity = isCandidate
@@ -2106,6 +2130,7 @@ export default function CubeMapScene({
       resetSearchHighlightZoom();
       chatSortCandidateMeshes = [];
       chatSortStage = null;
+      chatSortFilter = null;
       chatSortFinalMesh = null;
       syncChatSortDataset();
       selectedMesh = null;
@@ -2128,6 +2153,7 @@ export default function CubeMapScene({
     const resetChatSortHighlight = () => {
       chatSortCandidateMeshes = [];
       chatSortStage = null;
+      chatSortFilter = null;
       chatSortFinalMesh = null;
       selectedMesh = null;
       hovered = null;
@@ -2161,6 +2187,24 @@ export default function CubeMapScene({
       lastChatSortRequestId = request.requestId;
       exitOrbitView();
       resetSearchHighlightZoom();
+
+      chatSortFilter = request.filter ?? null;
+
+      if (chatSortFilter) {
+        chatSortCandidateMeshes = getPlaybooksByFilter(chatSortFilter)
+          .map((playbook) =>
+            cubeMeshes.find((mesh) => mesh.userData.playbook?.id === playbook.id),
+          )
+          .filter(Boolean) as CubeMesh[];
+        chatSortStage = request.stage;
+        chatSortFinalMesh = null;
+        selectedMesh = null;
+        hovered = null;
+        container.style.cursor = "default";
+        syncChatSortDataset();
+        applyChatSortHighlightTargets();
+        return;
+      }
 
       let nextCandidates = getInitialChatSortCandidates();
 
@@ -2210,6 +2254,7 @@ export default function CubeMapScene({
       exitOrbitView();
       chatSortCandidateMeshes = [];
       chatSortStage = null;
+      chatSortFilter = null;
       chatSortFinalMesh = null;
       syncChatSortDataset();
       const candidates =
@@ -2327,13 +2372,18 @@ export default function CubeMapScene({
         didPointerDownOnFocusedMesh = false;
 
         if (didClickFocusedMesh) {
-          openStoryDetailRef.current?.();
+          const playbook = focusedMesh?.userData.playbook ?? null;
+          if (playbook) {
+            openPlaybookRef.current?.(playbook);
+          } else {
+            openStoryDetailRef.current?.();
+          }
         }
 
         return;
       }
 
-      if (!selectedMesh || !hasPointerDown) {
+      if (!hasPointerDown) {
         hasPointerDown = false;
         didPointerDownOnFocusedMesh = false;
         return;
@@ -2353,6 +2403,15 @@ export default function CubeMapScene({
       updatePointer(event);
 
       const intersectedCube = getIntersectedCube();
+
+      if (intersectedCube?.userData.playbook) {
+        openPlaybookRef.current?.(intersectedCube.userData.playbook);
+        return;
+      }
+
+      if (!selectedMesh) {
+        return;
+      }
 
       if (intersectedCube === selectedMesh) {
         enterOrbitView();

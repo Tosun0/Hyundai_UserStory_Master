@@ -1,8 +1,11 @@
+import type { PlaybookFilter } from "./playbookCatalog";
+
 export type AiChatSortStage = 1 | 2 | 3;
 
 export type AiChatSortRequest = {
   requestId: number;
   stage: AiChatSortStage;
+  filter?: PlaybookFilter;
 };
 
 export const aiChatSortConfig = {

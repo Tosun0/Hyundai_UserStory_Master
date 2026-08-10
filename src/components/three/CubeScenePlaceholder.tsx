@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import type { AiChatSortRequest } from "../../data/aiChatSortConfig";
+import type { PlaybookItem } from "../../data/playbookCatalog";
 import type { ParallaxUnavailableReason } from "./parallaxTracking";
 import { MinimalCubeLoader } from "../ui/MinimalCubeLoader";
 
@@ -16,6 +17,7 @@ type CubeScenePlaceholderProps = {
   onOrbitViewChange?: (isOrbitView: boolean) => void;
   onParallaxViewUnavailable?: (reason: ParallaxUnavailableReason) => void;
   onOpenStoryDetail?: () => void;
+  onOpenPlaybook?: (playbook: PlaybookItem) => void;
 };
 
 export function CubeScenePlaceholder({
@@ -29,6 +31,7 @@ export function CubeScenePlaceholder({
   onOrbitViewChange,
   onParallaxViewUnavailable,
   onOpenStoryDetail,
+  onOpenPlaybook,
 }: CubeScenePlaceholderProps) {
   const [isSceneReady, setIsSceneReady] = useState(false);
 
@@ -61,6 +64,7 @@ export function CubeScenePlaceholder({
           onOrbitViewChange={onOrbitViewChange}
           onParallaxViewUnavailable={onParallaxViewUnavailable}
           onOpenStoryDetail={onOpenStoryDetail}
+          onOpenPlaybook={onOpenPlaybook}
           onSceneReady={() => setIsSceneReady(true)}
         />
       </Suspense>

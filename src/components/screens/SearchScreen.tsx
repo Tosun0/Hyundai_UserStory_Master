@@ -3,6 +3,7 @@ import {
   type AiChatSortRequest,
   type AiChatSortStage,
 } from "../../data/aiChatSortConfig";
+import type { PlaybookFilter, PlaybookItem } from "../../data/playbookCatalog";
 import { prototypeText } from "../../data/prototypeContent";
 import { CubeScenePlaceholder } from "../three/CubeScenePlaceholder";
 import { cubeSceneTheme } from "../three/cubeSceneTheme";
@@ -71,11 +72,16 @@ export function SearchScreen({ onOpenStoryDetail, isActive = true }: SearchScree
     }
   }, [isOrbitView]);
 
-  const handleSortStageComplete = (stage: AiChatSortStage) => {
+  const handleSortStageComplete = (stage: AiChatSortStage, filter?: PlaybookFilter) => {
     setChatSortRequest((currentRequest) => ({
       requestId: (currentRequest?.requestId ?? 0) + 1,
       stage,
+      filter,
     }));
+  };
+
+  const handleOpenPlaybook = (playbook: PlaybookItem) => {
+    window.open(playbook.url, "_blank", "noopener,noreferrer");
   };
 
   const handleBackToCubeMap = () => {
@@ -100,6 +106,7 @@ export function SearchScreen({ onOpenStoryDetail, isActive = true }: SearchScree
         onOrbitViewChange={setIsOrbitView}
         onParallaxViewUnavailable={() => setIsParallaxViewEnabled(false)}
         onOpenStoryDetail={onOpenStoryDetail}
+        onOpenPlaybook={handleOpenPlaybook}
       />
 
       {isOrbitView ? (

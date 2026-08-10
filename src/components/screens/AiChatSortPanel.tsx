@@ -5,6 +5,7 @@ import {
   aiChatSortConfig,
   type AiChatSortStage,
 } from "../../data/aiChatSortConfig";
+import type { PlaybookFilter } from "../../data/playbookCatalog";
 import { AnimatedButton } from "../ui/AnimatedButton";
 
 type AiChatMessage = {
@@ -18,7 +19,7 @@ const AXIS_INDEX_TOGGLE_COMMAND = "\uC778\uB371\uC2A4";
 const STORY_DETAIL_COMMAND = "\uC2A4\uD1A0\uB9AC";
 
 type AiChatSortPanelProps = {
-  onSortStageComplete: (stage: AiChatSortStage) => void;
+  onSortStageComplete: (stage: AiChatSortStage, filter?: PlaybookFilter) => void;
   onToggleAxisIndexes?: () => void;
   onOpenStoryDetailCommand?: () => void;
 };
@@ -310,6 +311,33 @@ export function AiChatSortPanel({
     if (trimmedMessage === STORY_DETAIL_COMMAND) {
       setInputValue("");
       onOpenStoryDetailCommand?.();
+      return;
+    }
+
+    if (trimmedMessage.toUpperCase() === "GN8") {
+      const userMessageId = `user-${Date.now()}`;
+      const aiMessageId = `ai-${Date.now()}`;
+
+      clearTimers();
+      setInputValue("");
+      setIsResponding(false);
+      setCompletedStages(aiChatSortConfig.aiReplies.length);
+      setMessages((currentMessages) => [
+        ...currentMessages,
+        {
+          id: userMessageId,
+          role: "user",
+          text: trimmedMessage,
+          status: "done",
+        },
+        {
+          id: aiMessageId,
+          role: "ai",
+          text: "GN8 플레이북 4개를 찾았습니다.",
+          status: "done",
+        },
+      ]);
+      onSortStageComplete(3, "GN8");
       return;
     }
 
