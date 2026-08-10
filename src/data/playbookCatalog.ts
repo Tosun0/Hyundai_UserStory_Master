@@ -34,7 +34,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     title: "핸들을 놓기엔, 내 인생은 아직 주행 중",
     url: "https://hyundai-user-story-16px.vercel.app/",
     group: "H",
-    thumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_002.png",
+    thumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_007.png",
     cubeKey: "2,4,2",
   },
   {

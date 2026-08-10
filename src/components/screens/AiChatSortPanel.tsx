@@ -16,12 +16,10 @@ type AiChatMessage = {
 };
 
 const AXIS_INDEX_TOGGLE_COMMAND = "\uC778\uB371\uC2A4";
-const STORY_DETAIL_COMMAND = "\uC2A4\uD1A0\uB9AC";
 
 type AiChatSortPanelProps = {
   onSortStageComplete: (stage: AiChatSortStage, filter?: PlaybookFilter) => void;
   onToggleAxisIndexes?: () => void;
-  onOpenStoryDetailCommand?: () => void;
 };
 
 function AiSparkleIcon() {
@@ -118,7 +116,6 @@ function ChatBubble({ message }: { message: AiChatMessage }) {
 export function AiChatSortPanel({
   onSortStageComplete,
   onToggleAxisIndexes,
-  onOpenStoryDetailCommand,
 }: AiChatSortPanelProps) {
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -308,12 +305,6 @@ export function AiChatSortPanel({
       return;
     }
 
-    if (trimmedMessage === STORY_DETAIL_COMMAND) {
-      setInputValue("");
-      onOpenStoryDetailCommand?.();
-      return;
-    }
-
     if (trimmedMessage.toUpperCase() === "GN8") {
       const userMessageId = `user-${Date.now()}`;
       const aiMessageId = `ai-${Date.now()}`;
@@ -399,10 +390,9 @@ export function AiChatSortPanel({
   const isComplete = completedStages >= aiChatSortConfig.aiReplies.length;
   const trimmedInputValue = inputValue.trim();
   const isIndexCommand = trimmedInputValue === AXIS_INDEX_TOGGLE_COMMAND;
-  const isStoryDetailCommand = trimmedInputValue === STORY_DETAIL_COMMAND;
   const isInputDisabled = isResponding;
   const isSubmitDisabled =
-    isResponding || !trimmedInputValue || (isComplete && !isIndexCommand && !isStoryDetailCommand);
+    isResponding || !trimmedInputValue || (isComplete && !isIndexCommand);
   const hasQuickPrompts = aiChatSortConfig.quickPrompts.length > 0;
 
   return (

@@ -16,7 +16,6 @@ type CubeScenePlaceholderProps = {
   parallaxViewEnabled?: boolean;
   onOrbitViewChange?: (isOrbitView: boolean) => void;
   onParallaxViewUnavailable?: (reason: ParallaxUnavailableReason) => void;
-  onOpenStoryDetail?: () => void;
   onOpenPlaybook?: (playbook: PlaybookItem) => void;
 };
 
@@ -30,7 +29,6 @@ export function CubeScenePlaceholder({
   parallaxViewEnabled = false,
   onOrbitViewChange,
   onParallaxViewUnavailable,
-  onOpenStoryDetail,
   onOpenPlaybook,
 }: CubeScenePlaceholderProps) {
   const [isSceneReady, setIsSceneReady] = useState(false);
@@ -63,7 +61,6 @@ export function CubeScenePlaceholder({
           parallaxViewEnabled={parallaxViewEnabled}
           onOrbitViewChange={onOrbitViewChange}
           onParallaxViewUnavailable={onParallaxViewUnavailable}
-          onOpenStoryDetail={onOpenStoryDetail}
           onOpenPlaybook={onOpenPlaybook}
           onSceneReady={() => setIsSceneReady(true)}
         />

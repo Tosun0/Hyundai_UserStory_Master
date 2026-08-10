@@ -12,7 +12,6 @@ import { AnimatedButton } from "../ui/AnimatedButton";
 import { ArrowGlyph } from "../ui/ArrowGlyph";
 
 type SearchScreenProps = {
-  onOpenStoryDetail: () => void;
   isActive?: boolean;
 };
 
@@ -56,7 +55,7 @@ const cubeMapTopNavItems = [
   },
 ] as const;
 
-export function SearchScreen({ onOpenStoryDetail, isActive = true }: SearchScreenProps) {
+export function SearchScreen({ isActive = true }: SearchScreenProps) {
   const [chatSortRequest, setChatSortRequest] = useState<AiChatSortRequest | null>(null);
   const [chatPanelResetId, setChatPanelResetId] = useState(0);
   const [exitOrbitViewRequestId, setExitOrbitViewRequestId] = useState(0);
@@ -105,7 +104,6 @@ export function SearchScreen({ onOpenStoryDetail, isActive = true }: SearchScree
         parallaxViewEnabled={isActive && isOrbitView && isParallaxViewEnabled}
         onOrbitViewChange={setIsOrbitView}
         onParallaxViewUnavailable={() => setIsParallaxViewEnabled(false)}
-        onOpenStoryDetail={onOpenStoryDetail}
         onOpenPlaybook={handleOpenPlaybook}
       />
 
@@ -176,16 +174,6 @@ export function SearchScreen({ onOpenStoryDetail, isActive = true }: SearchScree
             </span>
           </AnimatedButton>
 
-          <AnimatedButton
-            type="button"
-            onClick={onOpenStoryDetail}
-            className="gui-scale gui-origin-center absolute left-[var(--viewport-center-x)] top-[calc(var(--viewport-center-y)+360px)] z-20 flex h-[64px] w-[64px] -translate-x-1/2 items-center justify-center rounded-full bg-[#2c2c2d] text-white shadow-[0_18px_44px_rgba(0,0,0,0.18)] backdrop-blur-[18px]"
-            data-name="button/orbit-open-story-detail"
-            aria-label="Open story detail"
-            title="Open story detail"
-          >
-            <ArrowGlyph />
-          </AnimatedButton>
         </>
       ) : (
         <>
@@ -223,7 +211,6 @@ export function SearchScreen({ onOpenStoryDetail, isActive = true }: SearchScree
             onToggleAxisIndexes={() =>
               setAreAxisIndexesVisible((isVisible) => !isVisible)
             }
-            onOpenStoryDetailCommand={onOpenStoryDetail}
           />
         </>
       )}

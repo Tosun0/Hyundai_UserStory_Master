@@ -905,7 +905,6 @@ type CubeMapSceneProps = {
   parallaxViewEnabled?: boolean;
   onOrbitViewChange?: (isOrbitView: boolean) => void;
   onParallaxViewUnavailable?: (reason: ParallaxUnavailableReason) => void;
-  onOpenStoryDetail?: () => void;
   onOpenPlaybook?: (playbook: PlaybookItem) => void;
   onSceneReady?: () => void;
 };
@@ -921,7 +920,6 @@ export default function CubeMapScene({
   parallaxViewEnabled = false,
   onOrbitViewChange,
   onParallaxViewUnavailable,
-  onOpenStoryDetail,
   onOpenPlaybook,
   onSceneReady,
 }: CubeMapSceneProps) {
@@ -931,7 +929,6 @@ export default function CubeMapScene({
   const exitOrbitViewHandlerRef = useRef<(() => void) | null>(null);
   const orbitViewChangeRef = useRef(onOrbitViewChange);
   const parallaxViewUnavailableRef = useRef(onParallaxViewUnavailable);
-  const openStoryDetailRef = useRef(onOpenStoryDetail);
   const openPlaybookRef = useRef(onOpenPlaybook);
   const sceneReadyRef = useRef(onSceneReady);
   const sceneActiveRef = useRef(sceneActive);
@@ -959,10 +956,6 @@ export default function CubeMapScene({
   useEffect(() => {
     axisIndexesVisibleRef.current = axisIndexesVisible;
   }, [axisIndexesVisible]);
-
-  useEffect(() => {
-    openStoryDetailRef.current = onOpenStoryDetail;
-  }, [onOpenStoryDetail]);
 
   useEffect(() => {
     openPlaybookRef.current = onOpenPlaybook;
@@ -1012,9 +1005,6 @@ export default function CubeMapScene({
     THREE.ColorManagement.enabled = true;
 
     const overview = buildCubeMapOverview();
-    const overviewNodes = PLAYBOOK_CATALOG.map((playbook) =>
-      overview.nodes.find((node) => node.key === playbook.cubeKey),
-    ).filter(Boolean) as CubeMapOverviewNode[];
     const scene = new THREE.Scene();
     scene.background = null;
     scene.fog = new THREE.FogExp2(cubeSceneTheme.background, cubeSceneTheme.fog.density);
@@ -1203,7 +1193,7 @@ export default function CubeMapScene({
 
       const now = performance.now();
 
-      overviewNodes.forEach((node, index) => {
+      overview.nodes.forEach((node, index) => {
         const playbook = getPlaybookByCubeKey(node.key);
         const thumbnailTexture = playbook
           ? playbookThumbnailTextures.get(playbook.id) ?? null
@@ -2406,8 +2396,6 @@ export default function CubeMapScene({
           const playbook = focusedMesh?.userData.playbook ?? null;
           if (playbook) {
             openPlaybookRef.current?.(playbook);
-          } else {
-            openStoryDetailRef.current?.();
           }
         }
 
