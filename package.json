@@ -1,0 +1,46 @@
+{
+  "name": "cube-view-user-story-prototype",
+  "version": "0.1.0",
+  "description": "Figma 기반 User Story Cube View 웹 프로토타입",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "dev:lan": "vite --host 0.0.0.0 --port 5173 --mode lan",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "export:rounded-cube": "node scripts/export-rounded-cube-glb.mjs"
+  },
+  "keywords": [
+    "figma",
+    "prototype",
+    "react",
+    "tailwind",
+    "r3f"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@react-three/fiber": "^9.6.1",
+    "@tensorflow-models/blazeface": "^0.1.0",
+    "@tensorflow/tfjs-backend-webgl": "^4.22.0",
+    "@tensorflow/tfjs-converter": "^4.22.0",
+    "@tensorflow/tfjs-core": "^4.22.0",
+    "gsap": "^3.15.0",
+    "lottie-web": "^5.13.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.0",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "playwright-core": "^1.60.0",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.13"
+  }
+}
