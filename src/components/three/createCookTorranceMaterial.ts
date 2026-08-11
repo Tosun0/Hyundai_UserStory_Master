@@ -134,7 +134,8 @@ const fragmentShader = `
     vec3 absNormal = abs(localNormal);
 
     if (absNormal.x >= absNormal.y && absNormal.x >= absNormal.z) {
-      return localPosition.zy / max(uCubeHalfExtent, EPSILON);
+      return vec2(-sign(localNormal.x) * localPosition.z, localPosition.y) /
+        max(uCubeHalfExtent, EPSILON);
     }
 
     if (absNormal.y >= absNormal.x && absNormal.y >= absNormal.z) {
