@@ -2400,11 +2400,6 @@ export default function CubeMapScene({
     const getIntersectedCube = () => {
       const intersections = getIntersectedCubes();
 
-      if (isChatSortActive()) {
-        const candidateSet = new Set(chatSortCandidateMeshes);
-        return intersections.find((mesh) => candidateSet.has(mesh)) ?? null;
-      }
-
       if (isSearchHighlightActive() && selectedMesh && intersections.includes(selectedMesh)) {
         return selectedMesh;
       }
@@ -2556,10 +2551,10 @@ export default function CubeMapScene({
         return;
       }
 
-      const intersectedCube = getIntersectedCube();
-
       if (isChatSortActive()) {
         const candidateSet = new Set(chatSortCandidateMeshes);
+        const intersectedCube =
+          getIntersectedCubes().find((mesh) => candidateSet.has(mesh)) ?? null;
         const nextHovered =
           intersectedCube && candidateSet.has(intersectedCube) ? intersectedCube : null;
 
@@ -2573,6 +2568,8 @@ export default function CubeMapScene({
         applyChatSortHighlightTargets();
         return;
       }
+
+      const intersectedCube = getIntersectedCube();
 
       const nextHovered = selectedMesh
         ? intersectedCube === selectedMesh
