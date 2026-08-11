@@ -19,6 +19,7 @@ export type PlaybookItem = {
   group: PlaybookGroup;
   cubeKey: string;
   thumbnailSrc?: string;
+  fallbackThumbnailSrc?: string;
 };
 
 export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
@@ -28,6 +29,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://hyundai-user-story-17px.vercel.app/?v=4dd7e9c",
     group: "H",
     cubeKey: "2,4,0",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_001.png",
   },
   {
     id: "H4",
@@ -35,6 +37,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://hyundai-user-story-16px.vercel.app/",
     group: "H",
     cubeKey: "2,4,2",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_002.png",
   },
   {
     id: "H5",
@@ -42,6 +45,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://hyundai-user-story-20px.vercel.app/",
     group: "H",
     cubeKey: "3,4,2",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_003.png",
   },
   {
     id: "H6",
@@ -49,6 +53,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://playbook-test-game.vercel.app/",
     group: "H",
     cubeKey: "4,4,2",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_004.png",
   },
   {
     id: "GN8-1",
@@ -56,6 +61,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstorygn803.vercel.app/",
     group: "GN8",
     cubeKey: "5,3,4",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_005.png",
   },
   {
     id: "GN8-4",
@@ -63,6 +69,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstorygn804.vercel.app/",
     group: "GN8",
     cubeKey: "4,3,4",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_006.png",
   },
   {
     id: "GN8-6",
@@ -70,6 +77,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstorygn802.vercel.app/",
     group: "GN8",
     cubeKey: "5,2,0",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_007.png",
   },
   {
     id: "GN8-8",
@@ -77,6 +85,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstorygn801.vercel.app/",
     group: "GN8",
     cubeKey: "4,2,0",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_001.png",
   },
   {
     id: "GN8-5",
@@ -90,6 +99,12 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
 
 export function getPlaybookThumbnailSrc(playbook: Pick<PlaybookItem, "url" | "thumbnailSrc">) {
   return playbook.thumbnailSrc ?? `/api/playbook-thumbnail?url=${encodeURIComponent(playbook.url)}`;
+}
+
+export function getPlaybookFallbackThumbnailSrc(
+  playbook: Pick<PlaybookItem, "fallbackThumbnailSrc">,
+) {
+  return playbook.fallbackThumbnailSrc ?? null;
 }
 
 export function getPlaybookByCubeKey(cubeKey: string) {

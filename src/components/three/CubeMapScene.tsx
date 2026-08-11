@@ -10,6 +10,7 @@ import {
 } from "../../data/aiChatSortConfig";
 import {
   PLAYBOOK_CATALOG,
+  getPlaybookFallbackThumbnailSrc,
   getPlaybookThumbnailSrc,
   getPlaybooksByFilter,
   getPlaybookByCubeKey,
@@ -345,24 +346,32 @@ async function loadStoryThumbnailTextures(srcs: readonly string[], loader: THREE
 }
 
 async function loadPlaybookThumbnailTextures(loader: THREE.TextureLoader) {
-  const sources = Array.from(new Set(PLAYBOOK_CATALOG.map(getPlaybookThumbnailSrc)));
   const textures = await Promise.all(
-    sources.map(async (source) => {
+    PLAYBOOK_CATALOG.map(async (playbook) => {
+      const source = getPlaybookThumbnailSrc(playbook);
+
       try {
         return configureStoryThumbnailTexture(await loader.loadAsync(source));
       } catch (error) {
-        console.warn(`Playbook thumbnail failed to load: ${source}`, error);
-        return null;
+        const fallbackSource = getPlaybookFallbackThumbnailSrc(playbook);
+
+        if (!fallbackSource || fallbackSource === source) {
+          console.warn(`Playbook thumbnail failed to load: ${source}`, error);
+          return null;
+        }
+
+        try {
+          return configureStoryThumbnailTexture(await loader.loadAsync(fallbackSource));
+        } catch (fallbackError) {
+          console.warn(`Playbook thumbnail fallback failed to load: ${fallbackSource}`, fallbackError);
+          return null;
+        }
       }
     }),
   );
-  const texturesBySource = new Map(sources.map((source, index) => [source, textures[index]]));
 
   return new Map(
-    PLAYBOOK_CATALOG.map((playbook) => [
-      playbook.id,
-      texturesBySource.get(getPlaybookThumbnailSrc(playbook)) ?? null,
-    ]),
+    PLAYBOOK_CATALOG.map((playbook, index) => [playbook.id, textures[index] ?? null]),
   );
 }
 
