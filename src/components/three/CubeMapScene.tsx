@@ -2400,6 +2400,11 @@ export default function CubeMapScene({
     const getIntersectedCube = () => {
       const intersections = getIntersectedCubes();
 
+      if (isChatSortActive()) {
+        const candidateSet = new Set(chatSortCandidateMeshes);
+        return intersections.find((mesh) => candidateSet.has(mesh)) ?? null;
+      }
+
       if (isSearchHighlightActive() && selectedMesh && intersections.includes(selectedMesh)) {
         return selectedMesh;
       }
