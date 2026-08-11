@@ -1985,8 +1985,12 @@ export default function CubeMapScene({
         const isOrbitPreviewMesh = shouldShowOrbitPreview && mesh === chatSortFinalMesh;
         mesh.userData.targetPosition.copy(mesh.userData.basePosition);
         mesh.userData.targetScale =
-          isCandidate && (isFilterMode || !isFinalStage || isHoveredCandidate)
-            ? cubeSceneTheme.hover.searchHighlightHoverScale
+          isCandidate
+            ? isFilterMode && isHoveredCandidate
+              ? cubeSceneTheme.hover.filteredHighlightHoverScale
+              : isFilterMode || !isFinalStage || isHoveredCandidate
+                ? cubeSceneTheme.hover.searchHighlightHoverScale
+                : 1
             : 1;
         mesh.userData.targetOpacity = isCandidate
           ? cubeSceneTheme.hover.highlightOpacity

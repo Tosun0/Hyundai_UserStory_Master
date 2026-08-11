@@ -291,6 +291,7 @@ export const cubeSceneTheme = {
     boundaryPadding: 0,
     highlightOpacity: 1,
     searchHighlightHoverScale: 1.08,
+    filteredHighlightHoverScale: 1.18,
   },
   hoverGlow: {
     outlineColor: 0xffffff,
