@@ -9,7 +9,8 @@ export type PlaybookId =
   | "GN8-1"
   | "GN8-4"
   | "GN8-6"
-  | "GN8-8";
+  | "GN8-8"
+  | "GN8-5";
 
 export type PlaybookItem = {
   id: PlaybookId;
@@ -17,6 +18,7 @@ export type PlaybookItem = {
   url: string;
   group: PlaybookGroup;
   cubeKey: string;
+  thumbnailSrc?: string;
 };
 
 export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
@@ -76,10 +78,18 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     group: "GN8",
     cubeKey: "4,2,0",
   },
+  {
+    id: "GN8-5",
+    title: "GN8 아는 척은 했고, 이제 배워야 한다",
+    url: "https://userstorygn805.vercel.app/",
+    group: "GN8",
+    cubeKey: "5,3,0",
+    thumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_008.png",
+  },
 ];
 
-export function getPlaybookThumbnailSrc(playbook: Pick<PlaybookItem, "url">) {
-  return `/api/playbook-thumbnail?url=${encodeURIComponent(playbook.url)}`;
+export function getPlaybookThumbnailSrc(playbook: Pick<PlaybookItem, "url" | "thumbnailSrc">) {
+  return playbook.thumbnailSrc ?? `/api/playbook-thumbnail?url=${encodeURIComponent(playbook.url)}`;
 }
 
 export function getPlaybookByCubeKey(cubeKey: string) {
