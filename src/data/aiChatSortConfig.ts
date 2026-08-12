@@ -1,4 +1,4 @@
-import type { PlaybookFilter } from "./playbookCatalog";
+import { PLAYBOOK_CATALOG, type PlaybookFilter } from "./playbookCatalog";
 
 export type AiChatSortStage = 1 | 2 | 3;
 
@@ -9,16 +9,7 @@ export type AiChatSortRequest = {
 };
 
 export const aiChatSortConfig = {
-  initialCandidateCubeKeys: [
-    "2,4,0",
-    "2,4,2",
-    "3,4,2",
-    "4,4,2",
-    "5,3,4",
-    "4,3,4",
-    "5,2,0",
-    "4,2,0",
-  ],
+  initialCandidateCubeKeys: PLAYBOOK_CATALOG.map((playbook) => playbook.cubeKey),
   secondStageCount: 3,
   finalStageCount: 1,
   aiReplies: [

@@ -9,14 +9,17 @@ type ThumbnailResponse = {
 };
 
 const ALLOWED_HOSTS = new Set([
-  "hyundai-user-story-17px.vercel.app",
-  "hyundai-user-story-16px.vercel.app",
-  "hyundai-user-story-20px.vercel.app",
-  "playbook-test-game.vercel.app",
-  "userstorygn803.vercel.app",
-  "userstorygn804.vercel.app",
-  "userstorygn802.vercel.app",
-  "userstorygn801.vercel.app",
+  "userstory-gn8-01.vercel.app",
+  "userstory-gn8-02.vercel.app",
+  "userstory-gn8-03.vercel.app",
+  "userstory-gn8-04.vercel.app",
+  "userstory-gn8-06.vercel.app",
+  "userstory-gn8-08.vercel.app",
+  "userstory-h-01.vercel.app",
+  "userstory-h-03.vercel.app",
+  "userstory-h-04.vercel.app",
+  "userstory-h-05.vercel.app",
+  "userstory-h-06.vercel.app",
 ]);
 
 function getAttribute(tag: string, attributeName: string) {

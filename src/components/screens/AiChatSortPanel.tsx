@@ -5,7 +5,10 @@ import {
   aiChatSortConfig,
   type AiChatSortStage,
 } from "../../data/aiChatSortConfig";
-import type { PlaybookFilter } from "../../data/playbookCatalog";
+import {
+  getPlaybooksByFilter,
+  type PlaybookFilter,
+} from "../../data/playbookCatalog";
 import { AnimatedButton } from "../ui/AnimatedButton";
 
 type AiChatMessage = {
@@ -16,6 +19,7 @@ type AiChatMessage = {
 };
 
 const AXIS_INDEX_TOGGLE_COMMAND = "\uC778\uB371\uC2A4";
+const GN8_PLAYBOOK_COUNT = getPlaybooksByFilter("GN8").length;
 
 type AiChatSortPanelProps = {
   onSortStageComplete: (stage: AiChatSortStage, filter?: PlaybookFilter) => void;
@@ -324,7 +328,7 @@ export function AiChatSortPanel({
         {
           id: aiMessageId,
           role: "ai",
-          text: "GN8 플레이북 4개를 찾았습니다.",
+          text: `GN8 플레이북 ${GN8_PLAYBOOK_COUNT}개를 찾았습니다.`,
           status: "done",
         },
       ]);
