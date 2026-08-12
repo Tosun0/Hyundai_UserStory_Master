@@ -139,10 +139,12 @@ const fragmentShader = `
     }
 
     if (absNormal.y >= absNormal.x && absNormal.y >= absNormal.z) {
-      return localPosition.xz / max(uCubeHalfExtent, EPSILON);
+      return vec2(sign(localNormal.y) * localPosition.x, localPosition.z) /
+        max(uCubeHalfExtent, EPSILON);
     }
 
-    return localPosition.xy / max(uCubeHalfExtent, EPSILON);
+    return vec2(sign(localNormal.z) * localPosition.x, localPosition.y) /
+      max(uCubeHalfExtent, EPSILON);
   }
 
   float getMaskLuminance(vec4 texel) {
