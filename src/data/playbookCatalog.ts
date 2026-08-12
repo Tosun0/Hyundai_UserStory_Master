@@ -31,7 +31,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-h-01.vercel.app/",
     group: "GN8",
     cubeKey: "0,4,3",
-    thumbnailSrc: "/assets/models/story%20thumbnail/T_WorkingMom.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_WorkingMom.png",
   },
   {
     id: "H3",
@@ -39,7 +39,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-h-03.vercel.app/",
     group: "H",
     cubeKey: "2,4,0",
-    thumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_001.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Setlog.png",
   },
   {
     id: "H4",
@@ -47,7 +47,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-h-04.vercel.app/",
     group: "H",
     cubeKey: "2,4,2",
-    thumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_002.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Senior.png",
   },
   {
     id: "H5",
@@ -55,7 +55,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-h-05.vercel.app/",
     group: "H",
     cubeKey: "3,4,2",
-    thumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_003.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_NoobDad.png",
   },
   {
     id: "H6",
@@ -63,7 +63,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-h-06.vercel.app/",
     group: "H",
     cubeKey: "4,4,2",
-    thumbnailSrc: "/assets/models/story%20thumbnail/T_Puppy.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Puppy.png",
   },
   {
     id: "GN8-1",
@@ -71,7 +71,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-gn8-01.vercel.app/",
     group: "GN8",
     cubeKey: "5,3,4",
-    thumbnailSrc: "/assets/models/story%20thumbnail/T_Tech.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Tech.png",
   },
   {
     id: "GN8-2",
@@ -79,7 +79,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-gn8-02.vercel.app/",
     group: "GN8",
     cubeKey: "5,2,1",
-    thumbnailSrc: "/assets/models/story%20thumbnail/T_Blog.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Blog.png",
   },
   {
     id: "GN8-3",
@@ -87,7 +87,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-gn8-03.vercel.app/",
     group: "GN8",
     cubeKey: "5,3,0",
-    thumbnailSrc: "/assets/models/story%20thumbnail/story%20thumbnail_008.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Toon.png",
   },
   {
     id: "GN8-4",
@@ -95,7 +95,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-gn8-04.vercel.app/",
     group: "GN8",
     cubeKey: "4,3,4",
-    thumbnailSrc: "/assets/models/story%20thumbnail/T_AIKun.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_AIKun.png",
   },
   {
     id: "GN8-6",
@@ -103,7 +103,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-gn8-06.vercel.app/",
     group: "GN8",
     cubeKey: "5,2,0",
-    thumbnailSrc: "/assets/models/story%20thumbnail/T_Blind.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Blind.png",
   },
   {
     id: "GN8-8",
@@ -111,7 +111,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-gn8-08.vercel.app/",
     group: "GN8",
     cubeKey: "4,2,0",
-    thumbnailSrc: "/assets/models/story%20thumbnail/T_Shorts.png",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Shorts.png",
   },
 ];
 
