@@ -930,6 +930,7 @@ function createMaskOutlineMaterial(maskTexture: THREE.Texture) {
 type CubeMapSceneProps = {
   chatSortRequest?: AiChatSortRequest | null;
   highlightRequestId?: number;
+  clearHighlightRequestId?: number;
   exitOrbitViewRequestId?: number;
   axisIndexesVisible?: boolean;
   sceneActive?: boolean;
@@ -945,6 +946,7 @@ type CubeViewMode = "map" | "orbit";
 export default function CubeMapScene({
   chatSortRequest = null,
   highlightRequestId = 0,
+  clearHighlightRequestId = 0,
   exitOrbitViewRequestId = 0,
   axisIndexesVisible = false,
   sceneActive = true,
@@ -957,6 +959,7 @@ export default function CubeMapScene({
   const containerRef = useRef<HTMLDivElement>(null);
   const chatSortHandlerRef = useRef<((request: AiChatSortRequest | null) => void) | null>(null);
   const searchHighlightHandlerRef = useRef<(() => void) | null>(null);
+  const clearHighlightHandlerRef = useRef<(() => void) | null>(null);
   const exitOrbitViewHandlerRef = useRef<(() => void) | null>(null);
   const orbitViewChangeRef = useRef(onOrbitViewChange);
   const parallaxViewUnavailableRef = useRef(onParallaxViewUnavailable);
@@ -967,6 +970,7 @@ export default function CubeMapScene({
   const axisIndexesVisibleRef = useRef(axisIndexesVisible);
   const pendingChatSortRequestRef = useRef<AiChatSortRequest | null>(null);
   const pendingHighlightRequestIdRef = useRef(0);
+  const pendingClearHighlightRequestIdRef = useRef(0);
 
   useEffect(() => {
     orbitViewChangeRef.current = onOrbitViewChange;
@@ -1017,6 +1021,19 @@ export default function CubeMapScene({
 
     pendingHighlightRequestIdRef.current = highlightRequestId;
   }, [highlightRequestId]);
+
+  useEffect(() => {
+    if (clearHighlightRequestId <= 0) {
+      return;
+    }
+
+    if (clearHighlightHandlerRef.current) {
+      clearHighlightHandlerRef.current();
+      return;
+    }
+
+    pendingClearHighlightRequestIdRef.current = clearHighlightRequestId;
+  }, [clearHighlightRequestId]);
 
   useEffect(() => {
     if (exitOrbitViewRequestId <= 0) {
@@ -1946,52 +1963,42 @@ export default function CubeMapScene({
       spreadCubesFrom(targetMesh);
     };
 
-    const applySearchHighlightTarget = () => {
-      disposeStoryThumbnailCube("preview");
-
-      if (!selectedMesh) {
-        setDefaultCubeTargets();
-        return;
-      }
-
-      setOutlineSource(selectedMesh);
-      cubeMeshes.forEach((mesh) => {
-        mesh.userData.targetPosition.copy(mesh.userData.basePosition);
-        mesh.userData.targetScale =
-          mesh === selectedMesh && hovered === selectedMesh
-            ? cubeSceneTheme.hover.searchHighlightHoverScale
-            : 1;
-        mesh.userData.targetOpacity =
-          mesh === selectedMesh ? cubeSceneTheme.hover.highlightOpacity : SEARCH_DIMMED_OPACITY;
-        mesh.userData.targetOpacityMapMix = 0;
-        setMapViewMaterialTargets(mesh);
-        mesh.userData.targetFrontViewFadeStrength = 0;
-      });
+    type HighlightTargetOptions = {
+      filterMode?: boolean;
+      finalStage?: boolean;
+      finalMesh?: CubeMesh | null;
+      showOrbitPreview?: boolean;
     };
 
-    const applyChatSortHighlightTargets = () => {
-      if (!isChatSortActive()) {
+    const applyHighlightTargets = (
+      highlightedMeshes: CubeMesh[],
+      {
+        filterMode = false,
+        finalStage = false,
+        finalMesh = null,
+        showOrbitPreview = false,
+      }: HighlightTargetOptions = {},
+    ) => {
+      if (highlightedMeshes.length === 0) {
         disposeStoryThumbnailCube("preview");
+        setOutlineSource(null);
         setDefaultCubeTargets();
         return;
       }
 
-      const candidateSet = new Set(chatSortCandidateMeshes);
-      const isFinalStage = isChatSortFinalStage();
-      const isFilterMode = chatSortFilter !== null;
-      const shouldShowOrbitPreview = !isFilterMode && isFinalStage && chatSortFinalMesh !== null;
-      setOutlineSources(chatSortCandidateMeshes);
+      const highlightedSet = new Set(highlightedMeshes);
+      setOutlineSources(highlightedMeshes);
 
-      if (shouldShowOrbitPreview) {
-        createStoryThumbnailCube(chatSortFinalMesh, "preview");
+      if (showOrbitPreview && finalMesh) {
+        createStoryThumbnailCube(finalMesh, "preview");
       } else {
         disposeStoryThumbnailCube("preview");
       }
 
       cubeMeshes.forEach((mesh) => {
-        const isCandidate = candidateSet.has(mesh);
+        const isCandidate = highlightedSet.has(mesh);
         const isHoveredCandidate = hovered === mesh && isCandidate;
-        const isOrbitPreviewMesh = shouldShowOrbitPreview && mesh === chatSortFinalMesh;
+        const isOrbitPreviewMesh = showOrbitPreview && mesh === finalMesh;
         mesh.userData.targetPosition.copy(mesh.userData.basePosition);
         mesh.userData.targetScale =
           isCandidate
@@ -2018,6 +2025,25 @@ export default function CubeMapScene({
           ? shaderTheme.emissiveStrength
           : cubeSceneTheme.mapView.emissiveStrength;
         mesh.userData.targetFrontViewFadeStrength = 0;
+      });
+    };
+
+    const applySearchHighlightTarget = () => {
+      applyHighlightTargets(selectedMesh ? [selectedMesh] : [], {
+        finalStage: true,
+      });
+    };
+
+    const applyChatSortHighlightTargets = () => {
+      const isActive = isChatSortActive();
+      const isFinalStage = isChatSortFinalStage();
+      const isFilterMode = chatSortFilter !== null;
+
+      applyHighlightTargets(isActive ? chatSortCandidateMeshes : [], {
+        filterMode: isFilterMode,
+        finalStage: isFinalStage,
+        finalMesh: chatSortFinalMesh,
+        showOrbitPreview: !isFilterMode && isFinalStage && chatSortFinalMesh !== null,
       });
     };
 
@@ -2175,9 +2201,10 @@ export default function CubeMapScene({
       notifyOrbitViewChange();
     };
 
-    const clearSearchHighlight = () => {
+    const resetHighlightState = () => {
       exitOrbitView();
       resetSearchHighlightZoom();
+      lastChatSortRequestId = 0;
       chatSortCandidateMeshes = [];
       chatSortStage = null;
       chatSortFilter = null;
@@ -2192,6 +2219,8 @@ export default function CubeMapScene({
       setDefaultCubeTargets();
     };
 
+    const clearSearchHighlight = resetHighlightState;
+
     const pickChatSortCandidates = (sourceMeshes: CubeMesh[], count: number) => {
       if (sourceMeshes.length <= count) {
         return [...sourceMeshes];
@@ -2200,24 +2229,7 @@ export default function CubeMapScene({
       return shuffleItems(sourceMeshes).slice(0, count);
     };
 
-    const resetChatSortHighlight = () => {
-      chatSortCandidateMeshes = [];
-      chatSortStage = null;
-      chatSortFilter = null;
-      chatSortFinalMesh = null;
-      selectedMesh = null;
-      hovered = null;
-      delete container.dataset.searchHighlightKey;
-      syncChatSortDataset();
-      setOutlineSource(null);
-      resetSearchHighlightZoom();
-      disposeStoryThumbnailCube("preview");
-
-      if (viewMode === "map") {
-        container.style.cursor = "default";
-        setDefaultCubeTargets();
-      }
-    };
+    const resetChatSortHighlight = resetHighlightState;
 
     const applyChatSortRequest = (request: AiChatSortRequest | null) => {
       if (!request) {
@@ -2372,7 +2384,10 @@ export default function CubeMapScene({
           });
         });
 
-        if (pendingChatSortRequestRef.current) {
+        if (pendingClearHighlightRequestIdRef.current > 0) {
+          pendingClearHighlightRequestIdRef.current = 0;
+          resetHighlightState();
+        } else if (pendingChatSortRequestRef.current) {
           const pendingRequest = pendingChatSortRequestRef.current;
           pendingChatSortRequestRef.current = null;
           applyChatSortRequest(pendingRequest);
@@ -2389,6 +2404,7 @@ export default function CubeMapScene({
 
     chatSortHandlerRef.current = applyChatSortRequest;
     searchHighlightHandlerRef.current = selectRandomSearchHighlight;
+    clearHighlightHandlerRef.current = resetHighlightState;
     exitOrbitViewHandlerRef.current = exitOrbitView;
     void loadCubeAssets();
 
@@ -2843,6 +2859,7 @@ export default function CubeMapScene({
       controls.removeEventListener("end", handleControlsEnd);
       chatSortHandlerRef.current = null;
       searchHighlightHandlerRef.current = null;
+      clearHighlightHandlerRef.current = null;
       exitOrbitViewHandlerRef.current = null;
       if (viewMode === "orbit") {
         orbitViewChangeRef.current?.(false);

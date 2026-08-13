@@ -58,6 +58,7 @@ const cubeMapTopNavItems = [
 export function SearchScreen({ isActive = true }: SearchScreenProps) {
   const [chatSortRequest, setChatSortRequest] = useState<AiChatSortRequest | null>(null);
   const [chatPanelResetId, setChatPanelResetId] = useState(0);
+  const [clearHighlightRequestId, setClearHighlightRequestId] = useState(0);
   const [exitOrbitViewRequestId, setExitOrbitViewRequestId] = useState(0);
   const [areAxisIndexesVisible, setAreAxisIndexesVisible] = useState(false);
   const [isOrbitView, setIsOrbitView] = useState(false);
@@ -86,6 +87,7 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
   const handleBackToCubeMap = () => {
     setChatSortRequest(null);
     setChatPanelResetId((resetId) => resetId + 1);
+    setClearHighlightRequestId((requestId) => requestId + 1);
     setExitOrbitViewRequestId((requestId) => requestId + 1);
   };
 
@@ -99,6 +101,7 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
       <CubeScenePlaceholder
         sceneActive={isActive}
         chatSortRequest={chatSortRequest}
+        clearHighlightRequestId={clearHighlightRequestId}
         exitOrbitViewRequestId={exitOrbitViewRequestId}
         axisIndexesVisible={areAxisIndexesVisible}
         parallaxViewEnabled={isActive && isOrbitView && isParallaxViewEnabled}
@@ -185,8 +188,10 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
           >
             <div className="flex w-max items-center justify-center gap-[5.486px]">
               {cubeMapTopNavItems.map((item) => (
-                <div
+                <AnimatedButton
                   key={item.nodeId}
+                  type="button"
+                  onClick={item.isActive ? handleBackToCubeMap : undefined}
                   className={`flex h-[54px] shrink-0 items-center justify-center rounded-[40.229px] px-[20px] py-[12px] backdrop-blur-[18.286px] ${
                     item.isActive ? "bg-[#2c2c2d] text-white" : "bg-white text-[#2c2c2d]"
                   } ${item.isActive ? "gap-[6px]" : ""}`}
@@ -200,7 +205,7 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
                       {item.label}
                     </span>
                   ) : null}
-                </div>
+                </AnimatedButton>
               ))}
             </div>
           </nav>
