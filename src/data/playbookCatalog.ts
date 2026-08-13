@@ -12,7 +12,8 @@ export type PlaybookId =
   | "GN8-3"
   | "GN8-4"
   | "GN8-6"
-  | "GN8-8";
+  | "GN8-8"
+  | "GN8-13";
 
 export type PlaybookItem = {
   id: PlaybookId;
@@ -112,6 +113,14 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     group: "GN8",
     cubeKey: "4,2,0",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Shorts.png",
+  },
+  {
+    id: "GN8-13",
+    title: "그 사진, 여기서 찍었었지",
+    url: "https://userstory-gn8-13.vercel.app/",
+    group: "GN8",
+    cubeKey: "4,2,1",
+    fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Photo.png",
   },
 ];
 

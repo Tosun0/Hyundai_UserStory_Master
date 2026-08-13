@@ -158,6 +158,7 @@ export const cubeSceneTheme = {
         "/assets/models/story%20thumbnail/T_AIKun.png",
         "/assets/models/story%20thumbnail/T_Blind.png",
         "/assets/models/story%20thumbnail/T_Shorts.png",
+        "/assets/models/story%20thumbnail/T_Photo.png",
       ],
     },
   },
