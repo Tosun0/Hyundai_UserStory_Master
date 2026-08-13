@@ -2002,9 +2002,9 @@ export default function CubeMapScene({
         mesh.userData.targetPosition.copy(mesh.userData.basePosition);
         mesh.userData.targetScale =
           isCandidate
-            ? isFilterMode && isHoveredCandidate
+            ? filterMode && isHoveredCandidate
               ? cubeSceneTheme.hover.filteredHighlightHoverScale
-              : isFilterMode || !isFinalStage || isHoveredCandidate
+              : filterMode || !finalStage || isHoveredCandidate
                 ? cubeSceneTheme.hover.searchHighlightHoverScale
                 : 1
             : 1;
