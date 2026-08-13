@@ -120,6 +120,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     url: "https://userstory-gn8-13.vercel.app/",
     group: "GN8",
     cubeKey: "4,2,1",
+    thumbnailSrc: "https://userstory-gn8-13.vercel.app/assets/Thumbnail/T_Thumbnail.png",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Photo.png",
   },
 ];
