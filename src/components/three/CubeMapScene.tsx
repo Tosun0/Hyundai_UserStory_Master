@@ -2492,16 +2492,15 @@ export default function CubeMapScene({
 
       const intersectedCube = getIntersectedCube();
 
-      if (intersectedCube?.userData.playbook) {
-        openPlaybookRef.current?.(intersectedCube.userData.playbook);
-        return;
-      }
-
-      if (!selectedMesh) {
-        return;
-      }
-
-      if (intersectedCube === selectedMesh) {
+      if (intersectedCube) {
+        resetSearchHighlightZoom();
+        chatSortCandidateMeshes = [];
+        chatSortStage = null;
+        chatSortFilter = null;
+        chatSortFinalMesh = null;
+        syncChatSortDataset();
+        selectedMesh = intersectedCube;
+        delete container.dataset.searchHighlightKey;
         enterOrbitView();
         return;
       }
