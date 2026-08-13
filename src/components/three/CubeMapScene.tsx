@@ -1824,7 +1824,7 @@ export default function CubeMapScene({
 
     const setOrbitViewMaterialTargets = (mesh: CubeMesh) => {
       mesh.userData.targetBaseColor.copy(mesh.userData.baseColor);
-      mesh.userData.targetOpacityMaskStrength = 0;
+      mesh.userData.targetOpacityMaskStrength = 0.12;
       mesh.userData.targetEmissiveStrength = shaderTheme.emissiveStrength;
     };
 

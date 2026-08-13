@@ -158,12 +158,11 @@ const fragmentShader = `
 
   void main() {
     vec3 paletteColor = max(uBaseColor, vec3(0.0));
-    vec3 thumbnailColor = paletteColor;
     vec2 faceUv = clamp(getFaceUv(vLocalPosition, vLocalNormal), vec2(-1.0), vec2(1.0));
 
     if (uUseThumbnailMap > 0.5) {
       vec2 thumbnailUv = faceUv * 0.5 + 0.5;
-      thumbnailColor = texture2D(uThumbnailMap, thumbnailUv).rgb;
+      vec3 thumbnailColor = texture2D(uThumbnailMap, thumbnailUv).rgb;
       paletteColor = mix(
         paletteColor,
         thumbnailColor,
@@ -260,8 +259,6 @@ const fragmentShader = `
       color += uEmissiveColor * emissiveMask * max(uEmissiveStrength, 0.0);
     }
 
-    color = mix(color, thumbnailColor, clamp(uUseThumbnailMap, 0.0, 1.0));
-
     float frontViewFactor =
       pow(clamp(NdotV, 0.0, 1.0), max(uFrontViewFadePower, EPSILON)) *
       clamp(uFrontViewFadeStrength, 0.0, 1.0);
@@ -281,9 +278,7 @@ const fragmentShader = `
     );
 
     gl_FragColor = vec4(color, clamp(finalAlpha, 0.0, 1.0));
-    if (uUseThumbnailMap < 0.5) {
-      #include <tonemapping_fragment>
-    }
+    #include <tonemapping_fragment>
     #include <colorspace_fragment>
   }
 `;
