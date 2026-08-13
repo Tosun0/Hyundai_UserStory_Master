@@ -172,7 +172,7 @@ export const cubeSceneTheme = {
     opacity: 1,
     playbookThumbnailOpacity: 0.92,
     shader: {
-      roughness: 0.3,
+      roughness: 0.45,
       metallic: 0,
       baseColorOverride: null as string | null,
       palette: ["#c1fff4", "#dafbae", "#b4aefa", "#b4d3ff", "#a4eaff", "#c8ffc1"],

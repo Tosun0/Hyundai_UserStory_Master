@@ -2088,7 +2088,7 @@ export default function CubeMapScene({
         return;
       }
 
-      setOutlineSource(focusedMesh);
+      setOutlineSource(null);
       cubeMeshes.forEach((mesh) => {
         mesh.userData.targetPosition.copy(
           mesh === focusedMesh ? GRAPH_CENTER : mesh.userData.basePosition,
@@ -2179,7 +2179,7 @@ export default function CubeMapScene({
       viewMode = "orbit";
       focusedMesh = selectedMesh;
       hovered = null;
-      setOutlineSource(selectedMesh);
+      setOutlineSource(null);
       isOrbitControlsInteractionActive = false;
       savedMapCameraState = {
         position: camera.position.clone(),
