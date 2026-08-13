@@ -119,7 +119,7 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
       {isOrbitView ? (
         <>
           <header
-            className="gui-scale gui-origin-top-center pointer-events-none absolute left-[var(--viewport-center-x)] top-[max(calc(var(--safe-top)+96px),calc(var(--viewport-center-y)-720px))] z-20 flex h-[102px] w-max max-w-[calc(var(--viewport-width)-64px)] -translate-x-1/2 flex-col items-center text-white"
+            className="gui-origin-top-center pointer-events-none absolute left-[var(--viewport-center-x)] top-[max(calc(var(--safe-top)+96px),calc(var(--viewport-center-y)-720px))] z-20 flex h-[102px] w-max max-w-[calc(var(--viewport-width)-64px)] -translate-x-1/2 flex-col items-center text-white"
             data-name="header/orbit-story-summary"
             aria-label={focusedPlaybook?.title ?? "Cube View"}
           >
