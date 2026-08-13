@@ -269,9 +269,7 @@ function normalizeCubeGeometry(sourceGeometry: THREE.BufferGeometry) {
     }
   }
 
-  if (!geometry.getAttribute("normal")) {
-    geometry.computeVertexNormals();
-  }
+  geometry.computeVertexNormals();
 
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
