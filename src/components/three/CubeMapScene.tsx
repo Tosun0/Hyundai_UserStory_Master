@@ -67,6 +67,8 @@ type SearchHighlightZoomState = {
   toTarget: THREE.Vector3;
 };
 
+type OrbitCameraTransitionState = SearchHighlightZoomState;
+
 type CubeMeshUserData = CubeMapOverviewNode & {
   basePosition: THREE.Vector3;
   targetPosition: THREE.Vector3;
@@ -1397,6 +1399,7 @@ export default function CubeMapScene({
       enablePan: boolean;
     } | null = null;
     let searchHighlightZoom: SearchHighlightZoomState | null = null;
+    let orbitCameraTransition: OrbitCameraTransitionState | null = null;
     let searchHighlightZoomBaseline: {
       position: THREE.Vector3;
       target: THREE.Vector3;
@@ -1786,13 +1789,17 @@ export default function CubeMapScene({
       controls.minDistance = cubeSceneTheme.orbitView.minDistance;
       controls.maxDistance = cubeSceneTheme.orbitView.maxDistance;
       controls.enablePan = false;
-      controls.target.copy(GRAPH_CENTER);
       orbitCameraOffset
         .set(...cubeSceneTheme.orbitView.cameraOffset)
         .normalize()
         .multiplyScalar(cubeSceneTheme.orbitView.cameraDistance);
-      camera.position.copy(GRAPH_CENTER).add(orbitCameraOffset);
-      controls.update();
+      orbitCameraTransition = {
+        startTime: performance.now(),
+        fromPosition: camera.position.clone(),
+        fromTarget: controls.target.clone(),
+        toPosition: GRAPH_CENTER.clone().add(orbitCameraOffset),
+        toTarget: GRAPH_CENTER.clone(),
+      };
     };
 
     const cancelSearchHighlightZoom = (refreshBaseline = false) => {
@@ -1873,6 +1880,34 @@ export default function CubeMapScene({
         camera.position.copy(searchHighlightZoom.toPosition);
         controls.target.copy(searchHighlightZoom.toTarget);
         searchHighlightZoom = null;
+      }
+    };
+
+    const updateOrbitCameraTransition = (frameTime: number) => {
+      if (!orbitCameraTransition || viewMode !== "orbit") {
+        return;
+      }
+
+      const progress =
+        (frameTime - orbitCameraTransition.startTime) /
+        cubeSceneTheme.orbitView.cameraTransitionDurationMs;
+      const easedProgress = easeOutCubic(progress);
+
+      camera.position.lerpVectors(
+        orbitCameraTransition.fromPosition,
+        orbitCameraTransition.toPosition,
+        easedProgress,
+      );
+      controls.target.lerpVectors(
+        orbitCameraTransition.fromTarget,
+        orbitCameraTransition.toTarget,
+        easedProgress,
+      );
+
+      if (progress >= 1) {
+        camera.position.copy(orbitCameraTransition.toPosition);
+        controls.target.copy(orbitCameraTransition.toTarget);
+        orbitCameraTransition = null;
       }
     };
 
@@ -2171,6 +2206,7 @@ export default function CubeMapScene({
       }
 
       viewMode = "map";
+      orbitCameraTransition = null;
       stopParallaxInput();
       stopOrbitAutoRotate();
       disposeStoryThumbnailCube();
@@ -2666,6 +2702,7 @@ export default function CubeMapScene({
       syncParallaxInput();
       updateSearchHighlightZoom(frameTime);
       updateOrbitAutoRotate(frameTime);
+      updateOrbitCameraTransition(frameTime);
       controls.update();
       updateParallaxView(frameTime);
 

@@ -128,6 +128,7 @@ export const cubeSceneTheme = {
     minDistance: 500,
     maxDistance: 700,
     cameraOffset: [64, 42, 76],
+    cameraTransitionDurationMs: 420,
     opacityMaskSrc: "/assets/models/cube%20mask%20textures/Cube%20Opacity%20Mask_2.png",
     opacityMaskTransitionLerp: 0.08,
     autoRotate: {
