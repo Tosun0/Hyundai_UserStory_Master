@@ -193,7 +193,7 @@ export const cubeSceneTheme = {
       colorContrast: 1.12,
       colorVibrance: 0.5,
       emissiveColor: "#d7e6ff",
-      emissiveStrength: 0.5,
+      emissiveStrength: 0,
     },
     enterDelay: 220,
     enterStagger: 24,
