@@ -124,7 +124,7 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
             aria-label={focusedPlaybook?.title ?? "Cube View"}
           >
             <div
-              className="flex min-h-[48px] w-max max-w-full items-center justify-center rounded-full bg-[#d0d0d0] px-[22px] py-[6px] text-center text-[32px] font-bold leading-[1.25] tracking-[-0.32px] text-[#333333]"
+              className="flex min-h-[48px] w-max max-w-full items-center justify-center rounded-[999px] border border-[rgb(15_23_42_/_0.12)] bg-[rgb(255_255_255_/_0.88)] px-[28px] py-[10px] text-center text-[clamp(18px,1.6vw,24px)] font-extrabold leading-[1.2] tracking-[-0.025em] text-[#0f172a] shadow-[0_8px_24px_rgb(0_0_0_/_0.12)] backdrop-blur-[16px]"
               data-name="header/orbit-story-title-pill"
             >
               {focusedPlaybook?.title ?? "Cube View"}
