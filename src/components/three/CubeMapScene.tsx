@@ -935,7 +935,7 @@ type CubeMapSceneProps = {
   axisIndexesVisible?: boolean;
   sceneActive?: boolean;
   parallaxViewEnabled?: boolean;
-  onOrbitViewChange?: (isOrbitView: boolean) => void;
+  onOrbitViewChange?: (isOrbitView: boolean, playbook: PlaybookItem | null) => void;
   onParallaxViewUnavailable?: (reason: ParallaxUnavailableReason) => void;
   onOpenPlaybook?: (playbook: PlaybookItem) => void;
   onSceneReady?: () => void;
@@ -1458,7 +1458,10 @@ export default function CubeMapScene({
     };
 
     const notifyOrbitViewChange = () => {
-      orbitViewChangeRef.current?.(viewMode === "orbit");
+      orbitViewChangeRef.current?.(
+        viewMode === "orbit",
+        viewMode === "orbit" ? (focusedMesh?.userData.playbook ?? null) : null,
+      );
     };
 
     const isSceneActive = () => sceneActiveRef.current;
@@ -2158,7 +2161,7 @@ export default function CubeMapScene({
       applyOrbitControls();
       startOrbitAutoRotate();
       applyOrbitViewTargets();
-      createStoryThumbnailCube(focusedMesh, "orbit");
+      disposeStoryThumbnailCube();
       notifyOrbitViewChange();
     };
 
@@ -2861,7 +2864,7 @@ export default function CubeMapScene({
       clearHighlightHandlerRef.current = null;
       exitOrbitViewHandlerRef.current = null;
       if (viewMode === "orbit") {
-        orbitViewChangeRef.current?.(false);
+        orbitViewChangeRef.current?.(false, null);
       }
       stopParallaxInput();
       controls.dispose();

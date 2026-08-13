@@ -62,6 +62,7 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
   const [exitOrbitViewRequestId, setExitOrbitViewRequestId] = useState(0);
   const [areAxisIndexesVisible, setAreAxisIndexesVisible] = useState(false);
   const [isOrbitView, setIsOrbitView] = useState(false);
+  const [focusedPlaybook, setFocusedPlaybook] = useState<PlaybookItem | null>(null);
   const [isParallaxViewEnabled, setIsParallaxViewEnabled] = useState<boolean>(
     () => cubeSceneTheme.orbitView.parallax.defaultEnabled,
   );
@@ -82,6 +83,11 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
 
   const handleOpenPlaybook = (playbook: PlaybookItem) => {
     window.open(playbook.url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleOrbitViewChange = (isActive: boolean, playbook: PlaybookItem | null) => {
+    setIsOrbitView(isActive);
+    setFocusedPlaybook(isActive ? playbook : null);
   };
 
   const handleBackToCubeMap = () => {
@@ -105,7 +111,7 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
         exitOrbitViewRequestId={exitOrbitViewRequestId}
         axisIndexesVisible={areAxisIndexesVisible}
         parallaxViewEnabled={isActive && isOrbitView && isParallaxViewEnabled}
-        onOrbitViewChange={setIsOrbitView}
+        onOrbitViewChange={handleOrbitViewChange}
         onParallaxViewUnavailable={() => setIsParallaxViewEnabled(false)}
         onOpenPlaybook={handleOpenPlaybook}
       />
@@ -113,15 +119,15 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
       {isOrbitView ? (
         <>
           <header
-            className="gui-scale gui-origin-top-center pointer-events-none absolute left-[var(--viewport-center-x)] top-[max(calc(var(--safe-top)+96px),calc(var(--viewport-center-y)-720px))] z-20 flex h-[102px] w-[242px] -translate-x-1/2 flex-col items-center text-white"
+            className="gui-scale gui-origin-top-center pointer-events-none absolute left-[var(--viewport-center-x)] top-[max(calc(var(--safe-top)+96px),calc(var(--viewport-center-y)-720px))] z-20 flex h-[102px] w-max max-w-[calc(var(--viewport-width)-64px)] -translate-x-1/2 flex-col items-center text-white"
             data-name="header/orbit-story-summary"
-            aria-label={prototypeText.orbitTitle}
+            aria-label={focusedPlaybook?.title ?? "Cube View"}
           >
             <div
-              className="flex h-[48px] w-[145px] items-center justify-center rounded-full bg-[#d0d0d0] text-[32px] font-bold leading-[1.5] tracking-[-0.32px] text-[#333333]"
+              className="flex min-h-[48px] w-max max-w-full items-center justify-center rounded-full bg-[#d0d0d0] px-[22px] py-[6px] text-center text-[32px] font-bold leading-[1.25] tracking-[-0.32px] text-[#333333]"
               data-name="header/orbit-story-title-pill"
             >
-              {prototypeText.orbitTitle}
+              {focusedPlaybook?.title ?? "Cube View"}
             </div>
 
             <div

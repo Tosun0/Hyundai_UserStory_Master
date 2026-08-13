@@ -15,7 +15,7 @@ type CubeScenePlaceholderProps = {
   exitOrbitViewRequestId?: number;
   axisIndexesVisible?: boolean;
   parallaxViewEnabled?: boolean;
-  onOrbitViewChange?: (isOrbitView: boolean) => void;
+  onOrbitViewChange?: (isOrbitView: boolean, playbook: PlaybookItem | null) => void;
   onParallaxViewUnavailable?: (reason: ParallaxUnavailableReason) => void;
   onOpenPlaybook?: (playbook: PlaybookItem) => void;
 };
