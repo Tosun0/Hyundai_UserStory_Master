@@ -783,6 +783,21 @@ type CubeMapSceneProps = {
 
 type CubeViewMode = "map" | "orbit";
 
+const H_EMPTY_CUBE_KEYS = new Set([
+  "0,3,3",
+  "0,4,2",
+  "0,5,3",
+  "1,3,3",
+  "1,4,3",
+  "1,5,2",
+  "1,5,3",
+  "2,2,0",
+  "2,4,3",
+  "2,5,3",
+  "4,4,4",
+  "5,4,3",
+]);
+
 export default function CubeMapScene({
   playbookGroup,
   command = null,
@@ -860,7 +875,11 @@ export default function CubeMapScene({
     const groupNodes = overview.nodes.filter((node) => {
       const playbook = getPlaybookByCubeKey(node.key);
 
-      return !playbook || playbook.group === playbookGroup;
+      if (playbook) {
+        return playbook.group === playbookGroup;
+      }
+
+      return playbookGroup === "GN8" || H_EMPTY_CUBE_KEYS.has(node.key);
     });
     const scene = new THREE.Scene();
     scene.background = null;
