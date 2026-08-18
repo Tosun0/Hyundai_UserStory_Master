@@ -7,6 +7,7 @@ import {
 } from "../../data/aiChatSortConfig";
 import {
   getPlaybooksByFilter,
+  type PlaybookGroup,
   type PlaybookFilter,
 } from "../../data/playbookCatalog";
 import { AnimatedButton } from "../ui/AnimatedButton";
@@ -22,6 +23,7 @@ const AXIS_INDEX_TOGGLE_COMMAND = "\uC778\uB371\uC2A4";
 const GN8_PLAYBOOK_COUNT = getPlaybooksByFilter("GN8").length;
 
 type AiChatSortPanelProps = {
+  playbookGroup: PlaybookGroup;
   onSortStageComplete: (stage: AiChatSortStage, filter?: PlaybookFilter) => void;
   onToggleAxisIndexes?: () => void;
 };
@@ -118,6 +120,7 @@ function ChatBubble({ message }: { message: AiChatMessage }) {
 }
 
 export function AiChatSortPanel({
+  playbookGroup,
   onSortStageComplete,
   onToggleAxisIndexes,
 }: AiChatSortPanelProps) {
@@ -316,6 +319,26 @@ export function AiChatSortPanel({
       clearTimers();
       setInputValue("");
       setIsResponding(false);
+
+      if (playbookGroup !== "GN8") {
+        setMessages((currentMessages) => [
+          ...currentMessages,
+          {
+            id: userMessageId,
+            role: "user",
+            text: trimmedMessage,
+            status: "done",
+          },
+          {
+            id: aiMessageId,
+            role: "ai",
+            text: "현재 H 플레이북만 열려 있습니다.",
+            status: "done",
+          },
+        ]);
+        return;
+      }
+
       setCompletedStages(aiChatSortConfig.aiReplies.length);
       setMessages((currentMessages) => [
         ...currentMessages,

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import type { AiChatSortRequest } from "../../data/aiChatSortConfig";
-import type { PlaybookItem } from "../../data/playbookCatalog";
+import type { PlaybookGroup, PlaybookItem } from "../../data/playbookCatalog";
 import type { ParallaxUnavailableReason } from "./parallaxTracking";
+import type { CubeSceneCommand } from "./cubeSceneCommands";
 import { MinimalCubeLoader } from "../ui/MinimalCubeLoader";
 
 const CubeMapScene = lazy(() => import("./CubeMapScene"));
@@ -9,10 +9,8 @@ const CubeMapScene = lazy(() => import("./CubeMapScene"));
 type CubeScenePlaceholderProps = {
   enabled?: boolean;
   sceneActive?: boolean;
-  chatSortRequest?: AiChatSortRequest | null;
-  highlightRequestId?: number;
-  clearHighlightRequestId?: number;
-  exitOrbitViewRequestId?: number;
+  playbookGroup: PlaybookGroup;
+  command?: CubeSceneCommand | null;
   axisIndexesVisible?: boolean;
   parallaxViewEnabled?: boolean;
   onOrbitViewChange?: (isOrbitView: boolean, playbook: PlaybookItem | null) => void;
@@ -23,10 +21,8 @@ type CubeScenePlaceholderProps = {
 export function CubeScenePlaceholder({
   enabled = true,
   sceneActive = true,
-  chatSortRequest = null,
-  highlightRequestId = 0,
-  clearHighlightRequestId = 0,
-  exitOrbitViewRequestId = 0,
+  playbookGroup,
+  command = null,
   axisIndexesVisible = false,
   parallaxViewEnabled = false,
   onOrbitViewChange,
@@ -55,10 +51,8 @@ export function CubeScenePlaceholder({
     <>
       <Suspense fallback={null}>
         <CubeMapScene
-          chatSortRequest={chatSortRequest}
-          highlightRequestId={highlightRequestId}
-          clearHighlightRequestId={clearHighlightRequestId}
-          exitOrbitViewRequestId={exitOrbitViewRequestId}
+          playbookGroup={playbookGroup}
+          command={command}
           axisIndexesVisible={axisIndexesVisible}
           sceneActive={sceneActive}
           parallaxViewEnabled={parallaxViewEnabled}

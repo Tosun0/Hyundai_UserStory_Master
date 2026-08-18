@@ -1,5 +1,5 @@
 export type PlaybookGroup = "H" | "GN8";
-export type PlaybookFilter = "GN8";
+export type PlaybookFilter = PlaybookGroup;
 
 export type PlaybookId =
   | "H1"

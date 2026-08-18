@@ -13,6 +13,7 @@ import { MinimalCubeLoader } from "./components/ui/MinimalCubeLoader";
 import { PrototypeStage } from "./components/ui/PrototypeStage";
 import { prototypeParams } from "./config/prototypeParams";
 import { prototypeAssets, type ScreenId } from "./data/prototypeContent";
+import type { PlaybookGroup } from "./data/playbookCatalog";
 
 const screenBackgrounds: Record<
   ScreenId,
@@ -58,6 +59,7 @@ function preloadImage(src: string | null) {
 
 export default function App() {
   const [screen, setScreen] = useState<ScreenId>("landing");
+  const [playbookGroup, setPlaybookGroup] = useState<PlaybookGroup>("H");
   const [loadingOverlay, setLoadingOverlay] = useState<LoadingOverlayState>({
     isMounted: true,
     isVisible: true,
@@ -219,9 +221,14 @@ export default function App() {
     >
       <div ref={screenRef} className="screen-fill">
         {screen === "landing" ? (
-          <LandingScreen onGoToSearch={() => goToScreen("search")} />
+          <LandingScreen
+            onGoToSearch={(group) => {
+              setPlaybookGroup(group);
+              goToScreen("search");
+            }}
+          />
         ) : null}
-        {screen === "search" ? <SearchScreen isActive /> : null}
+        {screen === "search" ? <SearchScreen isActive playbookGroup={playbookGroup} /> : null}
       </div>
 
       {loadingOverlay.isMounted ? (

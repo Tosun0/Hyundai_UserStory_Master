@@ -1,14 +1,26 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import type { PlaybookGroup } from "../../data/playbookCatalog";
 import { prototypeText } from "../../data/prototypeContent";
 import { AnimatedButton } from "../ui/AnimatedButton";
 import { ArrowGlyph } from "../ui/ArrowGlyph";
 import { UserStoryLogo } from "../ui/UserStoryLogo";
 
-const LANDING_ACCESS_CODES = ["miuserstory", "qwe"];
+const LANDING_ACCESS_CODES: Record<PlaybookGroup, readonly string[]> = {
+  H: ["miuserstory", "qwe"],
+  GN8: ["gn8"],
+};
 
 type LandingScreenProps = {
-  onGoToSearch: () => void;
+  onGoToSearch: (group: PlaybookGroup) => void;
 };
+
+function getAccessGroup(accessCode: string) {
+  const normalizedCode = accessCode.trim().toLowerCase();
+
+  return (Object.entries(LANDING_ACCESS_CODES) as [PlaybookGroup, readonly string[]][]).find(
+    ([, codes]) => codes.includes(normalizedCode),
+  )?.[0] ?? null;
+}
 
 export function LandingScreen({ onGoToSearch }: LandingScreenProps) {
   const [isCodePromptVisible, setIsCodePromptVisible] = useState(false);
@@ -31,14 +43,16 @@ export function LandingScreen({ onGoToSearch }: LandingScreenProps) {
   const submitAccessCode = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!LANDING_ACCESS_CODES.includes(accessCode.trim().toLowerCase())) {
+    const accessGroup = getAccessGroup(accessCode);
+
+    if (!accessGroup) {
       setHasCodeError(true);
       inputRef.current?.focus();
       return;
     }
 
     setHasCodeError(false);
-    onGoToSearch();
+    onGoToSearch(accessGroup);
   };
 
   return (

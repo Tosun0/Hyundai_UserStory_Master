@@ -2,18 +2,15 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import {
   aiChatSortConfig,
   type AiChatSortRequest,
   type AiChatSortStage,
 } from "../../data/aiChatSortConfig";
 import {
-  PLAYBOOK_CATALOG,
-  getPlaybookFallbackThumbnailSrc,
-  getPlaybookThumbnailSrc,
   getPlaybooksByFilter,
   getPlaybookByCubeKey,
+  type PlaybookGroup,
   type PlaybookFilter,
   type PlaybookItem,
 } from "../../data/playbookCatalog";
@@ -23,6 +20,14 @@ import {
   CUBE_MAP_UNIT,
   type CubeMapOverviewNode,
 } from "./cubeMapData";
+import {
+  disposeObject,
+  loadCubeMaskTexture,
+  loadCubeModelGeometry,
+  loadPlaybookThumbnailTextures,
+  loadStoryThumbnailTextures,
+} from "./cubeSceneAssets";
+import type { CubeSceneCommand } from "./cubeSceneCommands";
 import { cubeSceneTheme } from "./cubeSceneTheme";
 import { createCookTorranceMaterial } from "./createCookTorranceMaterial";
 import {
@@ -208,171 +213,6 @@ function getCubeBaseColor(node: CubeMapOverviewNode, index: number) {
     Math.imul(index + 1, 265443576);
 
   return palette[Math.abs(hash) % palette.length];
-}
-
-function disposeMaterial(material: THREE.Material | THREE.Material[]) {
-  if (Array.isArray(material)) {
-    material.forEach((entry) => entry.dispose());
-    return;
-  }
-
-  material.dispose();
-}
-
-function disposeObject(object: THREE.Object3D) {
-  object.traverse((child) => {
-    const mesh = child as THREE.Mesh;
-    mesh.geometry?.dispose?.();
-
-    if (mesh.material) {
-      disposeMaterial(mesh.material);
-    }
-  });
-}
-
-function findFirstMesh(object: THREE.Object3D) {
-  let result: THREE.Mesh | null = null;
-
-  object.traverse((child) => {
-    if (!result && (child as THREE.Mesh).isMesh) {
-      result = child as THREE.Mesh;
-    }
-  });
-
-  return result;
-}
-
-function normalizeCubeGeometry(sourceGeometry: THREE.BufferGeometry) {
-  const geometry = sourceGeometry;
-  geometry.computeBoundingBox();
-
-  const bounds = geometry.boundingBox;
-
-  if (!bounds) {
-    return geometry;
-  }
-
-  const size = new THREE.Vector3();
-  const center = new THREE.Vector3();
-  bounds.getSize(size);
-  bounds.getCenter(center);
-
-  geometry.translate(-center.x, -center.y, -center.z);
-
-  const maxDimension = Math.max(size.x, size.y, size.z);
-
-  if (Number.isFinite(maxDimension) && maxDimension > 0) {
-    const scale = CUBE_MAP_UNIT / maxDimension;
-
-    if (Math.abs(scale - 1) > 0.0001) {
-      geometry.scale(scale, scale, scale);
-    }
-  }
-
-  geometry.computeVertexNormals();
-
-  geometry.computeBoundingBox();
-  geometry.computeBoundingSphere();
-
-  return geometry;
-}
-
-async function loadCubeModelGeometry(src: string) {
-  const gltf = await new GLTFLoader().loadAsync(src);
-  gltf.scene.updateMatrixWorld(true);
-
-  const sourceMesh = findFirstMesh(gltf.scene);
-
-  if (!sourceMesh?.geometry) {
-    throw new Error(`Cube model does not contain a mesh: ${src}`);
-  }
-
-  if (!sourceMesh.geometry.getAttribute("uv")) {
-    throw new Error(`Cube model is missing UV Channel 1 data: ${src}`);
-  }
-
-  sourceMesh.updateWorldMatrix(true, false);
-  const geometry = sourceMesh.geometry.clone();
-  geometry.applyMatrix4(sourceMesh.matrixWorld);
-  disposeObject(gltf.scene);
-
-  return normalizeCubeGeometry(geometry);
-}
-
-function configureCubeMaskTexture(texture: THREE.Texture) {
-  texture.flipY = false;
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = true;
-  texture.needsUpdate = true;
-
-  return texture;
-}
-
-async function loadCubeMaskTexture(src: string, loader: THREE.TextureLoader) {
-  const texture = await loader.loadAsync(src);
-
-  return configureCubeMaskTexture(texture);
-}
-
-function configureStoryThumbnailTexture(texture: THREE.Texture) {
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.minFilter = THREE.LinearMipmapLinearFilter;
-  texture.magFilter = THREE.LinearFilter;
-  texture.generateMipmaps = true;
-  texture.needsUpdate = true;
-
-  return texture;
-}
-
-async function loadStoryThumbnailTextures(srcs: readonly string[], loader: THREE.TextureLoader) {
-  const textures = await Promise.all(
-    srcs.map(async (src) => {
-      try {
-        return configureStoryThumbnailTexture(await loader.loadAsync(src));
-      } catch (error) {
-        console.warn(`Story thumbnail failed to load: ${src}`, error);
-        return null;
-      }
-    }),
-  );
-
-  return textures.filter((texture): texture is THREE.Texture => texture !== null);
-}
-
-async function loadPlaybookThumbnailTextures(loader: THREE.TextureLoader) {
-  const textures = await Promise.all(
-    PLAYBOOK_CATALOG.map(async (playbook) => {
-      const source = getPlaybookThumbnailSrc(playbook);
-
-      try {
-        return configureStoryThumbnailTexture(await loader.loadAsync(source));
-      } catch (error) {
-        const fallbackSource = getPlaybookFallbackThumbnailSrc(playbook);
-
-        if (!fallbackSource || fallbackSource === source) {
-          console.warn(`Playbook thumbnail failed to load: ${source}`, error);
-          return null;
-        }
-
-        try {
-          return configureStoryThumbnailTexture(await loader.loadAsync(fallbackSource));
-        } catch (fallbackError) {
-          console.warn(`Playbook thumbnail fallback failed to load: ${fallbackSource}`, fallbackError);
-          return null;
-        }
-      }
-    }),
-  );
-
-  return new Map(
-    PLAYBOOK_CATALOG.map((playbook, index) => [playbook.id, textures[index] ?? null]),
-  );
 }
 
 function shuffleItems<T>(items: readonly T[]) {
@@ -928,10 +768,8 @@ function createMaskOutlineMaterial(maskTexture: THREE.Texture) {
 }
 
 type CubeMapSceneProps = {
-  chatSortRequest?: AiChatSortRequest | null;
-  highlightRequestId?: number;
-  clearHighlightRequestId?: number;
-  exitOrbitViewRequestId?: number;
+  playbookGroup: PlaybookGroup;
+  command?: CubeSceneCommand | null;
   axisIndexesVisible?: boolean;
   sceneActive?: boolean;
   parallaxViewEnabled?: boolean;
@@ -944,10 +782,8 @@ type CubeMapSceneProps = {
 type CubeViewMode = "map" | "orbit";
 
 export default function CubeMapScene({
-  chatSortRequest = null,
-  highlightRequestId = 0,
-  clearHighlightRequestId = 0,
-  exitOrbitViewRequestId = 0,
+  playbookGroup,
+  command = null,
   axisIndexesVisible = false,
   sceneActive = true,
   parallaxViewEnabled = false,
@@ -957,10 +793,8 @@ export default function CubeMapScene({
   onSceneReady,
 }: CubeMapSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chatSortHandlerRef = useRef<((request: AiChatSortRequest | null) => void) | null>(null);
-  const searchHighlightHandlerRef = useRef<(() => void) | null>(null);
-  const clearHighlightHandlerRef = useRef<(() => void) | null>(null);
-  const exitOrbitViewHandlerRef = useRef<(() => void) | null>(null);
+  const cubeCommandHandlerRef = useRef<((nextCommand: CubeSceneCommand) => void) | null>(null);
+  const pendingCubeCommandRef = useRef<CubeSceneCommand | null>(null);
   const orbitViewChangeRef = useRef(onOrbitViewChange);
   const parallaxViewUnavailableRef = useRef(onParallaxViewUnavailable);
   const openPlaybookRef = useRef(onOpenPlaybook);
@@ -968,9 +802,6 @@ export default function CubeMapScene({
   const sceneActiveRef = useRef(sceneActive);
   const parallaxViewEnabledRef = useRef(parallaxViewEnabled);
   const axisIndexesVisibleRef = useRef(axisIndexesVisible);
-  const pendingChatSortRequestRef = useRef<AiChatSortRequest | null>(null);
-  const pendingHighlightRequestIdRef = useRef(0);
-  const pendingClearHighlightRequestIdRef = useRef(0);
 
   useEffect(() => {
     orbitViewChangeRef.current = onOrbitViewChange;
@@ -1001,47 +832,17 @@ export default function CubeMapScene({
   }, [parallaxViewEnabled]);
 
   useEffect(() => {
-    if (chatSortHandlerRef.current) {
-      chatSortHandlerRef.current(chatSortRequest);
+    if (!command) {
       return;
     }
 
-    pendingChatSortRequestRef.current = chatSortRequest;
-  }, [chatSortRequest]);
-
-  useEffect(() => {
-    if (highlightRequestId <= 0) {
+    if (cubeCommandHandlerRef.current) {
+      cubeCommandHandlerRef.current(command);
       return;
     }
 
-    if (searchHighlightHandlerRef.current) {
-      searchHighlightHandlerRef.current();
-      return;
-    }
-
-    pendingHighlightRequestIdRef.current = highlightRequestId;
-  }, [highlightRequestId]);
-
-  useEffect(() => {
-    if (clearHighlightRequestId <= 0) {
-      return;
-    }
-
-    if (clearHighlightHandlerRef.current) {
-      clearHighlightHandlerRef.current();
-      return;
-    }
-
-    pendingClearHighlightRequestIdRef.current = clearHighlightRequestId;
-  }, [clearHighlightRequestId]);
-
-  useEffect(() => {
-    if (exitOrbitViewRequestId <= 0) {
-      return;
-    }
-
-    exitOrbitViewHandlerRef.current?.();
-  }, [exitOrbitViewRequestId]);
+    pendingCubeCommandRef.current = command;
+  }, [command]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1061,7 +862,6 @@ export default function CubeMapScene({
       antialias: true,
       alpha: true,
       powerPreference: "high-performance",
-      preserveDrawingBuffer: true,
     });
     renderer.setClearColor(cubeSceneTheme.background, 0);
     renderer.autoClear = false;
@@ -1193,6 +993,7 @@ export default function CubeMapScene({
 
     const nodesGroup = new THREE.Group();
     const cubeMeshes: CubeMesh[] = [];
+    let visiblePlaybookGroup = playbookGroup;
     scene.add(nodesGroup);
 
     let nodeGeometry: THREE.BufferGeometry | null = null;
@@ -1215,6 +1016,11 @@ export default function CubeMapScene({
     const axisDepthOccludersGroup = new THREE.Group();
     axisDepthOccludersGroup.visible = true;
     axisDepthScene.add(axisDepthOccludersGroup);
+
+    const isVisiblePlaybookMesh = (mesh: CubeMesh) =>
+      mesh.userData.playbook?.group === visiblePlaybookGroup;
+
+    const getVisibleCubeMeshes = () => cubeMeshes.filter(isVisiblePlaybookMesh);
 
     const primaryLight = cubeSceneTheme.lights.directional[0];
     const shaderTheme = cubeSceneTheme.cube.shader;
@@ -1332,6 +1138,7 @@ export default function CubeMapScene({
           maskOccluder,
           axisDepthOccluder,
         };
+        mesh.visible = isVisiblePlaybookMesh(mesh);
         nodesGroup.add(mesh);
         cubeMeshes.push(mesh);
         if (playbook) {
@@ -1344,6 +1151,8 @@ export default function CubeMapScene({
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2(-9999, -9999);
+    let pointerRaycastDirty = true;
+    let intersectedCubes: CubeMesh[] = [];
     const pointerDownPosition = new THREE.Vector2();
     const spreadDirection = new THREE.Vector3();
     const targetScaleVector = new THREE.Vector3();
@@ -1405,6 +1214,7 @@ export default function CubeMapScene({
     let orbitAutoRotateResumeAt: number | null = null;
     let isOrbitControlsInteractionActive = false;
     container.dataset.cubeViewMode = "map";
+    container.dataset.visiblePlaybookGroup = visiblePlaybookGroup;
 
     const isSearchHighlightActive = () => Boolean(selectedMesh && viewMode === "map");
 
@@ -1419,8 +1229,8 @@ export default function CubeMapScene({
     };
 
     const setOutlineSources = (sources: CubeMesh[]) => {
-      outlineSources = sources;
-      outlineSource = sources[0] ?? null;
+      outlineSources = Array.from(new Set(sources));
+      outlineSource = outlineSources[0] ?? null;
     };
 
     const getCubeMeshByKey = (key: string) =>
@@ -1429,7 +1239,7 @@ export default function CubeMapScene({
     const getInitialChatSortCandidates = () =>
       aiChatSortConfig.initialCandidateCubeKeys
         .map((key) => getCubeMeshByKey(key))
-        .filter(Boolean) as CubeMesh[];
+        .filter((mesh): mesh is CubeMesh => Boolean(mesh && isVisiblePlaybookMesh(mesh)));
 
     const syncChatSortDataset = () => {
       if (!isChatSortActive()) {
@@ -1911,9 +1721,11 @@ export default function CubeMapScene({
 
     const setDefaultCubeTargets = () => {
       cubeMeshes.forEach((mesh) => {
+        const isVisible = isVisiblePlaybookMesh(mesh);
+        mesh.visible = isVisible;
         mesh.userData.targetPosition.copy(mesh.userData.basePosition);
-        mesh.userData.targetScale = 1;
-        mesh.userData.targetOpacity = mesh.userData.baseOpacity;
+        mesh.userData.targetScale = isVisible ? 1 : 0;
+        mesh.userData.targetOpacity = isVisible ? mesh.userData.baseOpacity : 0;
         mesh.userData.targetOpacityMapMix = 0;
         setMapViewMaterialTargets(mesh);
         mesh.userData.targetFrontViewFadeStrength = 0;
@@ -1925,7 +1737,7 @@ export default function CubeMapScene({
       const falloffDistance = CUBE_MAP_UNIT * cubeSceneTheme.hover.spreadFalloffUnits;
 
       const buildCandidates = (spreadMultiplier: number) =>
-        cubeMeshes.map<TargetCandidate>((mesh) => {
+        getVisibleCubeMeshes().map<TargetCandidate>((mesh) => {
           const basePosition = mesh.userData.basePosition;
           const scale =
             mesh === anchorMesh ? cubeSceneTheme.hover.hoverScale : cubeSceneTheme.hover.dimScale;
@@ -2032,19 +1844,24 @@ export default function CubeMapScene({
       }
 
       cubeMeshes.forEach((mesh) => {
-        const isCandidate = highlightedSet.has(mesh);
+        const isVisible = isVisiblePlaybookMesh(mesh);
+        mesh.visible = isVisible;
+        const isCandidate = isVisible && highlightedSet.has(mesh);
         const isHoveredCandidate = hovered === mesh && isCandidate;
         const isOrbitPreviewMesh = showOrbitPreview && mesh === finalMesh;
         mesh.userData.targetPosition.copy(mesh.userData.basePosition);
-        mesh.userData.targetScale =
-          isCandidate
+        mesh.userData.targetScale = !isVisible
+          ? 0
+          : isCandidate
             ? filterMode && isHoveredCandidate
               ? cubeSceneTheme.hover.filteredHighlightHoverScale
               : filterMode || !finalStage || isHoveredCandidate
                 ? cubeSceneTheme.hover.searchHighlightHoverScale
                 : 1
             : 1;
-        mesh.userData.targetOpacity = isCandidate
+        mesh.userData.targetOpacity = !isVisible
+          ? 0
+          : isCandidate
           ? cubeSceneTheme.hover.highlightOpacity
           : SEARCH_DIMMED_OPACITY;
         mesh.userData.targetOpacityMapMix = isOrbitPreviewMesh ? 1 : 0;
@@ -2256,6 +2073,20 @@ export default function CubeMapScene({
       setDefaultCubeTargets();
     };
 
+    const setVisiblePlaybookGroup = (group: PlaybookGroup) => {
+      if (visiblePlaybookGroup === group) {
+        setDefaultCubeTargets();
+        container.dataset.visiblePlaybookGroup = group;
+        return;
+      }
+
+      resetHighlightState();
+      visiblePlaybookGroup = group;
+      container.dataset.visiblePlaybookGroup = group;
+      pointerRaycastDirty = true;
+      setDefaultCubeTargets();
+    };
+
     const clearSearchHighlight = resetHighlightState;
 
     const pickChatSortCandidates = (sourceMeshes: CubeMesh[], count: number) => {
@@ -2279,7 +2110,11 @@ export default function CubeMapScene({
       }
 
       if (!cubeAssetsReady || cubeMeshes.length === 0) {
-        pendingChatSortRequestRef.current = request;
+        pendingCubeCommandRef.current = {
+          id: request.requestId,
+          type: "chat-sort",
+          request,
+        };
         return;
       }
 
@@ -2290,6 +2125,11 @@ export default function CubeMapScene({
       chatSortFilter = request.filter ?? null;
 
       if (chatSortFilter) {
+        if (chatSortFilter !== visiblePlaybookGroup) {
+          resetChatSortHighlight();
+          return;
+        }
+
         chatSortCandidateMeshes = getPlaybooksByFilter(chatSortFilter)
           .map((playbook) =>
             cubeMeshes.find((mesh) => mesh.userData.playbook?.id === playbook.id),
@@ -2320,7 +2160,10 @@ export default function CubeMapScene({
       }
 
       if (nextCandidates.length === 0) {
-        nextCandidates = pickChatSortCandidates(cubeMeshes, aiChatSortConfig.finalStageCount);
+        nextCandidates = pickChatSortCandidates(
+          getVisibleCubeMeshes(),
+          aiChatSortConfig.finalStageCount,
+        );
       }
 
       chatSortCandidateMeshes = nextCandidates;
@@ -2346,7 +2189,10 @@ export default function CubeMapScene({
 
     const selectRandomSearchHighlight = () => {
       if (!cubeAssetsReady || cubeMeshes.length === 0) {
-        pendingHighlightRequestIdRef.current = Math.max(pendingHighlightRequestIdRef.current, 1);
+        pendingCubeCommandRef.current = {
+          id: 0,
+          type: "highlight-random",
+        };
         return;
       }
 
@@ -2356,16 +2202,47 @@ export default function CubeMapScene({
       chatSortFilter = null;
       chatSortFinalMesh = null;
       syncChatSortDataset();
+      const visibleCubeMeshes = getVisibleCubeMeshes();
       const candidates =
-        selectedMesh && cubeMeshes.length > 1
-          ? cubeMeshes.filter((mesh) => mesh !== selectedMesh)
-          : cubeMeshes;
+        selectedMesh && visibleCubeMeshes.length > 1
+          ? visibleCubeMeshes.filter((mesh) => mesh !== selectedMesh)
+          : visibleCubeMeshes;
+
+      if (candidates.length === 0) {
+        return;
+      }
+
       selectedMesh = candidates[Math.floor(Math.random() * candidates.length)];
       container.dataset.searchHighlightKey = selectedMesh.userData.key;
       hovered = null;
       container.style.cursor = "default";
       applySearchHighlightTarget();
       startSearchHighlightZoom(selectedMesh);
+    };
+
+    const applyCubeSceneCommand = (nextCommand: CubeSceneCommand) => {
+      switch (nextCommand.type) {
+        case "set-playbook-group":
+          setVisiblePlaybookGroup(nextCommand.group);
+          break;
+        case "chat-sort":
+          applyChatSortRequest(nextCommand.request);
+          break;
+        case "highlight-random":
+          selectRandomSearchHighlight();
+          break;
+        case "clear-highlight":
+          resetHighlightState();
+          break;
+        case "exit-orbit":
+          exitOrbitView();
+          break;
+        case "reset-map":
+          resetHighlightState();
+          break;
+        default:
+          break;
+      }
     };
 
     const loadCubeAssets = async () => {
@@ -2421,16 +2298,10 @@ export default function CubeMapScene({
           });
         });
 
-        if (pendingClearHighlightRequestIdRef.current > 0) {
-          pendingClearHighlightRequestIdRef.current = 0;
-          resetHighlightState();
-        } else if (pendingChatSortRequestRef.current) {
-          const pendingRequest = pendingChatSortRequestRef.current;
-          pendingChatSortRequestRef.current = null;
-          applyChatSortRequest(pendingRequest);
-        } else if (pendingHighlightRequestIdRef.current > 0) {
-          pendingHighlightRequestIdRef.current = 0;
-          selectRandomSearchHighlight();
+        if (pendingCubeCommandRef.current) {
+          const pendingCommand = pendingCubeCommandRef.current;
+          pendingCubeCommandRef.current = null;
+          applyCubeSceneCommand(pendingCommand);
         }
       } catch (error) {
         if (!disposed) {
@@ -2439,24 +2310,28 @@ export default function CubeMapScene({
       }
     };
 
-    chatSortHandlerRef.current = applyChatSortRequest;
-    searchHighlightHandlerRef.current = selectRandomSearchHighlight;
-    clearHighlightHandlerRef.current = resetHighlightState;
-    exitOrbitViewHandlerRef.current = exitOrbitView;
+    cubeCommandHandlerRef.current = applyCubeSceneCommand;
     void loadCubeAssets();
 
     const updatePointer = (event: PointerEvent) => {
       const rect = renderer.domElement.getBoundingClientRect();
       isPointerInside = true;
+      pointerRaycastDirty = true;
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     };
 
     const getIntersectedCubes = () => {
+      if (!pointerRaycastDirty) {
+        return intersectedCubes;
+      }
+
       raycaster.setFromCamera(pointer, camera);
-      return raycaster
-        .intersectObjects(cubeMeshes, false)
+      intersectedCubes = raycaster
+        .intersectObjects(getVisibleCubeMeshes(), false)
         .map((intersection) => intersection.object as CubeMesh);
+      pointerRaycastDirty = false;
+      return intersectedCubes;
     };
 
     const getIntersectedCube = () => {
@@ -2530,6 +2405,13 @@ export default function CubeMapScene({
       const intersectedCube = getIntersectedCube();
 
       if (intersectedCube) {
+        const playbook =
+          intersectedCube.userData.playbook ??
+          getPlaybookByCubeKey(intersectedCube.userData.key);
+        if (!playbook) {
+          return;
+        }
+
         resetSearchHighlightZoom();
         chatSortCandidateMeshes = [];
         chatSortStage = null;
@@ -2553,6 +2435,7 @@ export default function CubeMapScene({
     };
 
     const handleControlsStart = () => {
+      pointerRaycastDirty = true;
       if (viewMode === "orbit") {
         isOrbitControlsInteractionActive = true;
         pauseOrbitAutoRotate();
@@ -2567,6 +2450,7 @@ export default function CubeMapScene({
     };
 
     const handleControlsEnd = () => {
+      pointerRaycastDirty = true;
       if (viewMode === "orbit") {
         if (isOrbitControlsInteractionActive) {
           scheduleOrbitAutoRotateResume();
@@ -2586,9 +2470,14 @@ export default function CubeMapScene({
       };
     };
 
+    const handleControlsChange = () => {
+      pointerRaycastDirty = true;
+    };
+
     const clearHover = () => {
       isPointerInside = false;
       hovered = null;
+      pointerRaycastDirty = true;
       pointer.set(-9999, -9999);
       hasPointerDown = false;
       if (viewMode === "orbit") {
@@ -2689,6 +2578,7 @@ export default function CubeMapScene({
     renderer.domElement.addEventListener("pointercancel", clearHover);
     controls.addEventListener("start", handleControlsStart);
     controls.addEventListener("end", handleControlsEnd);
+    controls.addEventListener("change", handleControlsChange);
 
     const render = () => {
       if (disposed) {
@@ -2701,6 +2591,9 @@ export default function CubeMapScene({
       updateSearchHighlightZoom(frameTime);
       updateOrbitAutoRotate(frameTime);
       updateOrbitCameraTransition(frameTime);
+      if (searchHighlightZoom || orbitCameraTransition) {
+        pointerRaycastDirty = true;
+      }
       controls.update();
       updateParallaxView(frameTime);
 
@@ -2797,9 +2690,7 @@ export default function CubeMapScene({
         material.opacity = opacity;
       });
 
-      const activeOutlineSources = outlineSources.filter(
-        (source, index, sources) => sources.indexOf(source) === index,
-      );
+      const activeOutlineSources = outlineSources;
       const activeHighlight =
         focusedMesh ?? selectedMesh ?? hovered ?? activeOutlineSources[0] ?? null;
       outlineOpacity = lerpValue(
@@ -2894,10 +2785,9 @@ export default function CubeMapScene({
       renderer.domElement.removeEventListener("pointercancel", clearHover);
       controls.removeEventListener("start", handleControlsStart);
       controls.removeEventListener("end", handleControlsEnd);
-      chatSortHandlerRef.current = null;
-      searchHighlightHandlerRef.current = null;
-      clearHighlightHandlerRef.current = null;
-      exitOrbitViewHandlerRef.current = null;
+      controls.removeEventListener("change", handleControlsChange);
+      cubeCommandHandlerRef.current = null;
+      pendingCubeCommandRef.current = null;
       if (viewMode === "orbit") {
         orbitViewChangeRef.current?.(false, null);
       }

@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
-import {
-  type AiChatSortRequest,
-  type AiChatSortStage,
-} from "../../data/aiChatSortConfig";
-import type { PlaybookFilter, PlaybookItem } from "../../data/playbookCatalog";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { AiChatSortStage } from "../../data/aiChatSortConfig";
+import type { PlaybookFilter, PlaybookGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { prototypeText } from "../../data/prototypeContent";
 import { CubeScenePlaceholder } from "../three/CubeScenePlaceholder";
+import type {
+  CubeSceneCommand,
+  CubeSceneCommandPayload,
+} from "../three/cubeSceneCommands";
 import { cubeSceneTheme } from "../three/cubeSceneTheme";
 import { AiChatSortPanel } from "./AiChatSortPanel";
 import { AnimatedButton } from "../ui/AnimatedButton";
@@ -13,6 +14,7 @@ import { ArrowGlyph } from "../ui/ArrowGlyph";
 
 type SearchScreenProps = {
   isActive?: boolean;
+  playbookGroup: PlaybookGroup;
 };
 
 function getOrbitStatWidthClass(id: string) {
@@ -55,11 +57,11 @@ const cubeMapTopNavItems = [
   },
 ] as const;
 
-export function SearchScreen({ isActive = true }: SearchScreenProps) {
-  const [chatSortRequest, setChatSortRequest] = useState<AiChatSortRequest | null>(null);
+export function SearchScreen({ isActive = true, playbookGroup }: SearchScreenProps) {
+  const [cubeCommand, setCubeCommand] = useState<CubeSceneCommand | null>(null);
+  const commandIdRef = useRef(0);
+  const chatSortRequestIdRef = useRef(0);
   const [chatPanelResetId, setChatPanelResetId] = useState(0);
-  const [clearHighlightRequestId, setClearHighlightRequestId] = useState(0);
-  const [exitOrbitViewRequestId, setExitOrbitViewRequestId] = useState(0);
   const [areAxisIndexesVisible, setAreAxisIndexesVisible] = useState(false);
   const [isOrbitView, setIsOrbitView] = useState(false);
   const [focusedPlaybook, setFocusedPlaybook] = useState<PlaybookItem | null>(null);
@@ -73,12 +75,25 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
     }
   }, [isOrbitView]);
 
+  useEffect(() => {
+    dispatchCubeCommand({ type: "set-playbook-group", group: playbookGroup });
+  }, [playbookGroup]);
+
+  const dispatchCubeCommand = useCallback((payload: CubeSceneCommandPayload) => {
+    commandIdRef.current += 1;
+    setCubeCommand({ ...payload, id: commandIdRef.current });
+  }, []);
+
   const handleSortStageComplete = (stage: AiChatSortStage, filter?: PlaybookFilter) => {
-    setChatSortRequest((currentRequest) => ({
-      requestId: (currentRequest?.requestId ?? 0) + 1,
-      stage,
-      filter,
-    }));
+    chatSortRequestIdRef.current += 1;
+    dispatchCubeCommand({
+      type: "chat-sort",
+      request: {
+        requestId: chatSortRequestIdRef.current,
+        stage,
+        filter,
+      },
+    });
   };
 
   const handleOpenPlaybook = (playbook: PlaybookItem) => {
@@ -91,10 +106,8 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
   };
 
   const handleBackToCubeMap = () => {
-    setChatSortRequest(null);
     setChatPanelResetId((resetId) => resetId + 1);
-    setClearHighlightRequestId((requestId) => requestId + 1);
-    setExitOrbitViewRequestId((requestId) => requestId + 1);
+    dispatchCubeCommand({ type: "reset-map" });
   };
 
   return (
@@ -106,9 +119,8 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
     >
       <CubeScenePlaceholder
         sceneActive={isActive}
-        chatSortRequest={chatSortRequest}
-        clearHighlightRequestId={clearHighlightRequestId}
-        exitOrbitViewRequestId={exitOrbitViewRequestId}
+        command={cubeCommand}
+        playbookGroup={playbookGroup}
         axisIndexesVisible={areAxisIndexesVisible}
         parallaxViewEnabled={isActive && isOrbitView && isParallaxViewEnabled}
         onOrbitViewChange={handleOrbitViewChange}
@@ -210,7 +222,7 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
                     <span className="whitespace-nowrap text-[22px] font-medium leading-[1.5] tracking-[-0.22px]">
                       {item.label}
                     </span>
-                  ) : null}
+      ) : null}
                 </AnimatedButton>
               ))}
             </div>
@@ -218,6 +230,7 @@ export function SearchScreen({ isActive = true }: SearchScreenProps) {
 
           <AiChatSortPanel
             key={chatPanelResetId}
+            playbookGroup={playbookGroup}
             onSortStageComplete={handleSortStageComplete}
             onToggleAxisIndexes={() =>
               setAreAxisIndexesVisible((isVisible) => !isVisible)
