@@ -132,7 +132,7 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
       <AnimatedButton
         type="button"
         onClick={onLogout}
-        className={`gui-scale gui-origin-top-right absolute right-[calc(var(--safe-right)+32px)] z-20 flex h-[54px] items-center justify-center gap-[6px] rounded-[40.229px] bg-[#2c2c2d] px-[20px] py-[12px] text-[18px] font-medium leading-[1.5] text-white backdrop-blur-[18.286px] ${isOrbitView ? "top-[calc(var(--safe-top)+112px)]" : "top-[calc(var(--safe-top)+44px)]"}`}
+        className={`gui-scale gui-origin-top-right absolute right-[calc(var(--viewport-width)-var(--safe-right)+32px)] z-20 flex h-[54px] items-center justify-center gap-[6px] rounded-[40.229px] bg-[#2c2c2d] px-[20px] py-[12px] text-[18px] font-medium leading-[1.5] text-white backdrop-blur-[18.286px] ${isOrbitView ? "top-[calc(var(--safe-top)+112px)]" : "top-[calc(var(--safe-top)+44px)]"}`}
         data-name="button/logout"
         aria-label="Logout"
         title="Logout"
