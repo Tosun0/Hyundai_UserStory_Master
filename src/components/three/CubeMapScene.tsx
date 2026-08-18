@@ -1020,8 +1020,11 @@ export default function CubeMapScene({
     axisDepthOccludersGroup.visible = true;
     axisDepthScene.add(axisDepthOccludersGroup);
 
+    const isVisibleCubeMesh = (mesh: CubeMesh) =>
+      !mesh.userData.playbook || mesh.userData.playbook.group === visiblePlaybookGroup;
+
     const isVisiblePlaybookMesh = (mesh: CubeMesh) =>
-      mesh.userData.playbook?.group === visiblePlaybookGroup;
+      Boolean(mesh.userData.playbook) && isVisibleCubeMesh(mesh);
 
     const getVisibleCubeMeshes = () => cubeMeshes.filter(isVisiblePlaybookMesh);
 
@@ -1141,7 +1144,7 @@ export default function CubeMapScene({
           maskOccluder,
           axisDepthOccluder,
         };
-        mesh.visible = isVisiblePlaybookMesh(mesh);
+        mesh.visible = isVisibleCubeMesh(mesh);
         nodesGroup.add(mesh);
         cubeMeshes.push(mesh);
         if (playbook) {
@@ -1724,7 +1727,7 @@ export default function CubeMapScene({
 
     const setDefaultCubeTargets = () => {
       cubeMeshes.forEach((mesh) => {
-        const isVisible = isVisiblePlaybookMesh(mesh);
+        const isVisible = isVisibleCubeMesh(mesh);
         mesh.visible = isVisible;
         mesh.userData.targetPosition.copy(mesh.userData.basePosition);
         mesh.userData.targetScale = isVisible ? 1 : 0;
@@ -1847,7 +1850,7 @@ export default function CubeMapScene({
       }
 
       cubeMeshes.forEach((mesh) => {
-        const isVisible = isVisiblePlaybookMesh(mesh);
+        const isVisible = isVisibleCubeMesh(mesh);
         mesh.visible = isVisible;
         const isCandidate = isVisible && highlightedSet.has(mesh);
         const isHoveredCandidate = hovered === mesh && isCandidate;

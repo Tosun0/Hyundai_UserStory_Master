@@ -139,19 +139,19 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
         resetSceneRef={resetSceneRef}
       />
 
-      <AnimatedButton
-        type="button"
-        onClick={handleLogout}
-        className={`gui-scale gui-origin-top-right absolute right-[calc(var(--viewport-width)-var(--safe-right)+32px)] z-20 flex h-[54px] items-center justify-center gap-[6px] rounded-[40.229px] bg-[#2c2c2d] px-[20px] py-[12px] text-[18px] font-medium leading-[1.5] text-white backdrop-blur-[18.286px] ${isOrbitView ? "top-[calc(var(--safe-top)+112px)]" : "top-[calc(var(--safe-top)+44px)]"}`}
-        data-name="button/logout"
-        aria-label="Logout"
-        title="Logout"
-      >
-        <span className="material-symbols-outlined text-[24px] leading-none" aria-hidden="true">
-          logout
-        </span>
-        <span>Logout</span>
-      </AnimatedButton>
+      {!isOrbitView ? (
+        <AnimatedButton
+          type="button"
+          onClick={handleLogout}
+          className="gui-scale gui-origin-top-left absolute left-[calc(var(--safe-left)+32px)] top-[calc(var(--safe-top)+32px)] z-20 flex h-[54px] items-center justify-center gap-[8px] rounded-full bg-[#2c2c2d] px-[22px] text-[20px] font-medium leading-[1.5] text-white backdrop-blur-[18.29px]"
+          data-name="button/back-to-landing"
+          aria-label="Back to access screen"
+          title="Back to access screen"
+        >
+          <ArrowGlyph className="rotate-180" />
+          <span>Back</span>
+        </AnimatedButton>
+      ) : null}
 
       {isOrbitView ? (
         <>

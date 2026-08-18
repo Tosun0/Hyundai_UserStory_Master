@@ -187,6 +187,26 @@ export function buildCubeMapOverview(
     });
   });
 
+  for (let x = 0; x < CUBE_MAP_STEPS; x += 1) {
+    for (let y = 0; y < CUBE_MAP_STEPS; y += 1) {
+      for (let z = 0; z < CUBE_MAP_STEPS; z += 1) {
+        const key = `${x},${y},${z}`;
+
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            x,
+            y,
+            z,
+            personaIds: new Set<number>(),
+            names: [],
+            colors: [],
+          });
+        }
+      }
+    }
+  }
+
   const nodes = [...map.values()].map<CubeMapOverviewNode>((entry) => ({
     ...entry,
     count: entry.personaIds.size,
