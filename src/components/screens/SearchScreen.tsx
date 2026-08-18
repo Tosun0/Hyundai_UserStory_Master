@@ -15,6 +15,7 @@ import { ArrowGlyph } from "../ui/ArrowGlyph";
 type SearchScreenProps = {
   isActive?: boolean;
   playbookGroup: PlaybookGroup;
+  onLogout: () => void;
 };
 
 function getOrbitStatWidthClass(id: string) {
@@ -57,7 +58,7 @@ const cubeMapTopNavItems = [
   },
 ] as const;
 
-export function SearchScreen({ isActive = true, playbookGroup }: SearchScreenProps) {
+export function SearchScreen({ isActive = true, playbookGroup, onLogout }: SearchScreenProps) {
   const [cubeCommand, setCubeCommand] = useState<CubeSceneCommand | null>(null);
   const commandIdRef = useRef(0);
   const chatSortRequestIdRef = useRef(0);
@@ -127,6 +128,20 @@ export function SearchScreen({ isActive = true, playbookGroup }: SearchScreenPro
         onParallaxViewUnavailable={() => setIsParallaxViewEnabled(false)}
         onOpenPlaybook={handleOpenPlaybook}
       />
+
+      <AnimatedButton
+        type="button"
+        onClick={onLogout}
+        className={`gui-scale gui-origin-top-right absolute right-[calc(var(--safe-right)+32px)] z-20 flex h-[54px] items-center justify-center gap-[6px] rounded-[40.229px] bg-[#2c2c2d] px-[20px] py-[12px] text-[18px] font-medium leading-[1.5] text-white backdrop-blur-[18.286px] ${isOrbitView ? "top-[calc(var(--safe-top)+112px)]" : "top-[calc(var(--safe-top)+44px)]"}`}
+        data-name="button/logout"
+        aria-label="Logout"
+        title="Logout"
+      >
+        <span className="material-symbols-outlined text-[24px] leading-none" aria-hidden="true">
+          logout
+        </span>
+        <span>Logout</span>
+      </AnimatedButton>
 
       {isOrbitView ? (
         <>

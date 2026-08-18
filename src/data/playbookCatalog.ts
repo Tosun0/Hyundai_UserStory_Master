@@ -30,7 +30,7 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     id: "H1",
     title: "워킹맘의 딜레마",
     url: "https://userstory-h-01.vercel.app/",
-    group: "GN8",
+    group: "H",
     cubeKey: "0,4,3",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_WorkingMom.png",
   },

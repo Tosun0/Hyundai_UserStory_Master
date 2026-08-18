@@ -228,7 +228,16 @@ export default function App() {
             }}
           />
         ) : null}
-        {screen === "search" ? <SearchScreen isActive playbookGroup={playbookGroup} /> : null}
+        {screen === "search" ? (
+          <SearchScreen
+            isActive
+            playbookGroup={playbookGroup}
+            onLogout={() => {
+              setPlaybookGroup("H");
+              goToScreen("landing");
+            }}
+          />
+        ) : null}
       </div>
 
       {loadingOverlay.isMounted ? (
