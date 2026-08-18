@@ -776,6 +776,7 @@ type CubeMapSceneProps = {
   onOrbitViewChange?: (isOrbitView: boolean, playbook: PlaybookItem | null) => void;
   onParallaxViewUnavailable?: (reason: ParallaxUnavailableReason) => void;
   onOpenPlaybook?: (playbook: PlaybookItem) => void;
+  resetSceneRef?: { current: (() => void) | null };
   onSceneReady?: () => void;
 };
 
@@ -790,6 +791,7 @@ export default function CubeMapScene({
   onOrbitViewChange,
   onParallaxViewUnavailable,
   onOpenPlaybook,
+  resetSceneRef,
   onSceneReady,
 }: CubeMapSceneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -2311,6 +2313,12 @@ export default function CubeMapScene({
     };
 
     cubeCommandHandlerRef.current = applyCubeSceneCommand;
+    if (resetSceneRef) {
+      resetSceneRef.current = () => {
+        applyCubeSceneCommand({ id: 0, type: "reset-map" });
+        applyCubeSceneCommand({ id: 0, type: "set-playbook-group", group: "H" });
+      };
+    }
     void loadCubeAssets();
 
     const updatePointer = (event: PointerEvent) => {
@@ -2788,6 +2796,9 @@ export default function CubeMapScene({
       controls.removeEventListener("change", handleControlsChange);
       cubeCommandHandlerRef.current = null;
       pendingCubeCommandRef.current = null;
+      if (resetSceneRef) {
+        resetSceneRef.current = null;
+      }
       if (viewMode === "orbit") {
         orbitViewChangeRef.current?.(false, null);
       }

@@ -60,6 +60,7 @@ const cubeMapTopNavItems = [
 
 export function SearchScreen({ isActive = true, playbookGroup, onLogout }: SearchScreenProps) {
   const [cubeCommand, setCubeCommand] = useState<CubeSceneCommand | null>(null);
+  const resetSceneRef = useRef<(() => void) | null>(null);
   const commandIdRef = useRef(0);
   const chatSortRequestIdRef = useRef(0);
   const [chatPanelResetId, setChatPanelResetId] = useState(0);
@@ -111,6 +112,14 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
     dispatchCubeCommand({ type: "reset-map" });
   };
 
+  const handleLogout = useCallback(() => {
+    resetSceneRef.current?.();
+    setChatPanelResetId((resetId) => resetId + 1);
+    setIsOrbitView(false);
+    setFocusedPlaybook(null);
+    onLogout();
+  }, [onLogout]);
+
   return (
     <section
       className={`screen-fill ${isActive ? "" : "pointer-events-none opacity-0"}`}
@@ -127,11 +136,12 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
         onOrbitViewChange={handleOrbitViewChange}
         onParallaxViewUnavailable={() => setIsParallaxViewEnabled(false)}
         onOpenPlaybook={handleOpenPlaybook}
+        resetSceneRef={resetSceneRef}
       />
 
       <AnimatedButton
         type="button"
-        onClick={onLogout}
+        onClick={handleLogout}
         className={`gui-scale gui-origin-top-right absolute right-[calc(var(--viewport-width)-var(--safe-right)+32px)] z-20 flex h-[54px] items-center justify-center gap-[6px] rounded-[40.229px] bg-[#2c2c2d] px-[20px] py-[12px] text-[18px] font-medium leading-[1.5] text-white backdrop-blur-[18.286px] ${isOrbitView ? "top-[calc(var(--safe-top)+112px)]" : "top-[calc(var(--safe-top)+44px)]"}`}
         data-name="button/logout"
         aria-label="Logout"
