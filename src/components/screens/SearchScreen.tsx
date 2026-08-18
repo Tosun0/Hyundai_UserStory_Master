@@ -143,13 +143,12 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
         <AnimatedButton
           type="button"
           onClick={handleLogout}
-          className="gui-scale gui-origin-top-left absolute left-[calc(var(--safe-left)+32px)] top-[calc(var(--safe-top)+32px)] z-20 flex h-[54px] items-center justify-center gap-[8px] rounded-full bg-[#2c2c2d] px-[22px] text-[20px] font-medium leading-[1.5] text-white backdrop-blur-[18.29px]"
+          className="gui-scale gui-origin-top-left absolute left-[calc(var(--safe-left)+32px)] top-[calc(var(--safe-top)+50px)] z-20 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#2c2c2d] text-white backdrop-blur-[18.29px]"
           data-name="button/back-to-landing"
           aria-label="Back to access screen"
           title="Back to access screen"
         >
           <ArrowGlyph className="rotate-180" />
-          <span>Back</span>
         </AnimatedButton>
       ) : null}
 
