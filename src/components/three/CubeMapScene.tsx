@@ -21,6 +21,7 @@ import {
   type CubeMapOverviewNode,
 } from "./cubeMapData";
 import {
+  disposeMaterial,
   disposeObject,
   loadCubeMaskTexture,
   loadCubeModelGeometry,
