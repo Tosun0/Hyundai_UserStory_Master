@@ -857,6 +857,11 @@ export default function CubeMapScene({
     THREE.ColorManagement.enabled = true;
 
     const overview = buildCubeMapOverview();
+    const groupNodes = overview.nodes.filter((node) => {
+      const playbook = getPlaybookByCubeKey(node.key);
+
+      return !playbook || playbook.group === playbookGroup;
+    });
     const scene = new THREE.Scene();
     scene.background = null;
     scene.fog = new THREE.FogExp2(cubeSceneTheme.background, cubeSceneTheme.fog.density);
@@ -1054,7 +1059,7 @@ export default function CubeMapScene({
 
       const now = performance.now();
 
-      overview.nodes.forEach((node, index) => {
+      groupNodes.forEach((node, index) => {
         const playbook = getPlaybookByCubeKey(node.key);
         const thumbnailTexture = playbook
           ? playbookThumbnailTextures.get(playbook.id) ?? null
@@ -2828,7 +2833,7 @@ export default function CubeMapScene({
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, []);
+  }, [playbookGroup]);
 
   return <div ref={containerRef} className="cube-scene" data-layer-name="Cube Map 3D Scene" />;
 }
