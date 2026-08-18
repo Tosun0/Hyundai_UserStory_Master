@@ -213,6 +213,18 @@ export default function App() {
     [],
   );
 
+  const logoutToLanding = useCallback(() => {
+    if (screenRef.current) {
+      gsap.killTweensOf(screenRef.current);
+      gsap.set(screenRef.current, { clearProps: "opacity,visibility,transform" });
+    }
+
+    isTransitioningRef.current = false;
+    activeScreenRef.current = "landing";
+    setPlaybookGroup("H");
+    setScreen("landing");
+  }, []);
+
   return (
     <PrototypeStage
       backgroundSrc={background.src}
@@ -232,10 +244,7 @@ export default function App() {
           <SearchScreen
             isActive
             playbookGroup={playbookGroup}
-            onLogout={() => {
-              setPlaybookGroup("H");
-              goToScreen("landing");
-            }}
+            onLogout={logoutToLanding}
           />
         ) : null}
       </div>
