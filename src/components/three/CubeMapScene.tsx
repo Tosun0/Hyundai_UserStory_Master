@@ -2839,20 +2839,24 @@ export default function CubeMapScene({
       }
 
       const sceneTime = frameTime * 0.001;
-      const shouldRunIdleMotion =
+      const canRunIdleMotion =
         cubeSceneTheme.cube.idleMotion.enabled &&
         viewMode === "map" &&
         !cubeEntryCamera.active &&
-        !hovered &&
-        !selectedMesh &&
-        !isChatSortActive() &&
         !searchHighlightZoom &&
-        !orbitCameraTransition &&
-        !hasPointerDown &&
-        !isOrbitControlsInteractionActive;
+        !orbitCameraTransition;
+      const idleMotionTargetStrength = !canRunIdleMotion
+        ? 0
+        : selectedMesh || isChatSortActive()
+          ? cubeSceneTheme.cube.idleMotion.highlightStrength
+          : hovered
+            ? cubeSceneTheme.cube.idleMotion.hoverStrength
+            : hasPointerDown || isOrbitControlsInteractionActive
+              ? cubeSceneTheme.cube.idleMotion.interactionStrength
+              : 1;
       idleMotionBlend = lerpValue(
         idleMotionBlend,
-        shouldRunIdleMotion ? 1 : 0,
+        idleMotionTargetStrength,
         getTimeAlpha(cubeSceneTheme.cube.idleMotion.blendResponseMs, frameDeltaMs),
       );
       cubeMeshes.forEach((mesh) => {
