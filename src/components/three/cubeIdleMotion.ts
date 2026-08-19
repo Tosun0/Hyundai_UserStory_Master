@@ -73,14 +73,14 @@ export function applyCubeIdleMotion({
     Math.sin(seed) * 0.08;
   const normalWave = Math.sin(normalWavePhase) * 0.5 + 0.5;
   const normalPulse =
-    Math.pow(normalWave, config.normalWavePulsePower) *
+    -Math.pow(normalWave, config.normalWavePulsePower) *
     config.normalWaveAmplitude *
     strength;
   const normalBend =
     Math.cos(normalWavePhase) * config.normalWaveRotationAmplitude * strength;
   scale.multiplyScalar(
     1 +
-      Math.pow(normalWave, config.normalWavePulsePower * 0.82) *
+      -Math.pow(normalWave, config.normalWavePulsePower * 0.82) *
         config.normalWaveScaleAmplitude *
         strength,
   );
