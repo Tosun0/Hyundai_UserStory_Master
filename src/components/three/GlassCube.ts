@@ -67,6 +67,12 @@ type GlassCubeOptions = {
   glassSpecularIntensity: number;
   glassClearcoat: number;
   glassClearcoatRoughness: number;
+  glassScatter: {
+    color: THREE.ColorRepresentation;
+    centerOpacity: number;
+    edgeOpacity: number;
+    scale: number;
+  };
   glassAttenuationColor: THREE.ColorRepresentation;
   glassAttenuationDistance: number;
   baseOpacity: number;
@@ -82,6 +88,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   readonly definition: GlassCubeDefinition;
   readonly state: GlassCubeRuntimeState;
   readonly glassShell: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
+  readonly scatterShell: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
   private readonly glassOpacity: number;
   private readonly glassIOR: number;
   private readonly glassDispersion: number;
@@ -114,6 +121,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     glassSpecularIntensity,
     glassClearcoat,
     glassClearcoatRoughness,
+    glassScatter,
     glassAttenuationColor,
     glassAttenuationDistance,
     baseOpacity,
@@ -262,6 +270,60 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassShell.frustumCulled = false;
     this.glassShell.renderOrder = 2;
     this.add(this.glassShell);
+
+    const scatterMaterial = new THREE.ShaderMaterial({
+      name: "MI_GlassScatter",
+      uniforms: {
+        uColor: { value: new THREE.Color(glassScatter.color) },
+        uCenterOpacity: { value: glassScatter.centerOpacity },
+        uEdgeOpacity: { value: glassScatter.edgeOpacity },
+        uHalfExtent: { value: glassHalfExtent },
+        uVisibility: { value: 0 },
+      },
+      vertexShader: `
+        varying vec3 vLocalPosition;
+        varying vec3 vLocalNormal;
+        void main() {
+          vLocalPosition = position;
+          vLocalNormal = normal;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        uniform float uCenterOpacity;
+        uniform float uEdgeOpacity;
+        uniform float uHalfExtent;
+        uniform float uVisibility;
+        varying vec3 vLocalPosition;
+        varying vec3 vLocalNormal;
+        void main() {
+          vec3 axis = abs(normalize(vLocalNormal));
+          vec2 facePosition = axis.x >= axis.y && axis.x >= axis.z
+            ? vLocalPosition.zy
+            : axis.y >= axis.z
+              ? vLocalPosition.xz
+              : vLocalPosition.xy;
+          float radius = max(abs(facePosition.x), abs(facePosition.y)) /
+            max(uHalfExtent, 0.0001);
+          float feather = smoothstep(0.18, 1.0, radius);
+          float opacity = mix(uCenterOpacity, uEdgeOpacity, feather) * uVisibility;
+          gl_FragColor = vec4(uColor, opacity);
+        }
+      `,
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+      side: THREE.BackSide,
+      toneMapped: false,
+    });
+    scatterMaterial.userData.masterMaterial = "M_GlassScatter";
+    this.scatterShell = new THREE.Mesh(geometry, scatterMaterial);
+    this.scatterShell.name = "Glass Scatter Shell";
+    this.scatterShell.frustumCulled = false;
+    this.scatterShell.renderOrder = 1.5;
+    this.scatterShell.scale.setScalar(glassScatter.scale);
+    this.add(this.scatterShell);
   }
 
   get key() {
@@ -315,6 +377,11 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassShell.material.opacity = THREE.MathUtils.lerp(
       this.glassShell.material.opacity,
       this.glassOpacity * targetOpacity,
+      amount,
+    );
+    this.scatterShell.material.uniforms.uVisibility.value = THREE.MathUtils.lerp(
+      this.scatterShell.material.uniforms.uVisibility.value,
+      targetOpacity,
       amount,
     );
     this.thumbnailCube?.material.forEach((material) => {
@@ -374,6 +441,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
   disposeGlassCube() {
     this.removeThumbnailCube();
+    this.scatterShell.material.dispose();
     this.glassShell.material.dispose();
     this.geometry.dispose();
     this.material.dispose();
