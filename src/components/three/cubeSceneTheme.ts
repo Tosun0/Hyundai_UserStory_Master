@@ -352,8 +352,8 @@ export const cubeSceneTheme = {
     filteredHighlightHoverScale: 1.08,
   },
   hoverGlow: {
-    outlineColor: 0xffffff,
-    glowColor: 0xd7e6ff,
+    outlineColor: 0x4f73e3,
+    glowColor: 0x4f73e3,
     outlineOpacity: 0.82,
     glowOpacity: 0.24,
     outlineThickness: 0.75,
