@@ -304,11 +304,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
               smoothstep(0.0, 1.0, glassEdgeDistance),
               uGlassEdgeFalloffPower
             );
-            float glassFresnel = pow(
-              1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0),
-              uGlassFresnelPower
-            );
-            float glassEdgeBlur = glassDistanceFalloff * mix(0.85, 1.0, glassFresnel);
+            float glassEdgeBlur = glassDistanceFalloff;
             roughnessFactor = mix(
               uGlassCoreRoughness,
               uGlassEdgeRoughness,
