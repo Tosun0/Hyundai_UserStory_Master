@@ -31,6 +31,7 @@ import {
 import type { CubeSceneCommand } from "./cubeSceneCommands";
 import { cubeSceneTheme } from "./cubeSceneTheme";
 import { createCookTorranceMaterial } from "./createCookTorranceMaterial";
+import { GlassCube, type GlassCubeThumbnail } from "./GlassCube";
 import {
   createParallaxInputController,
   ParallaxUnavailableError,
@@ -75,29 +76,7 @@ type SearchHighlightZoomState = {
 
 type OrbitCameraTransitionState = SearchHighlightZoomState;
 
-type CubeMeshUserData = CubeMapOverviewNode & {
-  basePosition: THREE.Vector3;
-  targetPosition: THREE.Vector3;
-  targetScale: number;
-  entryProgress: number;
-  enterStart: number;
-  enterDuration: number;
-  entryComplete: boolean;
-  baseOpacity: number;
-  targetOpacity: number;
-  baseColor: THREE.Color;
-  targetBaseColor: THREE.Color;
-  targetOpacityMapMix: number;
-  targetOpacityMaskStrength: number;
-  targetEmissiveStrength: number;
-  targetFrontViewFadeStrength: number;
-  maskOccluder: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
-  axisDepthOccluder: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
-};
-
-type CubeMesh = THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial> & {
-  userData: CubeMeshUserData;
-};
+type CubeMesh = GlassCube;
 
 type StoryThumbnailCubeMode = "preview" | "orbit";
 
@@ -1037,7 +1016,7 @@ export default function CubeMapScene({
     let storyThumbnailTextures: THREE.Texture[] = [];
     let playbookThumbnailTextures = new Map();
     const playbookThumbnailMeshes = new Map();
-    let storyThumbnailCube: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]> | null = null;
+    let storyThumbnailCube: GlassCubeThumbnail | null = null;
     let storyThumbnailCubeParent: CubeMesh | null = null;
     let storyThumbnailCubeMode: StoryThumbnailCubeMode | null = null;
     let cubeAssetsReady = false;
@@ -1051,10 +1030,10 @@ export default function CubeMapScene({
     axisDepthScene.add(axisDepthOccludersGroup);
 
     const isVisibleCubeMesh = (mesh: CubeMesh) =>
-      !mesh.userData.playbook || mesh.userData.playbook.group === visiblePlaybookGroup;
+      !mesh.playbook || mesh.playbook.group === visiblePlaybookGroup;
 
     const isVisiblePlaybookMesh = (mesh: CubeMesh) =>
-      Boolean(mesh.userData.playbook) && isVisibleCubeMesh(mesh);
+      Boolean(mesh.playbook) && isVisibleCubeMesh(mesh);
 
     const getVisibleCubeMeshes = () => cubeMeshes.filter(isVisiblePlaybookMesh);
 
@@ -1135,8 +1114,27 @@ export default function CubeMapScene({
             cubeSceneTheme.orbitView.frontViewFade.saturationMultiplier,
           opacity: cubeSceneTheme.cube.opacity,
         });
-        const mesh = new THREE.Mesh(nodeGeometry, material) as CubeMesh;
-        mesh.position.copy(basePosition);
+        const definition = {
+          node,
+          playbook,
+          basePosition,
+          baseColor: cubeBaseColor,
+        };
+        const mesh = new GlassCube({
+          geometry: nodeGeometry,
+          material,
+          definition,
+          baseOpacity: cubeSceneTheme.cube.opacity,
+          enterStart:
+            now +
+            cubeSceneTheme.cube.enterDelay +
+            Math.min(index * cubeSceneTheme.cube.enterStagger, cubeSceneTheme.cube.enterMaxStagger),
+          enterDuration: cubeSceneTheme.cube.enterDuration,
+          targetBaseColor: mapViewBaseColor,
+          targetOpacityMaskStrength: cubeSceneTheme.mapView.opacityMaskStrength,
+          targetEmissiveStrength: cubeSceneTheme.mapView.emissiveStrength,
+          targetFrontViewFadeStrength: 0,
+        });
         mesh.scale.setScalar(0);
 
         const maskOccluder = new THREE.Mesh(nodeGeometry, maskOccluderMaterial);
@@ -1150,30 +1148,7 @@ export default function CubeMapScene({
         axisDepthOccluder.frustumCulled = false;
         axisDepthOccludersGroup.add(axisDepthOccluder);
 
-        mesh.userData = {
-          ...node,
-          playbook,
-          basePosition,
-          targetPosition: basePosition.clone(),
-          targetScale: 1,
-          entryProgress: 0,
-          enterStart:
-            now +
-            cubeSceneTheme.cube.enterDelay +
-            Math.min(index * cubeSceneTheme.cube.enterStagger, cubeSceneTheme.cube.enterMaxStagger),
-          enterDuration: cubeSceneTheme.cube.enterDuration,
-          entryComplete: false,
-          baseOpacity: cubeSceneTheme.cube.opacity,
-          targetOpacity: cubeSceneTheme.cube.opacity,
-          baseColor: cubeBaseColor,
-          targetBaseColor: mapViewBaseColor.clone(),
-          targetOpacityMapMix: 0,
-          targetOpacityMaskStrength: cubeSceneTheme.mapView.opacityMaskStrength,
-          targetEmissiveStrength: cubeSceneTheme.mapView.emissiveStrength,
-          targetFrontViewFadeStrength: 0,
-          maskOccluder,
-          axisDepthOccluder,
-        };
+        mesh.attachOccluders(maskOccluder, axisDepthOccluder);
         mesh.visible = isVisibleCubeMesh(mesh);
         nodesGroup.add(mesh);
         cubeMeshes.push(mesh);
@@ -1270,7 +1245,7 @@ export default function CubeMapScene({
     };
 
     const getCubeMeshByKey = (key: string) =>
-      cubeMeshes.find((mesh) => mesh.userData.key === key) ?? null;
+      cubeMeshes.find((mesh) => mesh.key === key) ?? null;
 
     const getInitialChatSortCandidates = () =>
       aiChatSortConfig.initialCandidateCubeKeys
@@ -1288,7 +1263,7 @@ export default function CubeMapScene({
 
       container.dataset.chatSortStage = String(chatSortStage);
       container.dataset.chatSortCandidates = chatSortCandidateMeshes
-        .map((mesh) => mesh.userData.key)
+        .map((mesh) => mesh.key)
         .join(",");
 
       if (chatSortFilter) {
@@ -1663,15 +1638,15 @@ export default function CubeMapScene({
     };
 
     const setMapViewMaterialTargets = (mesh: CubeMesh) => {
-      mesh.userData.targetBaseColor.copy(mapViewBaseColor);
-      mesh.userData.targetOpacityMaskStrength = cubeSceneTheme.mapView.opacityMaskStrength;
-      mesh.userData.targetEmissiveStrength = cubeSceneTheme.mapView.emissiveStrength;
+      mesh.state.targetBaseColor.copy(mapViewBaseColor);
+      mesh.state.targetOpacityMaskStrength = cubeSceneTheme.mapView.opacityMaskStrength;
+      mesh.state.targetEmissiveStrength = cubeSceneTheme.mapView.emissiveStrength;
     };
 
     const setOrbitViewMaterialTargets = (mesh: CubeMesh) => {
-      mesh.userData.targetBaseColor.copy(mesh.userData.baseColor);
-      mesh.userData.targetOpacityMaskStrength = 0.12;
-      mesh.userData.targetEmissiveStrength = shaderTheme.emissiveStrength;
+      mesh.state.targetBaseColor.copy(mesh.baseColor);
+      mesh.state.targetOpacityMaskStrength = 0.12;
+      mesh.state.targetEmissiveStrength = shaderTheme.emissiveStrength;
     };
 
     const startSearchHighlightZoom = (targetMesh: CubeMesh) => {
@@ -1685,7 +1660,7 @@ export default function CubeMapScene({
 
       searchZoomTarget
         .copy(baseline.target)
-        .lerp(targetMesh.userData.basePosition, cubeSceneTheme.searchHighlightZoom.targetPull);
+        .lerp(targetMesh.basePosition, cubeSceneTheme.searchHighlightZoom.targetPull);
       searchZoomOffset
         .copy(baseline.position)
         .sub(baseline.target)
@@ -1759,22 +1734,22 @@ export default function CubeMapScene({
       cubeMeshes.forEach((mesh) => {
         const isVisible = isVisibleCubeMesh(mesh);
         mesh.visible = isVisible;
-        mesh.userData.targetPosition.copy(mesh.userData.basePosition);
-        mesh.userData.targetScale = isVisible ? 1 : 0;
-        mesh.userData.targetOpacity = isVisible ? mesh.userData.baseOpacity : 0;
-        mesh.userData.targetOpacityMapMix = 0;
+        mesh.state.targetPosition.copy(mesh.basePosition);
+        mesh.state.targetScale = isVisible ? 1 : 0;
+        mesh.state.targetOpacity = isVisible ? mesh.state.baseOpacity : 0;
+        mesh.state.targetOpacityMapMix = 0;
         setMapViewMaterialTargets(mesh);
-        mesh.userData.targetFrontViewFadeStrength = 0;
+        mesh.state.targetFrontViewFadeStrength = 0;
       });
     };
 
     const spreadCubesFrom = (anchorMesh: CubeMesh) => {
-      const anchorPosition = anchorMesh.userData.basePosition;
+      const anchorPosition = anchorMesh.basePosition;
       const falloffDistance = CUBE_MAP_UNIT * cubeSceneTheme.hover.spreadFalloffUnits;
 
       const buildCandidates = (spreadMultiplier: number) =>
         getVisibleCubeMeshes().map<TargetCandidate>((mesh) => {
-          const basePosition = mesh.userData.basePosition;
+          const basePosition = mesh.basePosition;
           const scale =
             mesh === anchorMesh ? cubeSceneTheme.hover.hoverScale : cubeSceneTheme.hover.dimScale;
           const position = basePosition.clone();
@@ -1820,19 +1795,19 @@ export default function CubeMapScene({
       }
 
       selectedCandidates.forEach(({ mesh, position, scale }) => {
-        mesh.userData.targetPosition.copy(position);
-        mesh.userData.targetScale = scale;
-        mesh.userData.targetOpacityMapMix = 0;
+        mesh.state.targetPosition.copy(position);
+        mesh.state.targetScale = scale;
+        mesh.state.targetOpacityMapMix = 0;
         setMapViewMaterialTargets(mesh);
-        mesh.userData.targetFrontViewFadeStrength = 0;
+        mesh.state.targetFrontViewFadeStrength = 0;
 
         if (mesh === anchorMesh) {
-          mesh.userData.targetOpacity = cubeSceneTheme.hover.highlightOpacity;
+          mesh.state.targetOpacity = cubeSceneTheme.hover.highlightOpacity;
           return;
         }
 
-        mesh.userData.targetOpacity =
-          mesh.userData.baseOpacity * cubeSceneTheme.hover.dimOpacityMultiplier;
+        mesh.state.targetOpacity =
+          mesh.state.baseOpacity * cubeSceneTheme.hover.dimOpacityMultiplier;
       });
     };
 
@@ -1885,8 +1860,8 @@ export default function CubeMapScene({
         const isCandidate = isVisible && highlightedSet.has(mesh);
         const isHoveredCandidate = hovered === mesh && isCandidate;
         const isOrbitPreviewMesh = showOrbitPreview && mesh === finalMesh;
-        mesh.userData.targetPosition.copy(mesh.userData.basePosition);
-        mesh.userData.targetScale = !isVisible
+        mesh.state.targetPosition.copy(mesh.basePosition);
+        mesh.state.targetScale = !isVisible
           ? 0
           : isCandidate
             ? filterMode && isHoveredCandidate
@@ -1895,25 +1870,25 @@ export default function CubeMapScene({
                 ? cubeSceneTheme.hover.searchHighlightHoverScale
                 : 1
             : 1;
-        mesh.userData.targetOpacity = !isVisible
+        mesh.state.targetOpacity = !isVisible
           ? 0
           : isCandidate
           ? cubeSceneTheme.hover.highlightOpacity
-          : SEARCH_DIMMED_OPACITY;
-        mesh.userData.targetOpacityMapMix = isOrbitPreviewMesh ? 1 : 0;
+            : SEARCH_DIMMED_OPACITY;
+        mesh.state.targetOpacityMapMix = isOrbitPreviewMesh ? 1 : 0;
 
         if (isOrbitPreviewMesh) {
           setOrbitViewMaterialTargets(mesh);
-          mesh.userData.targetFrontViewFadeStrength =
+          mesh.state.targetFrontViewFadeStrength =
             cubeSceneTheme.orbitView.frontViewFade.strength;
           return;
         }
 
         setMapViewMaterialTargets(mesh);
-        mesh.userData.targetEmissiveStrength = isCandidate
+        mesh.state.targetEmissiveStrength = isCandidate
           ? shaderTheme.emissiveStrength
           : cubeSceneTheme.mapView.emissiveStrength;
-        mesh.userData.targetFrontViewFadeStrength = 0;
+        mesh.state.targetFrontViewFadeStrength = 0;
       });
     };
 
@@ -1943,18 +1918,18 @@ export default function CubeMapScene({
 
       setOutlineSource(focusedMesh);
       cubeMeshes.forEach((mesh) => {
-        mesh.userData.targetPosition.copy(
-          mesh === focusedMesh ? GRAPH_CENTER : mesh.userData.basePosition,
+        mesh.state.targetPosition.copy(
+          mesh === focusedMesh ? GRAPH_CENTER : mesh.basePosition,
         );
-        mesh.userData.targetScale = mesh === focusedMesh ? cubeSceneTheme.orbitView.focusedScale : 0;
-        mesh.userData.targetOpacity = mesh === focusedMesh ? cubeSceneTheme.hover.highlightOpacity : 0;
-        mesh.userData.targetOpacityMapMix = mesh === focusedMesh ? 1 : 0;
+        mesh.state.targetScale = mesh === focusedMesh ? cubeSceneTheme.orbitView.focusedScale : 0;
+        mesh.state.targetOpacity = mesh === focusedMesh ? cubeSceneTheme.hover.highlightOpacity : 0;
+        mesh.state.targetOpacityMapMix = mesh === focusedMesh ? 1 : 0;
         if (mesh === focusedMesh) {
           setOrbitViewMaterialTargets(mesh);
         } else {
           setMapViewMaterialTargets(mesh);
         }
-        mesh.userData.targetFrontViewFadeStrength =
+        mesh.state.targetFrontViewFadeStrength =
           mesh === focusedMesh ? cubeSceneTheme.orbitView.frontViewFade.strength : 0;
       });
     };
@@ -1964,9 +1939,7 @@ export default function CubeMapScene({
         return;
       }
 
-      storyThumbnailCube.parent?.remove(storyThumbnailCube);
-      storyThumbnailCube.geometry.dispose();
-      storyThumbnailCube.material.forEach((material) => material.dispose());
+      storyThumbnailCubeParent?.removeThumbnailCube();
       storyThumbnailCube = null;
       storyThumbnailCubeParent = null;
       storyThumbnailCubeMode = null;
@@ -2015,7 +1988,7 @@ export default function CubeMapScene({
       storyThumbnailCube.userData.isStoryThumbnailCube = true;
       storyThumbnailCubeParent = parentMesh;
       storyThumbnailCubeMode = mode;
-      parentMesh.add(storyThumbnailCube);
+      parentMesh.setThumbnailCube(storyThumbnailCube);
       container.dataset.storyThumbnailFaces = faceTextures
         .map((texture) => texture.source?.data?.currentSrc || texture.source?.data?.src || "story-thumbnail")
         .join(",");
@@ -2168,7 +2141,7 @@ export default function CubeMapScene({
 
         chatSortCandidateMeshes = getPlaybooksByFilter(chatSortFilter)
           .map((playbook) =>
-            cubeMeshes.find((mesh) => mesh.userData.playbook?.id === playbook.id),
+            cubeMeshes.find((mesh) => mesh.playbook?.id === playbook.id),
           )
           .filter(Boolean) as CubeMesh[];
         chatSortStage = request.stage;
@@ -2660,47 +2633,47 @@ export default function CubeMapScene({
 
       const sceneTime = frameTime * 0.001;
       cubeMeshes.forEach((mesh) => {
-        const elapsed = frameTime - mesh.userData.enterStart;
+        const elapsed = frameTime - mesh.state.enterStart;
 
         if (elapsed < 0) {
-          mesh.userData.entryProgress = 0;
-        } else if (elapsed < mesh.userData.enterDuration) {
-          mesh.userData.entryProgress = outCirc(elapsed / mesh.userData.enterDuration);
+          mesh.state.entryProgress = 0;
+        } else if (elapsed < mesh.state.enterDuration) {
+          mesh.state.entryProgress = outCirc(elapsed / mesh.state.enterDuration);
         } else {
-          mesh.userData.entryProgress = 1;
-          mesh.userData.entryComplete = true;
+          mesh.state.entryProgress = 1;
+          mesh.state.entryComplete = true;
         }
 
-        mesh.position.lerp(mesh.userData.targetPosition, cubeSceneTheme.hover.positionLerp);
-        targetScaleVector.setScalar(mesh.userData.targetScale * mesh.userData.entryProgress);
+        mesh.position.lerp(mesh.state.targetPosition, cubeSceneTheme.hover.positionLerp);
+        targetScaleVector.setScalar(mesh.state.targetScale * mesh.state.entryProgress);
         mesh.scale.lerp(targetScaleVector, cubeSceneTheme.hover.scaleLerp);
-        const shouldOccludeAxisGuide = viewMode === "map" && mesh.userData.entryProgress > 0.001;
-        mesh.userData.axisDepthOccluder.visible = shouldOccludeAxisGuide;
+        const shouldOccludeAxisGuide = viewMode === "map" && mesh.state.entryProgress > 0.001;
+        mesh.state.axisDepthOccluder.visible = shouldOccludeAxisGuide;
 
         if (shouldOccludeAxisGuide) {
           mesh.updateWorldMatrix(true, false);
-          mesh.userData.axisDepthOccluder.matrix.copy(mesh.matrixWorld);
-          mesh.userData.axisDepthOccluder.matrixWorldNeedsUpdate = true;
-          mesh.userData.axisDepthOccluder.updateMatrixWorld(true);
+          mesh.state.axisDepthOccluder.matrix.copy(mesh.matrixWorld);
+          mesh.state.axisDepthOccluder.matrixWorldNeedsUpdate = true;
+          mesh.state.axisDepthOccluder.updateMatrixWorld(true);
         }
 
         const { material } = mesh;
         const opacity = lerpValue(
           material.uniforms.uOpacity.value,
-          mesh.userData.targetOpacity,
+          mesh.state.targetOpacity,
           cubeSceneTheme.hover.materialLerp,
         );
         material.uniforms.uOpacity.value = opacity;
         material.uniforms.uTime.value = sceneTime;
         material.uniforms.uBaseColor.value.lerp(
-          mesh.userData.targetBaseColor,
+          mesh.state.targetBaseColor,
           cubeSceneTheme.hover.materialLerp,
         );
 
         if (material.uniforms.uOpacityMapMix) {
           material.uniforms.uOpacityMapMix.value = lerpValue(
             material.uniforms.uOpacityMapMix.value,
-            mesh.userData.targetOpacityMapMix,
+            mesh.state.targetOpacityMapMix,
             cubeSceneTheme.orbitView.opacityMaskTransitionLerp,
           );
         }
@@ -2708,7 +2681,7 @@ export default function CubeMapScene({
         if (material.uniforms.uOpacityMaskStrength) {
           material.uniforms.uOpacityMaskStrength.value = lerpValue(
             material.uniforms.uOpacityMaskStrength.value,
-            mesh.userData.targetOpacityMaskStrength,
+            mesh.state.targetOpacityMaskStrength,
             cubeSceneTheme.orbitView.opacityMaskTransitionLerp,
           );
         }
@@ -2716,7 +2689,7 @@ export default function CubeMapScene({
         if (material.uniforms.uEmissiveStrength) {
           material.uniforms.uEmissiveStrength.value = lerpValue(
             material.uniforms.uEmissiveStrength.value,
-            mesh.userData.targetEmissiveStrength,
+            mesh.state.targetEmissiveStrength,
             cubeSceneTheme.hover.materialLerp,
           );
         }
@@ -2724,7 +2697,7 @@ export default function CubeMapScene({
         if (material.uniforms.uFrontViewFadeStrength) {
           material.uniforms.uFrontViewFadeStrength.value = lerpValue(
             material.uniforms.uFrontViewFadeStrength.value,
-            mesh.userData.targetFrontViewFadeStrength,
+            mesh.state.targetFrontViewFadeStrength,
             cubeSceneTheme.orbitView.frontViewFade.transitionLerp,
           );
         }
@@ -2762,9 +2735,9 @@ export default function CubeMapScene({
           if (shouldUseOutlineOcclusion) {
             maskOccludersGroup.visible = true;
             cubeMeshes.forEach((mesh) => {
-              const { maskOccluder } = mesh.userData;
+              const { maskOccluder } = mesh.state;
               const shouldOcclude =
-                mesh !== currentOutlineSource && mesh.userData.entryProgress > 0.001;
+                mesh !== currentOutlineSource && mesh.state.entryProgress > 0.001;
               maskOccluder.visible = shouldOcclude;
 
               if (shouldOcclude) {
