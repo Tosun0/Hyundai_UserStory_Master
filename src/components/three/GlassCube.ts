@@ -424,8 +424,6 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
         uMaxOpacity: { value: glassScatter.maxOpacity },
         uHalfExtent: { value: glassHalfExtent },
         uInstanceOffset: { value: glassTintInstanceOffset },
-        uThumbnailMix: { value: definition.playbook ? 1 : 0 },
-        uWorldOffset: { value: definition.basePosition.clone() },
         uGradientScale: { value: glassScatter.gradientScale },
         uGradientStrength: { value: glassScatter.gradientStrength },
         uTint0: { value: new THREE.Color(glassScatter.colors[0]) },
@@ -435,20 +433,16 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
         uVisibility: { value: 0 },
       },
       vertexShader: `
+        varying vec3 vViewPosition;
+        varying vec3 vViewNormal;
         varying vec3 vLocalPosition;
-        varying vec3 vCameraLocalPosition;
+        varying vec3 vWorldPosition;
         void main() {
           vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+          vViewPosition = viewPosition.xyz;
+          vViewNormal = normalize(normalMatrix * normal);
           vLocalPosition = position;
-          vec3 translation = modelViewMatrix[3].xyz;
-          vec3 axisX = modelViewMatrix[0].xyz;
-          vec3 axisY = modelViewMatrix[1].xyz;
-          vec3 axisZ = modelViewMatrix[2].xyz;
-          vCameraLocalPosition = -vec3(
-            dot(translation, axisX) / max(dot(axisX, axisX), 0.0001),
-            dot(translation, axisY) / max(dot(axisY, axisY), 0.0001),
-            dot(translation, axisZ) / max(dot(axisZ, axisZ), 0.0001)
-          );
+          vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
           gl_Position = projectionMatrix * viewPosition;
         }
       `,
@@ -458,8 +452,6 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
         uniform float uMaxOpacity;
         uniform float uHalfExtent;
         uniform float uInstanceOffset;
-        uniform float uThumbnailMix;
-        uniform vec3 uWorldOffset;
         uniform float uGradientScale;
         uniform float uGradientStrength;
         uniform vec3 uTint0;
@@ -467,8 +459,10 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
         uniform vec3 uTint2;
         uniform vec3 uTint3;
         uniform float uVisibility;
+        varying vec3 vViewPosition;
+        varying vec3 vViewNormal;
         varying vec3 vLocalPosition;
-        varying vec3 vCameraLocalPosition;
+        varying vec3 vWorldPosition;
 
         vec3 sampleScatterTint(float phase) {
           float segment = fract(phase) * 4.0;
@@ -480,76 +474,31 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
         }
 
         void main() {
-          vec3 rayOrigin = vCameraLocalPosition;
-          vec3 rayDirection = normalize(vLocalPosition - rayOrigin);
-          vec3 safeDirection = vec3(
-            abs(rayDirection.x) < 0.0001 ? 0.0001 : rayDirection.x,
-            abs(rayDirection.y) < 0.0001 ? 0.0001 : rayDirection.y,
-            abs(rayDirection.z) < 0.0001 ? 0.0001 : rayDirection.z
+          vec3 viewDirection = normalize(-vViewPosition);
+          float facing = max(abs(dot(normalize(vViewNormal), viewDirection)), 0.18);
+          float pathLength = 1.0 / facing;
+          vec3 localPosition = vLocalPosition / max(uHalfExtent, 0.0001);
+          float worldPhase = dot(
+            vWorldPosition,
+            normalize(vec3(0.57, 0.73, 0.38))
+          ) * uGradientScale;
+          float localPhase = dot(
+            localPosition,
+            normalize(vec3(0.71, 0.43, 0.55))
+          ) * 0.18;
+          float phase = worldPhase + localPhase + uInstanceOffset * 0.42;
+          float cloudA = 0.5 + 0.5 * sin((phase * 0.67 + localPosition.y * 0.12) * 6.283185);
+          float cloudB = 0.5 + 0.5 * sin((phase * 0.41 - localPosition.x * 0.09) * 6.283185);
+          float cloud = smoothstep(0.18, 0.82, cloudA * 0.68 + cloudB * 0.32);
+          vec3 tint = sampleScatterTint(phase);
+          vec3 scatterColor = mix(
+            uColor,
+            tint,
+            uGradientStrength * mix(0.7, 1.0, cloud)
           );
-          vec3 bounds = vec3(uHalfExtent);
-          vec3 firstHit = (-bounds - rayOrigin) / safeDirection;
-          vec3 secondHit = (bounds - rayOrigin) / safeDirection;
-          vec3 nearHit = min(firstHit, secondHit);
-          vec3 farHit = max(firstHit, secondHit);
-          float nearDistance = max(max(nearHit.x, nearHit.y), nearHit.z);
-          float farDistance = min(min(farHit.x, farHit.y), farHit.z);
-          nearDistance = max(nearDistance, 0.0);
-          if (farDistance <= nearDistance) discard;
-
-          float stepLength = (farDistance - nearDistance) / 8.0;
-          vec3 accumulatedColor = vec3(0.0);
-          float accumulatedAlpha = 0.0;
-
-          for (int index = 0; index < 8; index++) {
-            float sampleDistance = nearDistance + (float(index) + 0.5) * stepLength;
-            vec3 samplePosition = rayOrigin + rayDirection * sampleDistance;
-            vec3 normalizedPosition = samplePosition / max(uHalfExtent, 0.0001);
-            float boundaryDistance = max(
-              max(abs(normalizedPosition.x), abs(normalizedPosition.y)),
-              abs(normalizedPosition.z)
-            );
-            float boundaryFade = 1.0 - smoothstep(0.52, 0.96, boundaryDistance);
-            boundaryFade = mix(
-              boundaryFade,
-              max(boundaryFade, 0.42),
-              uThumbnailMix
-            );
-            float coreFade = exp(-dot(normalizedPosition, normalizedPosition) * 0.72);
-            float phase = dot(
-              uWorldOffset + samplePosition,
-              normalize(vec3(0.57, 0.73, 0.38))
-            ) * uGradientScale + uInstanceOffset * 0.42;
-            float cloud = 0.5 + 0.5 * sin(
-              (phase + dot(normalizedPosition, vec3(0.19, -0.13, 0.17))) * 6.283185
-            );
-            cloud = mix(cloud, 0.5, uThumbnailMix * 0.72);
-            vec3 tint = sampleScatterTint(phase + normalizedPosition.y * 0.08);
-            vec3 sampleColor = mix(
-              uColor,
-              tint,
-              uGradientStrength * mix(0.62, 1.0, cloud)
-            );
-            float sampleDensity =
-              uDensity *
-              mix(1.0, 1.35, uThumbnailMix) *
-              boundaryFade *
-              coreFade *
-              mix(0.72, 1.24, cloud);
-            float sampleAlpha = 1.0 - exp(
-              -sampleDensity * stepLength / max(uHalfExtent, 0.0001)
-            );
-            float contribution = (1.0 - accumulatedAlpha) * sampleAlpha;
-            accumulatedColor += sampleColor * contribution;
-            accumulatedAlpha += contribution;
-          }
-
-          float opacity = min(
-            accumulatedAlpha,
-            uMaxOpacity * mix(1.0, 1.18, uThumbnailMix)
-          ) * uVisibility;
-          vec3 color = accumulatedColor / max(accumulatedAlpha, 0.0001);
-          gl_FragColor = vec4(color, opacity);
+          float density = uDensity * mix(0.92, 1.08, cloud);
+          float opacity = min(1.0 - exp(-density * pathLength), uMaxOpacity) * uVisibility;
+          gl_FragColor = vec4(scatterColor, opacity);
         }
       `,
       transparent: true,
