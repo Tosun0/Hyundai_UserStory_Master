@@ -88,6 +88,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   private readonly glassIOR: number;
   private readonly glassDispersion: number;
   private readonly glassThickness: number;
+  private readonly glassEnvMapIntensity: number;
+  private readonly glassSpecularIntensity: number;
+  private readonly glassClearcoatRoughness: number;
   private thumbnailCube: GlassCubeThumbnail | null = null;
 
   constructor({
@@ -173,6 +176,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassIOR = resolvedGlassIOR;
     this.glassDispersion = resolvedGlassDispersion;
     this.glassThickness = resolvedGlassThickness;
+    this.glassEnvMapIntensity = resolvedGlassEnvMapIntensity;
+    this.glassSpecularIntensity = resolvedGlassSpecularIntensity;
+    this.glassClearcoatRoughness = resolvedGlassClearcoatRoughness;
     this.userData.key = definition.node.key;
     this.userData.playbook = definition.playbook;
     this.state = {
@@ -204,7 +210,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       ior: this.glassIOR,
       dispersion: this.glassDispersion,
       transparent: true,
-      opacity: this.glassOpacity,
+      opacity: 0,
       envMapIntensity: resolvedGlassEnvMapIntensity,
       depthWrite: false,
       side: THREE.DoubleSide,
@@ -352,6 +358,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
           metalness: 0,
           side: THREE.DoubleSide,
           toneMapped: true,
+          transparent: true,
+          opacity: 0,
         }),
     );
     const thumbnailCube = new THREE.Mesh(geometry, materials) as GlassCubeThumbnail;
@@ -367,6 +375,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       amount,
     );
     this.thumbnailCube?.material.forEach((material) => {
+      material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, amount);
+      material.depthWrite = material.opacity > 0.05;
       const brightness = THREE.MathUtils.lerp(
         material.color.r,
         Math.max(targetOpacity, 0.28),
@@ -374,6 +384,25 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       );
       material.color.setScalar(brightness);
     });
+  }
+
+  updateInteractionVisual(strength: number, amount: number) {
+    const clampedStrength = THREE.MathUtils.clamp(strength, 0, 1);
+    this.glassShell.material.envMapIntensity = THREE.MathUtils.lerp(
+      this.glassShell.material.envMapIntensity,
+      this.glassEnvMapIntensity * (1 + clampedStrength * 0.14),
+      amount,
+    );
+    this.glassShell.material.specularIntensity = THREE.MathUtils.lerp(
+      this.glassShell.material.specularIntensity,
+      Math.min(1, this.glassSpecularIntensity + clampedStrength * 0.08),
+      amount,
+    );
+    this.glassShell.material.clearcoatRoughness = THREE.MathUtils.lerp(
+      this.glassShell.material.clearcoatRoughness,
+      Math.max(0.01, this.glassClearcoatRoughness * (1 - clampedStrength * 0.3)),
+      amount,
+    );
   }
 
   updateRefractionStrength(strength: number) {

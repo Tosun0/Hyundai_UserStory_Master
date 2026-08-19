@@ -103,10 +103,6 @@ type GridPlaneOptions = {
   skipSecondaryLines?: number[];
 };
 
-function outCirc(t: number) {
-  return Math.sqrt(1 - Math.pow(Math.min(t, 1) - 1, 2));
-}
-
 function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - THREE.MathUtils.clamp(t, 0, 1), 3);
 }
@@ -1219,6 +1215,7 @@ export default function CubeMapScene({
     const pointerDownPosition = new THREE.Vector2();
     const spreadDirection = new THREE.Vector3();
     const targetScaleVector = new THREE.Vector3();
+    const entryPositionVector = new THREE.Vector3();
     const refractionWorldPosition = new THREE.Vector3();
     const orbitCameraOffset = new THREE.Vector3();
     const searchZoomTarget = new THREE.Vector3();
@@ -2696,16 +2693,32 @@ export default function CubeMapScene({
         if (elapsed < 0) {
           mesh.state.entryProgress = 0;
         } else if (elapsed < mesh.state.enterDuration) {
-          mesh.state.entryProgress = outCirc(elapsed / mesh.state.enterDuration);
+          mesh.state.entryProgress = easeOutCubic(elapsed / mesh.state.enterDuration);
         } else {
           mesh.state.entryProgress = 1;
           mesh.state.entryComplete = true;
         }
 
-        mesh.position.lerp(mesh.state.targetPosition, cubeSceneTheme.hover.positionLerp);
-        targetScaleVector.setScalar(mesh.state.targetScale * mesh.state.entryProgress);
+        const entryVisibility = THREE.MathUtils.smoothstep(
+          mesh.state.entryProgress,
+          0,
+          cubeSceneTheme.cube.enterFadeEnd,
+        );
+        entryPositionVector.copy(mesh.state.targetPosition);
+        entryPositionVector.y +=
+          cubeSceneTheme.cube.enterLift * (1 - mesh.state.entryProgress);
+        mesh.position.lerp(entryPositionVector, cubeSceneTheme.hover.positionLerp);
+        const entryScale =
+          mesh.state.entryProgress <= 0
+            ? 0
+            : THREE.MathUtils.lerp(
+                cubeSceneTheme.cube.enterStartScale,
+                mesh.state.targetScale,
+                mesh.state.entryProgress,
+              );
+        targetScaleVector.setScalar(entryScale);
         mesh.scale.lerp(targetScaleVector, cubeSceneTheme.hover.scaleLerp);
-        const shouldOccludeAxisGuide = viewMode === "map" && mesh.state.entryProgress > 0.001;
+        const shouldOccludeAxisGuide = viewMode === "map" && entryVisibility > 0.01;
         mesh.state.axisDepthOccluder.visible = shouldOccludeAxisGuide;
 
         if (shouldOccludeAxisGuide) {
@@ -2716,9 +2729,10 @@ export default function CubeMapScene({
         }
 
         const { material } = mesh;
+        const visualOpacity = mesh.state.targetOpacity * entryVisibility;
         const opacity = lerpValue(
           material.uniforms.uOpacity.value,
-          mesh.state.targetOpacity,
+          visualOpacity,
           cubeSceneTheme.hover.materialLerp,
         );
         material.uniforms.uOpacity.value = opacity;
@@ -2762,7 +2776,16 @@ export default function CubeMapScene({
 
         material.opacity = opacity;
         mesh.updateVisualOpacity(
-          mesh.state.targetOpacity,
+          visualOpacity,
+          cubeSceneTheme.hover.materialLerp,
+        );
+        mesh.updateInteractionVisual(
+          mesh === hovered ||
+            mesh === focusedMesh ||
+            mesh === selectedMesh ||
+            outlineSources.includes(mesh)
+            ? 1
+            : 0,
           cubeSceneTheme.hover.materialLerp,
         );
         mesh.getWorldPosition(refractionWorldPosition);
