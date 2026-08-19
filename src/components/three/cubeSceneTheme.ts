@@ -92,7 +92,7 @@ export const cubeOrbitParallaxConfig = {
 export const cubeSceneTheme = {
   background: "#d6d6d6",
   rendering: {
-    toneMappingExposure: 0.9,
+    toneMappingExposure: 1.15,
   },
   fog: {
     density: 0.0004,
