@@ -4,7 +4,6 @@ import type { CubeMapOverviewNode } from "./cubeMapData";
 import type { PlaybookItem } from "../../data/playbookCatalog";
 
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
-export const GLASS_BLOOM_LAYER = 1;
 
 export function createThumbnailMaterial(texture: THREE.Texture) {
   return new THREE.MeshBasicMaterial({
@@ -292,8 +291,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
             vec3 gradeGlassFresnelTint(vec3 color, float strength) {
               float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-              vec3 saturated = mix(vec3(luminance), color, 1.35);
-              vec3 lifted = pow(max(saturated, vec3(0.0)), vec3(0.82));
+              vec3 saturated = mix(vec3(luminance), color, 1.15);
+              vec3 lifted = pow(max(saturated, vec3(0.0)), vec3(0.9));
               return lifted * strength;
             }
 
@@ -406,7 +405,6 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassShell.name = "Glass Shell";
     this.glassShell.frustumCulled = false;
     this.glassShell.renderOrder = 2;
-    this.glassShell.layers.enable(GLASS_BLOOM_LAYER);
     this.add(this.glassShell);
 
     const scatterMaterial = new THREE.ShaderMaterial({
