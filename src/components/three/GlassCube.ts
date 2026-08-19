@@ -61,7 +61,9 @@ type GlassCubeOptions = {
     worldScale: number;
     viewShift: number;
     instanceShift: number;
+    instanceBlend: number;
     colors: readonly [
+      THREE.ColorRepresentation,
       THREE.ColorRepresentation,
       THREE.ColorRepresentation,
       THREE.ColorRepresentation,
@@ -219,12 +221,14 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       shader.uniforms.uGlassTintWorldScale = { value: glassFresnelTint.worldScale };
       shader.uniforms.uGlassTintViewShift = { value: glassFresnelTint.viewShift };
       shader.uniforms.uGlassTintInstanceShift = { value: glassFresnelTint.instanceShift };
+      shader.uniforms.uGlassTintInstanceBlend = { value: glassFresnelTint.instanceBlend };
       shader.uniforms.uGlassTintInstanceOffset = { value: glassTintInstanceOffset };
       shader.uniforms.uGlassTint0 = { value: new THREE.Color(glassFresnelTint.colors[0]) };
       shader.uniforms.uGlassTint1 = { value: new THREE.Color(glassFresnelTint.colors[1]) };
       shader.uniforms.uGlassTint2 = { value: new THREE.Color(glassFresnelTint.colors[2]) };
       shader.uniforms.uGlassTint3 = { value: new THREE.Color(glassFresnelTint.colors[3]) };
       shader.uniforms.uGlassTint4 = { value: new THREE.Color(glassFresnelTint.colors[4]) };
+      shader.uniforms.uGlassTint5 = { value: new THREE.Color(glassFresnelTint.colors[5]) };
       shader.vertexShader = shader.vertexShader
         .replace(
           "varying vec3 vViewPosition;",
@@ -263,20 +267,23 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             uniform float uGlassTintWorldScale;
             uniform float uGlassTintViewShift;
             uniform float uGlassTintInstanceShift;
+            uniform float uGlassTintInstanceBlend;
             uniform float uGlassTintInstanceOffset;
             uniform vec3 uGlassTint0;
             uniform vec3 uGlassTint1;
             uniform vec3 uGlassTint2;
             uniform vec3 uGlassTint3;
             uniform vec3 uGlassTint4;
+            uniform vec3 uGlassTint5;
 
             vec3 sampleGlassFresnelTint(float phase) {
-              float segment = abs(fract(phase * 0.5) * 2.0 - 1.0) * 4.0;
+              float segment = abs(fract(phase * 0.5) * 2.0 - 1.0) * 5.0;
               float blend = smoothstep(0.0, 1.0, fract(segment));
               if (segment < 1.0) return mix(uGlassTint0, uGlassTint1, blend);
               if (segment < 2.0) return mix(uGlassTint1, uGlassTint2, blend);
               if (segment < 3.0) return mix(uGlassTint2, uGlassTint3, blend);
-              return mix(uGlassTint3, uGlassTint4, blend);
+              if (segment < 4.0) return mix(uGlassTint3, uGlassTint4, blend);
+              return mix(uGlassTint4, uGlassTint5, blend);
             }
           `,
         )
@@ -316,13 +323,23 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
               clamp(1.0 - abs(dot(normalize(normal), glassViewDirection)), 0.0, 1.0),
               uGlassFresnelPower
             );
-            float glassTintPhase =
-              dot(vGlassWorldPosition, normalize(vec3(0.72, 0.43, 0.55))) *
-                uGlassTintWorldScale +
-              uGlassTintInstanceOffset * uGlassTintInstanceShift +
+            float glassViewTintPhase =
               dot(glassViewDirection, normalize(vec3(0.31, 0.67, 0.47))) *
                 uGlassTintViewShift;
-            vec3 glassFresnelTint = sampleGlassFresnelTint(glassTintPhase);
+            float glassWorldTintPhase =
+              dot(vGlassWorldPosition, normalize(vec3(0.72, 0.43, 0.55))) *
+                uGlassTintWorldScale +
+              glassViewTintPhase;
+            float glassInstanceTintPhase =
+              uGlassTintInstanceOffset * uGlassTintInstanceShift +
+              glassViewTintPhase * 0.35;
+            vec3 glassWorldTint = sampleGlassFresnelTint(glassWorldTintPhase);
+            vec3 glassInstanceTint = sampleGlassFresnelTint(glassInstanceTintPhase);
+            vec3 glassFresnelTint = mix(
+              glassWorldTint,
+              glassInstanceTint,
+              uGlassTintInstanceBlend
+            );
             totalEmissiveRadiance +=
               glassFresnelTint * glassFresnelTintMask * uGlassTintEmissionStrength;
           `,
