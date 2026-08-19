@@ -94,6 +94,11 @@ export const cubeSceneTheme = {
   rendering: {
     toneMappingExposure: 1.15,
     environmentRotation: [0, (Math.PI / 2) + (Math.PI / 9), 0] as const,
+    bloom: {
+      threshold: 1.05,
+      strength: 0.75,
+      radius: 0.55,
+    },
   },
   fog: {
     density: 0.0004,
@@ -189,7 +194,7 @@ export const cubeSceneTheme = {
       fresnelPower: 1.25,
       fresnelTint: {
         strength: 0.95,
-        emissionStrength: 0.1,
+        emissionStrength: 0.65,
         gradeStrength: 1.45,
         worldScale: 0.045,
         viewShift: 0.14,
@@ -210,9 +215,9 @@ export const cubeSceneTheme = {
       clearcoat: 0.35,
       clearcoatRoughness: 0.08,
       scatter: {
-        color: "#eef7ff",
-        density: 0.18,
-        maxOpacity: 0.26,
+        color: "#b9c7ff",
+        density: 0.2,
+        maxOpacity: 0.28,
         scale: 0.94,
       },
       attenuationColor: "#dcecff",

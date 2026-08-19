@@ -3,6 +3,10 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import {
   aiChatSortConfig,
   type AiChatSortRequest,
@@ -986,6 +990,18 @@ export default function CubeMapScene({
     camera.position
       .copy(GRAPH_CENTER)
       .add(cameraOffset.normalize().multiplyScalar(cubeSceneTheme.camera.distance));
+
+    const composer = new EffectComposer(renderer);
+    const renderPass = new RenderPass(scene, camera);
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(1, 1),
+      cubeSceneTheme.rendering.bloom.strength,
+      cubeSceneTheme.rendering.bloom.radius,
+      cubeSceneTheme.rendering.bloom.threshold,
+    );
+    composer.addPass(renderPass);
+    composer.addPass(bloomPass);
+    composer.addPass(new OutputPass());
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -2818,6 +2834,7 @@ export default function CubeMapScene({
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
+      composer.setSize(width, height);
 
       const pixelRatio = renderer.getPixelRatio();
       const bufferWidth = Math.max(1, Math.floor(width * pixelRatio));
@@ -3054,7 +3071,7 @@ export default function CubeMapScene({
       renderer.setRenderTarget(null);
       renderer.setClearColor(cubeSceneTheme.background, 0);
       renderer.clear(true, true, true);
-      renderer.render(scene, camera);
+      composer.render();
 
       if (axisGuideGroup.visible) {
         renderer.render(axisDepthScene, camera);
@@ -3114,6 +3131,7 @@ export default function CubeMapScene({
       axisDepthOccluderMaterial.dispose();
       overlayGeometry.dispose();
       outlineMaterial.dispose();
+      composer.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
