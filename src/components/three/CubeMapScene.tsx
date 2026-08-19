@@ -47,7 +47,7 @@ const GRAPH_CENTER = new THREE.Vector3(SIZE / 2, SIZE / 2, SIZE / 2);
 const GRID_MIN = -CUBE_MAP_UNIT / 2;
 const GRID_MAX = SIZE + CUBE_MAP_UNIT / 2;
 const GRID_VISIBILITY_VECTOR = new THREE.Vector3();
-const SEARCH_DIMMED_OPACITY = 0.1;
+const SEARCH_DIMMED_OPACITY = 0.28;
 const EMPTY_SPACE_CLICK_THRESHOLD = 6;
 
 type VectorTuple = readonly [number, number, number];
