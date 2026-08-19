@@ -404,13 +404,6 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     );
   }
 
-  updateRefractionStrength(strength: number) {
-    const clampedStrength = THREE.MathUtils.clamp(strength, 0, 1);
-    this.glassShell.material.ior = THREE.MathUtils.lerp(1.02, this.glassIOR, clampedStrength);
-    this.glassShell.material.thickness = this.glassThickness * clampedStrength;
-    this.glassShell.material.dispersion = this.glassDispersion * clampedStrength;
-  }
-
   removeThumbnailCube() {
     if (!this.thumbnailCube) {
       return;

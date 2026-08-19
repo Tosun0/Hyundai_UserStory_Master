@@ -219,11 +219,6 @@ export const cubeSceneTheme = {
       },
       attenuationColor: "#ffffff",
       attenuationDistance: 7.5,
-      refractionDistance: {
-        near: 300,
-        far: 900,
-        minimumStrength: 0.12,
-      },
       thumbnailScale: 0.9,
     },
     shader: {
