@@ -870,6 +870,7 @@ export default function CubeMapScene({
     const scene = new THREE.Scene();
     scene.background = null;
     scene.fog = new THREE.FogExp2(cubeSceneTheme.background, cubeSceneTheme.fog.density);
+    scene.environmentRotation.set(...cubeSceneTheme.rendering.environmentRotation);
 
     const renderer = new THREE.WebGLRenderer({
       antialias: true,

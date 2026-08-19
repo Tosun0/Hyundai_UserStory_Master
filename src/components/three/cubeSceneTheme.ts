@@ -93,6 +93,7 @@ export const cubeSceneTheme = {
   background: "#d6d6d6",
   rendering: {
     toneMappingExposure: 1.15,
+    environmentRotation: [0, Math.PI / 2, 0] as const,
   },
   fog: {
     density: 0.0004,
