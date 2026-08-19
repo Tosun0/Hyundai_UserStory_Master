@@ -2887,8 +2887,10 @@ export default function CubeMapScene({
           position: entryPositionVector,
           rotation: mesh.rotation,
           basePosition: mesh.basePosition,
+          center: GRAPH_CENTER,
           sceneTime,
           strength: idleMotionBlend * mesh.state.entryProgress,
+          unit: CUBE_MAP_UNIT,
           config: cubeSceneTheme.cube.idleMotion,
         });
         const isFocusTransitionMesh = orbitCameraTransition && mesh === focusedMesh;

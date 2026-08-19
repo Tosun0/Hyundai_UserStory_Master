@@ -264,7 +264,11 @@ export const cubeSceneTheme = {
     idleMotion: {
       enabled: true,
       periodSeconds: 9.5,
-      verticalAmplitude: 0.42,
+      normalWavePeriodSeconds: 6.8,
+      normalWaveAmplitude: 0.34,
+      normalWaveLayerDelay: 0.62,
+      normalWaveRotationAmplitude: 0.012,
+      verticalAmplitude: 0.28,
       lateralAmplitude: 0.16,
       depthAmplitude: 0.2,
       rotationAmplitude: [0.009, 0.014, 0.007] as const,
