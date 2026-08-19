@@ -201,8 +201,8 @@ export const cubeSceneTheme = {
       clearcoatRoughness: 0.025,
       scatter: {
         color: "#eef7ff",
-        centerOpacity: 0.18,
-        edgeOpacity: 0.035,
+        density: 0.12,
+        maxOpacity: 0.18,
         scale: 0.94,
       },
       attenuationColor: "#dcecff",

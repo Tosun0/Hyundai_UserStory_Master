@@ -3009,15 +3009,6 @@ export default function CubeMapScene({
           visualOpacity,
           cubeSceneTheme.hover.materialLerp,
         );
-        mesh.updateInteractionVisual(
-          mesh === hovered ||
-            mesh === focusedMesh ||
-            mesh === selectedMesh ||
-            outlineSources.includes(mesh)
-            ? 1
-            : 0,
-          cubeSceneTheme.hover.materialLerp,
-        );
       });
 
       const activeOutlineSources = outlineSources;

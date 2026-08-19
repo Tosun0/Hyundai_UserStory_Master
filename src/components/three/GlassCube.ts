@@ -69,8 +69,8 @@ type GlassCubeOptions = {
   glassClearcoatRoughness: number;
   glassScatter: {
     color: THREE.ColorRepresentation;
-    centerOpacity: number;
-    edgeOpacity: number;
+    density: number;
+    maxOpacity: number;
     scale: number;
   };
   glassAttenuationColor: THREE.ColorRepresentation;
@@ -93,9 +93,6 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   private readonly glassIOR: number;
   private readonly glassDispersion: number;
   private readonly glassThickness: number;
-  private readonly glassEnvMapIntensity: number;
-  private readonly glassSpecularIntensity: number;
-  private readonly glassClearcoatRoughness: number;
   private thumbnailCube: GlassCubeThumbnail | null = null;
 
   constructor({
@@ -140,9 +137,6 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassIOR = glassIOR;
     this.glassDispersion = glassDispersion;
     this.glassThickness = glassThickness;
-    this.glassEnvMapIntensity = glassEnvMapIntensity;
-    this.glassSpecularIntensity = glassSpecularIntensity;
-    this.glassClearcoatRoughness = glassClearcoatRoughness;
     this.userData.key = definition.node.key;
     this.userData.playbook = definition.playbook;
     this.state = {
@@ -275,39 +269,32 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       name: "MI_GlassScatter",
       uniforms: {
         uColor: { value: new THREE.Color(glassScatter.color) },
-        uCenterOpacity: { value: glassScatter.centerOpacity },
-        uEdgeOpacity: { value: glassScatter.edgeOpacity },
-        uHalfExtent: { value: glassHalfExtent },
+        uDensity: { value: glassScatter.density },
+        uMaxOpacity: { value: glassScatter.maxOpacity },
         uVisibility: { value: 0 },
       },
       vertexShader: `
-        varying vec3 vLocalPosition;
-        varying vec3 vLocalNormal;
+        varying vec3 vViewPosition;
+        varying vec3 vViewNormal;
         void main() {
-          vLocalPosition = position;
-          vLocalNormal = normal;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+          vViewPosition = viewPosition.xyz;
+          vViewNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * viewPosition;
         }
       `,
       fragmentShader: `
         uniform vec3 uColor;
-        uniform float uCenterOpacity;
-        uniform float uEdgeOpacity;
-        uniform float uHalfExtent;
+        uniform float uDensity;
+        uniform float uMaxOpacity;
         uniform float uVisibility;
-        varying vec3 vLocalPosition;
-        varying vec3 vLocalNormal;
+        varying vec3 vViewPosition;
+        varying vec3 vViewNormal;
         void main() {
-          vec3 axis = abs(normalize(vLocalNormal));
-          vec2 facePosition = axis.x >= axis.y && axis.x >= axis.z
-            ? vLocalPosition.zy
-            : axis.y >= axis.z
-              ? vLocalPosition.xz
-              : vLocalPosition.xy;
-          float radius = max(abs(facePosition.x), abs(facePosition.y)) /
-            max(uHalfExtent, 0.0001);
-          float feather = smoothstep(0.18, 1.0, radius);
-          float opacity = mix(uCenterOpacity, uEdgeOpacity, feather) * uVisibility;
+          vec3 viewDirection = normalize(-vViewPosition);
+          float facing = max(abs(dot(normalize(vViewNormal), viewDirection)), 0.18);
+          float pathLength = 1.0 / facing;
+          float opacity = min(1.0 - exp(-uDensity * pathLength), uMaxOpacity) * uVisibility;
           gl_FragColor = vec4(uColor, opacity);
         }
       `,
@@ -393,25 +380,6 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       );
       material.color.setScalar(brightness);
     });
-  }
-
-  updateInteractionVisual(strength: number, amount: number) {
-    const clampedStrength = THREE.MathUtils.clamp(strength, 0, 1);
-    this.glassShell.material.envMapIntensity = THREE.MathUtils.lerp(
-      this.glassShell.material.envMapIntensity,
-      this.glassEnvMapIntensity * (1 + clampedStrength * 0.14),
-      amount,
-    );
-    this.glassShell.material.specularIntensity = THREE.MathUtils.lerp(
-      this.glassShell.material.specularIntensity,
-      Math.min(1, this.glassSpecularIntensity + clampedStrength * 0.08),
-      amount,
-    );
-    this.glassShell.material.clearcoatRoughness = THREE.MathUtils.lerp(
-      this.glassShell.material.clearcoatRoughness,
-      Math.max(0.01, this.glassClearcoatRoughness * (1 - clampedStrength * 0.3)),
-      amount,
-    );
   }
 
   removeThumbnailCube() {
