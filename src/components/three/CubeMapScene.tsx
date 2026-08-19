@@ -87,8 +87,10 @@ type SearchHighlightZoomState = {
 
 type OrbitCameraTransitionState = SearchHighlightZoomState & {
   direction: "in" | "out";
+  durationMs: number;
   fromFocusOffset?: THREE.Vector3;
   toFocusOffset?: THREE.Vector3;
+  focusArcQuaternion?: THREE.Quaternion;
   fromFocusPosition?: THREE.Vector3;
   toFocusPosition?: THREE.Vector3;
   fromFocusScale?: number;
@@ -1258,6 +1260,8 @@ export default function CubeMapScene({
     const refractionWorldPosition = new THREE.Vector3();
     const orbitCameraOffset = new THREE.Vector3();
     const orbitTransitionOffset = new THREE.Vector3();
+    const orbitTransitionRotation = new THREE.Quaternion();
+    const orbitIdentityRotation = new THREE.Quaternion();
     const searchZoomTarget = new THREE.Vector3();
     const searchZoomOffset = new THREE.Vector3();
     const parallaxBasePosition = new THREE.Vector3();
@@ -1705,15 +1709,30 @@ export default function CubeMapScene({
         .normalize()
         .multiplyScalar(cubeSceneTheme.orbitView.cameraDistance);
       const focusPosition = focusedMesh?.position ?? GRAPH_CENTER;
+      const fromFocusOffset = camera.position.clone().sub(focusPosition);
+      const toFocusOffset = orbitCameraOffset.clone();
+      const focusArcQuaternion = new THREE.Quaternion().setFromUnitVectors(
+        fromFocusOffset.clone().normalize(),
+        toFocusOffset.clone().normalize(),
+      );
+      const focusArcRatio = fromFocusOffset.angleTo(toFocusOffset) / Math.PI;
       orbitCameraTransition = {
         startTime: performance.now(),
+        durationMs:
+          cubeSceneTheme.orbitView.cameraTransitionDurationMs *
+          THREE.MathUtils.lerp(
+            1,
+            cubeSceneTheme.orbitView.oppositeViewDurationMultiplier,
+            focusArcRatio,
+          ),
         fromPosition: camera.position.clone(),
         fromTarget: focusPosition.clone(),
         toPosition: GRAPH_CENTER.clone().add(orbitCameraOffset),
         toTarget: GRAPH_CENTER.clone(),
         direction: "in",
-        fromFocusOffset: camera.position.clone().sub(focusPosition),
-        toFocusOffset: orbitCameraOffset.clone(),
+        fromFocusOffset,
+        toFocusOffset,
+        focusArcQuaternion,
         fromFocusPosition: focusPosition.clone(),
         toFocusPosition: focusedMesh?.state.targetPosition.clone(),
         fromFocusScale: focusedMesh?.scale.x,
@@ -1809,8 +1828,7 @@ export default function CubeMapScene({
 
       const transition = orbitCameraTransition;
       const progress =
-        (frameTime - transition.startTime) /
-        cubeSceneTheme.orbitView.cameraTransitionDurationMs;
+        (frameTime - transition.startTime) / transition.durationMs;
       const easedProgress = easeInOutCubic(progress);
 
       if (
@@ -1838,13 +1856,25 @@ export default function CubeMapScene({
         transition.direction === "in" &&
         focusedMesh &&
         transition.fromFocusOffset &&
-        transition.toFocusOffset
+        transition.toFocusOffset &&
+        transition.focusArcQuaternion
       ) {
-        orbitTransitionOffset.lerpVectors(
-          transition.fromFocusOffset,
-          transition.toFocusOffset,
+        orbitTransitionRotation.slerpQuaternions(
+          orbitIdentityRotation,
+          transition.focusArcQuaternion,
           easedProgress,
         );
+        orbitTransitionOffset
+          .copy(transition.fromFocusOffset)
+          .normalize()
+          .applyQuaternion(orbitTransitionRotation)
+          .multiplyScalar(
+            THREE.MathUtils.lerp(
+              transition.fromFocusOffset.length(),
+              transition.toFocusOffset.length(),
+              easedProgress,
+            ),
+          );
         controls.target.copy(focusedMesh.position);
         camera.position.copy(focusedMesh.position).add(orbitTransitionOffset);
       } else {
@@ -2210,6 +2240,7 @@ export default function CubeMapScene({
       const returnTarget = savedMapCameraState?.target ?? GRAPH_CENTER;
       orbitCameraTransition = {
         startTime: performance.now(),
+        durationMs: cubeSceneTheme.orbitView.cameraTransitionDurationMs,
         fromPosition: camera.position.clone(),
         fromTarget: controls.target.clone(),
         toPosition: returnPosition.clone(),
