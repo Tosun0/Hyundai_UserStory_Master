@@ -88,6 +88,9 @@ type GlassCubeOptions = {
     color: THREE.ColorRepresentation;
     density: number;
     maxOpacity: number;
+    thumbnailColor: THREE.ColorRepresentation;
+    thumbnailDensity: number;
+    thumbnailMaxOpacity: number;
     scale: number;
   };
   glassAttenuationColor: THREE.ColorRepresentation;
@@ -407,12 +410,21 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassShell.renderOrder = 2;
     this.add(this.glassShell);
 
+    const hasThumbnail = Boolean(definition.playbook);
     const scatterMaterial = new THREE.ShaderMaterial({
       name: "MI_GlassScatter",
       uniforms: {
-        uColor: { value: new THREE.Color(glassScatter.color) },
-        uDensity: { value: glassScatter.density },
-        uMaxOpacity: { value: glassScatter.maxOpacity },
+        uColor: {
+          value: new THREE.Color(
+            hasThumbnail ? glassScatter.thumbnailColor : glassScatter.color,
+          ),
+        },
+        uDensity: {
+          value: hasThumbnail ? glassScatter.thumbnailDensity : glassScatter.density,
+        },
+        uMaxOpacity: {
+          value: hasThumbnail ? glassScatter.thumbnailMaxOpacity : glassScatter.maxOpacity,
+        },
         uVisibility: { value: 0 },
       },
       vertexShader: `
