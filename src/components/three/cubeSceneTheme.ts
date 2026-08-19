@@ -173,7 +173,7 @@ export const cubeSceneTheme = {
     opacity: 1,
     playbookThumbnailOpacity: 0.92,
     glass: {
-      color: "#f2f1ff",
+      color: "#ffffff",
       roughness: 0.02,
       edgeRoughness: 0.2,
       edgeWidth: 0.14,
@@ -189,8 +189,13 @@ export const cubeSceneTheme = {
       opacity: 1,
       envMapIntensity: 1.35,
       specularIntensity: 1,
-      attenuationColor: "#f7f3ff",
+      attenuationColor: "#ffffff",
       attenuationDistance: 7.5,
+      refractionDistance: {
+        near: 300,
+        far: 900,
+        minimumStrength: 0.12,
+      },
       thumbnailScale: 0.9,
     },
     shader: {

@@ -1216,6 +1216,7 @@ export default function CubeMapScene({
     const pointerDownPosition = new THREE.Vector2();
     const spreadDirection = new THREE.Vector3();
     const targetScaleVector = new THREE.Vector3();
+    const refractionWorldPosition = new THREE.Vector3();
     const orbitCameraOffset = new THREE.Vector3();
     const searchZoomTarget = new THREE.Vector3();
     const searchZoomOffset = new THREE.Vector3();
@@ -2760,6 +2761,21 @@ export default function CubeMapScene({
         mesh.updateVisualOpacity(
           mesh.state.targetOpacity,
           cubeSceneTheme.hover.materialLerp,
+        );
+        mesh.getWorldPosition(refractionWorldPosition);
+        const refractionDistanceFade =
+          1 -
+          THREE.MathUtils.smoothstep(
+            camera.position.distanceTo(refractionWorldPosition),
+            cubeSceneTheme.cube.glass.refractionDistance.near,
+            cubeSceneTheme.cube.glass.refractionDistance.far,
+          );
+        mesh.updateRefractionStrength(
+          THREE.MathUtils.lerp(
+            cubeSceneTheme.cube.glass.refractionDistance.minimumStrength,
+            1,
+            refractionDistanceFade,
+          ),
         );
       });
 
