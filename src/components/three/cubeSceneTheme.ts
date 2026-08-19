@@ -268,7 +268,7 @@ export const cubeSceneTheme = {
       normalWaveAmplitude: 0.48,
       normalWaveSpatialFrequency: 0.86,
       normalWavePulsePower: 2.6,
-      normalWaveScaleAmplitude: 0.035,
+      normalWaveScaleAmplitude: 0.1,
       normalWaveRotationAmplitude: 0.01,
       verticalAmplitude: 0.14,
       lateralAmplitude: 0.12,
