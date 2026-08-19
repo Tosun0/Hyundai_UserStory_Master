@@ -1214,6 +1214,7 @@ export default function CubeMapScene({
           glassClearcoat: cubeSceneTheme.cube.glass.clearcoat,
           glassClearcoatRoughness: cubeSceneTheme.cube.glass.clearcoatRoughness,
           thumbnailBlurRadius: cubeSceneTheme.cube.glass.thumbnailBlurRadius,
+          thumbnailEdgeFeather: cubeSceneTheme.cube.glass.thumbnailEdgeFeather,
           glassEmptyOverrides: cubeSceneTheme.cube.glass.instances.empty,
           glassAttenuationColor: cubeSceneTheme.cube.glass.attenuationColor,
           glassAttenuationDistance: cubeSceneTheme.cube.glass.attenuationDistance,
@@ -2208,6 +2209,7 @@ export default function CubeMapScene({
             texture,
             1,
             cubeSceneTheme.cube.glass.thumbnailBlurRadius,
+            cubeSceneTheme.cube.glass.thumbnailEdgeFeather,
           ),
       );
 

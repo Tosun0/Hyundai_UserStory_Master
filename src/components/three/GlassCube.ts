@@ -9,6 +9,7 @@ export function createThumbnailMaterial(
   texture: THREE.Texture,
   opacity = 1,
   blurRadius = 0,
+  edgeFeather = 0,
 ) {
   const image = texture.image as { width?: number; height?: number } | undefined;
   const texelSize = new THREE.Vector2(
@@ -23,7 +24,7 @@ export function createThumbnailMaterial(
     envMapIntensity: 0.42,
     side: THREE.FrontSide,
     toneMapped: true,
-    transparent: opacity < 1,
+    transparent: true,
     opacity,
     depthTest: true,
     depthWrite: false,
@@ -32,9 +33,11 @@ export function createThumbnailMaterial(
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uThumbnailTexelSize = { value: texelSize };
     shader.uniforms.uThumbnailBlurRadius = { value: blurRadius };
+    shader.uniforms.uThumbnailEdgeFeather = { value: edgeFeather };
     shader.fragmentShader = `
       uniform vec2 uThumbnailTexelSize;
       uniform float uThumbnailBlurRadius;
+      uniform float uThumbnailEdgeFeather;
       ${shader.fragmentShader}
     `;
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -56,11 +59,21 @@ export function createThumbnailMaterial(
           #endif
           diffuseColor *= sampledDiffuseColor;
         #endif
-        diffuseColor.a = opacity;
+        float thumbnailEdgeDistance = min(
+          min(vMapUv.x, 1.0 - vMapUv.x),
+          min(vMapUv.y, 1.0 - vMapUv.y)
+        );
+        float thumbnailEdgeAlpha = smoothstep(
+          0.0,
+          max(uThumbnailEdgeFeather, 0.0001),
+          thumbnailEdgeDistance
+        );
+        diffuseColor.a = opacity * thumbnailEdgeAlpha;
       `,
     );
   };
-  material.customProgramCacheKey = () => `thumbnail-blur-${blurRadius}-v1`;
+  material.customProgramCacheKey = () =>
+    `thumbnail-blur-${blurRadius}-feather-${edgeFeather}-v1`;
   return material;
 }
 
@@ -113,6 +126,7 @@ type GlassCubeOptions = {
   glassClearcoat: number;
   glassClearcoatRoughness: number;
   thumbnailBlurRadius: number;
+  thumbnailEdgeFeather: number;
   glassEmptyOverrides: {
     roughness: number;
     edgeRoughness: number;
@@ -152,6 +166,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   private readonly glassSpecularIntensity: number;
   private readonly glassClearcoatRoughness: number;
   private readonly thumbnailBlurRadius: number;
+  private readonly thumbnailEdgeFeather: number;
   private thumbnailCube: GlassCubeThumbnail | null = null;
 
   constructor({
@@ -178,6 +193,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     glassClearcoat,
     glassClearcoatRoughness,
     thumbnailBlurRadius,
+    thumbnailEdgeFeather,
     glassEmptyOverrides,
     glassAttenuationColor,
     glassAttenuationDistance,
@@ -242,6 +258,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassSpecularIntensity = resolvedGlassSpecularIntensity;
     this.glassClearcoatRoughness = resolvedGlassClearcoatRoughness;
     this.thumbnailBlurRadius = thumbnailBlurRadius;
+    this.thumbnailEdgeFeather = thumbnailEdgeFeather;
     this.userData.key = definition.node.key;
     this.userData.playbook = definition.playbook;
     this.state = {
@@ -414,7 +431,13 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     const geometry = new THREE.BoxGeometry(size, size, size);
     const materials = Array.from(
       { length: 6 },
-      () => createThumbnailMaterial(texture, 0, this.thumbnailBlurRadius),
+      () =>
+        createThumbnailMaterial(
+          texture,
+          0,
+          this.thumbnailBlurRadius,
+          this.thumbnailEdgeFeather,
+        ),
     );
     const thumbnailCube = new THREE.Mesh(geometry, materials) as GlassCubeThumbnail;
     thumbnailCube.name = "Thumbnail Cube";
