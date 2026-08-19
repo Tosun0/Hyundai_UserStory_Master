@@ -207,11 +207,11 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       shader.uniforms.uGlassTintStrength = { value: glassFresnelTint.strength };
       shader.uniforms.uGlassTintWorldScale = { value: glassFresnelTint.worldScale };
       shader.uniforms.uGlassTintViewShift = { value: glassFresnelTint.viewShift };
-      shader.uniforms.uGlassTintBlue = { value: new THREE.Color(glassFresnelTint.colors[0]) };
-      shader.uniforms.uGlassTintMint = { value: new THREE.Color(glassFresnelTint.colors[1]) };
-      shader.uniforms.uGlassTintGreen = { value: new THREE.Color(glassFresnelTint.colors[2]) };
-      shader.uniforms.uGlassTintPurple = { value: new THREE.Color(glassFresnelTint.colors[3]) };
-      shader.uniforms.uGlassTintPink = { value: new THREE.Color(glassFresnelTint.colors[4]) };
+      shader.uniforms.uGlassTint0 = { value: new THREE.Color(glassFresnelTint.colors[0]) };
+      shader.uniforms.uGlassTint1 = { value: new THREE.Color(glassFresnelTint.colors[1]) };
+      shader.uniforms.uGlassTint2 = { value: new THREE.Color(glassFresnelTint.colors[2]) };
+      shader.uniforms.uGlassTint3 = { value: new THREE.Color(glassFresnelTint.colors[3]) };
+      shader.uniforms.uGlassTint4 = { value: new THREE.Color(glassFresnelTint.colors[4]) };
       shader.vertexShader = shader.vertexShader
         .replace(
           "varying vec3 vViewPosition;",
@@ -248,19 +248,19 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             uniform float uGlassTintStrength;
             uniform float uGlassTintWorldScale;
             uniform float uGlassTintViewShift;
-            uniform vec3 uGlassTintBlue;
-            uniform vec3 uGlassTintMint;
-            uniform vec3 uGlassTintGreen;
-            uniform vec3 uGlassTintPurple;
-            uniform vec3 uGlassTintPink;
+            uniform vec3 uGlassTint0;
+            uniform vec3 uGlassTint1;
+            uniform vec3 uGlassTint2;
+            uniform vec3 uGlassTint3;
+            uniform vec3 uGlassTint4;
 
             vec3 sampleGlassFresnelTint(float phase) {
               float segment = abs(fract(phase * 0.5) * 2.0 - 1.0) * 4.0;
               float blend = smoothstep(0.0, 1.0, fract(segment));
-              if (segment < 1.0) return mix(uGlassTintGreen, uGlassTintMint, blend);
-              if (segment < 2.0) return mix(uGlassTintMint, uGlassTintBlue, blend);
-              if (segment < 3.0) return mix(uGlassTintBlue, uGlassTintPurple, blend);
-              return mix(uGlassTintPurple, uGlassTintPink, blend);
+              if (segment < 1.0) return mix(uGlassTint0, uGlassTint1, blend);
+              if (segment < 2.0) return mix(uGlassTint1, uGlassTint2, blend);
+              if (segment < 3.0) return mix(uGlassTint2, uGlassTint3, blend);
+              return mix(uGlassTint3, uGlassTint4, blend);
             }
           `,
         )
