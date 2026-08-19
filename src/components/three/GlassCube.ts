@@ -297,8 +297,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             }
 
             float gradeGlassFresnelFalloff(float value) {
-              float expanded = pow(clamp(value, 0.0, 1.0), 0.65);
-              return clamp(max(value * 2.0, expanded), 0.0, 1.0);
+              float expanded = pow(clamp(value, 0.0, 1.0), 0.82);
+              return clamp(max(value * 1.45, expanded), 0.0, 1.0);
             }
           `,
         )
