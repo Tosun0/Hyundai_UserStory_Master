@@ -1167,6 +1167,7 @@ export default function CubeMapScene({
           glassSpecularIntensity: cubeSceneTheme.cube.glass.specularIntensity,
           glassClearcoat: cubeSceneTheme.cube.glass.clearcoat,
           glassClearcoatRoughness: cubeSceneTheme.cube.glass.clearcoatRoughness,
+          glassEmptyOverrides: cubeSceneTheme.cube.glass.instances.empty,
           glassAttenuationColor: cubeSceneTheme.cube.glass.attenuationColor,
           glassAttenuationDistance: cubeSceneTheme.cube.glass.attenuationDistance,
           baseOpacity: cubeSceneTheme.cube.opacity,
