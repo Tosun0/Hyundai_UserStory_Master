@@ -91,7 +91,7 @@ export function updateCubeEntryCamera(
     1,
   );
   const easedProgress = easeOutCubic(progress);
-  const arcProgress = Math.sin(progress * Math.PI);
+  const arcProgress = Math.pow(Math.sin(progress * Math.PI), 2);
 
   cameraPosition.lerpVectors(state.startPosition, state.endPosition, easedProgress);
   cameraPosition.addScaledVector(state.side, arcProgress * state.sweep);
