@@ -3,7 +3,7 @@ import * as THREE from "three";
 import type { CubeMapOverviewNode } from "./cubeMapData";
 import type { PlaybookItem } from "../../data/playbookCatalog";
 
-export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial[]>;
+export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
 
 export function createThumbnailMaterial(
   texture: THREE.Texture,
@@ -16,12 +16,9 @@ export function createThumbnailMaterial(
     1 / Math.max(image?.width ?? 1024, 1),
     1 / Math.max(image?.height ?? 1024, 1),
   );
-  const material = new THREE.MeshStandardMaterial({
+  const material = new THREE.MeshBasicMaterial({
     map: texture,
     color: 0xe9edf4,
-    roughness: 0.48,
-    metalness: 0,
-    envMapIntensity: 0.42,
     side: THREE.FrontSide,
     toneMapped: true,
     transparent: true,
