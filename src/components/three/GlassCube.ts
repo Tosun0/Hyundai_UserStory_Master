@@ -5,7 +5,16 @@ import type { PlaybookItem } from "../../data/playbookCatalog";
 
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial[]>;
 
-export function createThumbnailMaterial(texture: THREE.Texture, opacity = 1) {
+export function createThumbnailMaterial(
+  texture: THREE.Texture,
+  opacity = 1,
+  blurRadius = 0,
+) {
+  const image = texture.image as { width?: number; height?: number } | undefined;
+  const texelSize = new THREE.Vector2(
+    1 / Math.max(image?.width ?? 1024, 1),
+    1 / Math.max(image?.height ?? 1024, 1),
+  );
   const material = new THREE.MeshStandardMaterial({
     map: texture,
     color: 0xe9edf4,
@@ -21,15 +30,37 @@ export function createThumbnailMaterial(texture: THREE.Texture, opacity = 1) {
     dithering: true,
   });
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uThumbnailTexelSize = { value: texelSize };
+    shader.uniforms.uThumbnailBlurRadius = { value: blurRadius };
+    shader.fragmentShader = `
+      uniform vec2 uThumbnailTexelSize;
+      uniform float uThumbnailBlurRadius;
+      ${shader.fragmentShader}
+    `;
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <map_fragment>",
       `
-        #include <map_fragment>
+        #ifdef USE_MAP
+          vec2 thumbnailBlurStep = uThumbnailTexelSize * uThumbnailBlurRadius;
+          vec4 sampledDiffuseColor = texture2D(map, vMapUv) * 0.2;
+          sampledDiffuseColor += texture2D(map, vMapUv + vec2(thumbnailBlurStep.x, 0.0)) * 0.12;
+          sampledDiffuseColor += texture2D(map, vMapUv - vec2(thumbnailBlurStep.x, 0.0)) * 0.12;
+          sampledDiffuseColor += texture2D(map, vMapUv + vec2(0.0, thumbnailBlurStep.y)) * 0.12;
+          sampledDiffuseColor += texture2D(map, vMapUv - vec2(0.0, thumbnailBlurStep.y)) * 0.12;
+          sampledDiffuseColor += texture2D(map, vMapUv + thumbnailBlurStep) * 0.08;
+          sampledDiffuseColor += texture2D(map, vMapUv - thumbnailBlurStep) * 0.08;
+          sampledDiffuseColor += texture2D(map, vMapUv + vec2(thumbnailBlurStep.x, -thumbnailBlurStep.y)) * 0.08;
+          sampledDiffuseColor += texture2D(map, vMapUv + vec2(-thumbnailBlurStep.x, thumbnailBlurStep.y)) * 0.08;
+          #ifdef DECODE_VIDEO_TEXTURE
+            sampledDiffuseColor = sRGBTransferEOTF(sampledDiffuseColor);
+          #endif
+          diffuseColor *= sampledDiffuseColor;
+        #endif
         diffuseColor.a = opacity;
       `,
     );
   };
-  material.customProgramCacheKey = () => "thumbnail-ignore-source-alpha-v1";
+  material.customProgramCacheKey = () => `thumbnail-blur-${blurRadius}-v1`;
   return material;
 }
 
@@ -81,6 +112,7 @@ type GlassCubeOptions = {
   glassSpecularIntensity: number;
   glassClearcoat: number;
   glassClearcoatRoughness: number;
+  thumbnailBlurRadius: number;
   glassEmptyOverrides: {
     roughness: number;
     edgeRoughness: number;
@@ -119,6 +151,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   private readonly glassEnvMapIntensity: number;
   private readonly glassSpecularIntensity: number;
   private readonly glassClearcoatRoughness: number;
+  private readonly thumbnailBlurRadius: number;
   private thumbnailCube: GlassCubeThumbnail | null = null;
 
   constructor({
@@ -144,6 +177,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     glassSpecularIntensity,
     glassClearcoat,
     glassClearcoatRoughness,
+    thumbnailBlurRadius,
     glassEmptyOverrides,
     glassAttenuationColor,
     glassAttenuationDistance,
@@ -207,6 +241,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassEnvMapIntensity = resolvedGlassEnvMapIntensity;
     this.glassSpecularIntensity = resolvedGlassSpecularIntensity;
     this.glassClearcoatRoughness = resolvedGlassClearcoatRoughness;
+    this.thumbnailBlurRadius = thumbnailBlurRadius;
     this.userData.key = definition.node.key;
     this.userData.playbook = definition.playbook;
     this.state = {
@@ -379,7 +414,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     const geometry = new THREE.BoxGeometry(size, size, size);
     const materials = Array.from(
       { length: 6 },
-      () => createThumbnailMaterial(texture, 0),
+      () => createThumbnailMaterial(texture, 0, this.thumbnailBlurRadius),
     );
     const thumbnailCube = new THREE.Mesh(geometry, materials) as GlassCubeThumbnail;
     thumbnailCube.name = "Thumbnail Cube";
