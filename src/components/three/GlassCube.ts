@@ -103,6 +103,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     material.depthWrite = false;
     this.definition = definition;
     this.glassOpacity = glassOpacity;
+    this.userData.key = definition.node.key;
+    this.userData.playbook = definition.playbook;
     this.state = {
       targetPosition: definition.basePosition.clone(),
       targetScale: 1,
