@@ -179,6 +179,10 @@ export const cubeSceneTheme = {
       transmission: 0.82,
       thickness: 0.24,
       opacity: 0.36,
+      envMapIntensity: 1.35,
+      specularIntensity: 0.92,
+      fresnelStrength: 0.58,
+      fresnelPower: 3.2,
       thumbnailScale: 0.9,
     },
     shader: {
@@ -325,12 +329,12 @@ export const cubeSceneTheme = {
   lights: {
     ambient: {
       color: 0xffffff,
-      intensity: 0.5,
+      intensity: 0.64,
     },
     directional: [
-      { color: 0xffffff, position: [2.2, 3.4, 2.1], intensity: 0.92 },
-      { color: 0xffffff, position: [-2, 1.4, -2.6], intensity: 0.22 },
-      { color: 0xffffff, position: [0.2, -2, 1.2], intensity: 0.1 },
+      { color: 0xe8f6ff, position: [2.2, 3.4, 2.1], intensity: 1.35 },
+      { color: 0xffffff, position: [-2, 1.4, -2.6], intensity: 0.42 },
+      { color: 0xb9d9ff, position: [0.2, -2, 1.2], intensity: 0.22 },
     ],
   },
 } as const;

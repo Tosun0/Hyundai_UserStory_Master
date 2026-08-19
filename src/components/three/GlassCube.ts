@@ -40,6 +40,10 @@ type GlassCubeOptions = {
   glassTransmission: number;
   glassThickness: number;
   glassOpacity: number;
+  glassEnvMapIntensity: number;
+  glassSpecularIntensity: number;
+  fresnelStrength: number;
+  fresnelPower: number;
   baseOpacity: number;
   enterStart: number;
   enterDuration: number;
@@ -65,6 +69,10 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     glassTransmission,
     glassThickness,
     glassOpacity,
+    glassEnvMapIntensity,
+    glassSpecularIntensity,
+    fresnelStrength,
+    fresnelPower,
     baseOpacity,
     enterStart,
     enterDuration,
@@ -104,13 +112,43 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       ior: glassIOR,
       transparent: true,
       opacity: glassOpacity,
+      envMapIntensity: glassEnvMapIntensity,
       depthWrite: false,
       side: THREE.DoubleSide,
       clearcoat: 0.45,
       clearcoatRoughness: 0.08,
-      specularIntensity: 0.78,
+      specularIntensity: glassSpecularIntensity,
       specularColor: new THREE.Color("#d8efff"),
     });
+    glassMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uFresnelStrength = { value: fresnelStrength };
+      shader.uniforms.uFresnelPower = { value: fresnelPower };
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <common>",
+        `
+          #include <common>
+          uniform float uFresnelStrength;
+          uniform float uFresnelPower;
+        `,
+      );
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <opaque_fragment>",
+        `
+          float glassFresnel = pow(
+            1.0 - clamp(dot(normalize(vNormal), normalize(-vViewPosition)), 0.0, 1.0),
+            uFresnelPower
+          );
+          outgoingLight = mix(
+            outgoingLight,
+            vec3(0.78, 0.91, 1.0),
+            glassFresnel * uFresnelStrength
+          );
+          #include <opaque_fragment>
+        `,
+      );
+    };
+    glassMaterial.customProgramCacheKey = () =>
+      `glass-fresnel-${fresnelStrength}-${fresnelPower}`;
     this.glassShell = new THREE.Mesh(geometry, glassMaterial);
     this.glassShell.name = "Glass Shell";
     this.glassShell.frustumCulled = false;

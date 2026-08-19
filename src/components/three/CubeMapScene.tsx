@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import {
   aiChatSortConfig,
   type AiChatSortRequest,
@@ -884,6 +885,11 @@ export default function CubeMapScene({
     renderer.domElement.setAttribute("data-cube-map-canvas", "true");
     container.appendChild(renderer.domElement);
 
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    const roomEnvironment = new RoomEnvironment();
+    const environmentRenderTarget = pmremGenerator.fromScene(roomEnvironment, 0.04);
+    scene.environment = environmentRenderTarget.texture;
+
     const maskRenderTarget = new THREE.WebGLRenderTarget(1, 1, {
       format: THREE.RGBAFormat,
       type: THREE.UnsignedByteType,
@@ -957,7 +963,9 @@ export default function CubeMapScene({
     cubeSceneTheme.lights.directional.forEach(({ color, position, intensity }) => {
       const light = new THREE.DirectionalLight(color, intensity);
       light.position.set(...position);
+      light.target.position.copy(GRAPH_CENTER);
       scene.add(light);
+      scene.add(light.target);
     });
 
     const gridPlaneOptions = {
@@ -1131,6 +1139,10 @@ export default function CubeMapScene({
           glassTransmission: cubeSceneTheme.cube.glass.transmission,
           glassThickness: cubeSceneTheme.cube.glass.thickness,
           glassOpacity: cubeSceneTheme.cube.glass.opacity,
+          glassEnvMapIntensity: cubeSceneTheme.cube.glass.envMapIntensity,
+          glassSpecularIntensity: cubeSceneTheme.cube.glass.specularIntensity,
+          fresnelStrength: cubeSceneTheme.cube.glass.fresnelStrength,
+          fresnelPower: cubeSceneTheme.cube.glass.fresnelPower,
           baseOpacity: cubeSceneTheme.cube.opacity,
           enterStart:
             now +
@@ -2832,6 +2844,9 @@ export default function CubeMapScene({
       axisDepthOccludersGroup.clear();
       disposeStoryThumbnailCube();
       disposeObject(scene);
+      disposeObject(roomEnvironment);
+      environmentRenderTarget.dispose();
+      pmremGenerator.dispose();
       nodeGeometry?.dispose();
       opacityMaskTexture?.dispose();
       orbitOpacityMaskTexture?.dispose();
