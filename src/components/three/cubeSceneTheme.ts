@@ -179,6 +179,13 @@ export const cubeSceneTheme = {
       edgeWidth: 0.14,
       edgeFalloffPower: 1.8,
       fresnelPower: 2.4,
+      emptyBlur: {
+        roughness: 0.07,
+        edgeRoughness: 0.34,
+        edgeWidth: 0.22,
+        edgeFalloffPower: 1.45,
+        fresnelPower: 2,
+      },
       iridescence: 0.42,
       iridescenceIOR: 1.3,
       iridescenceThicknessRange: [180, 360] as const,
