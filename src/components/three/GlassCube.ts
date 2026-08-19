@@ -42,8 +42,8 @@ type GlassCubeOptions = {
   glassOpacity: number;
   glassEnvMapIntensity: number;
   glassSpecularIntensity: number;
-  fresnelStrength: number;
-  fresnelPower: number;
+  glassAttenuationColor: THREE.ColorRepresentation;
+  glassAttenuationDistance: number;
   baseOpacity: number;
   enterStart: number;
   enterDuration: number;
@@ -57,6 +57,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   readonly definition: GlassCubeDefinition;
   readonly state: GlassCubeRuntimeState;
   readonly glassShell: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
+  private readonly glassOpacity: number;
   private thumbnailCube: GlassCubeThumbnail | null = null;
 
   constructor({
@@ -71,8 +72,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     glassOpacity,
     glassEnvMapIntensity,
     glassSpecularIntensity,
-    fresnelStrength,
-    fresnelPower,
+    glassAttenuationColor,
+    glassAttenuationDistance,
     baseOpacity,
     enterStart,
     enterDuration,
@@ -82,7 +83,10 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     targetFrontViewFadeStrength,
   }: GlassCubeOptions) {
     super(geometry, material);
+    material.colorWrite = false;
+    material.depthWrite = false;
     this.definition = definition;
+    this.glassOpacity = glassOpacity;
     this.state = {
       targetPosition: definition.basePosition.clone(),
       targetScale: 1,
@@ -119,36 +123,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       clearcoatRoughness: 0.08,
       specularIntensity: glassSpecularIntensity,
       specularColor: new THREE.Color("#d8efff"),
+      attenuationColor: new THREE.Color(glassAttenuationColor),
+      attenuationDistance: glassAttenuationDistance,
     });
-    glassMaterial.onBeforeCompile = (shader) => {
-      shader.uniforms.uFresnelStrength = { value: fresnelStrength };
-      shader.uniforms.uFresnelPower = { value: fresnelPower };
-      shader.fragmentShader = shader.fragmentShader.replace(
-        "#include <common>",
-        `
-          #include <common>
-          uniform float uFresnelStrength;
-          uniform float uFresnelPower;
-        `,
-      );
-      shader.fragmentShader = shader.fragmentShader.replace(
-        "#include <opaque_fragment>",
-        `
-          float glassFresnel = pow(
-            1.0 - clamp(dot(normalize(vNormal), normalize(-vViewPosition)), 0.0, 1.0),
-            uFresnelPower
-          );
-          outgoingLight = mix(
-            outgoingLight,
-            vec3(0.78, 0.91, 1.0),
-            glassFresnel * uFresnelStrength
-          );
-          #include <opaque_fragment>
-        `,
-      );
-    };
-    glassMaterial.customProgramCacheKey = () =>
-      `glass-fresnel-${fresnelStrength}-${fresnelPower}`;
     this.glassShell = new THREE.Mesh(geometry, glassMaterial);
     this.glassShell.name = "Glass Shell";
     this.glassShell.frustumCulled = false;
@@ -186,6 +163,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
   setThumbnailCube(thumbnailCube: GlassCubeThumbnail) {
     this.removeThumbnailCube();
+    thumbnailCube.material.forEach((material) => {
+      material.transparent = true;
+    });
     this.thumbnailCube = thumbnailCube;
     this.add(thumbnailCube);
   }
@@ -199,6 +179,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
           map: texture,
           side: THREE.DoubleSide,
           toneMapped: false,
+          transparent: true,
         }),
     );
     const thumbnailCube = new THREE.Mesh(geometry, materials) as GlassCubeThumbnail;
@@ -206,6 +187,17 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     thumbnailCube.frustumCulled = false;
     thumbnailCube.renderOrder = 1;
     this.setThumbnailCube(thumbnailCube);
+  }
+
+  updateVisualOpacity(targetOpacity: number, amount: number) {
+    this.glassShell.material.opacity = THREE.MathUtils.lerp(
+      this.glassShell.material.opacity,
+      this.glassOpacity * targetOpacity,
+      amount,
+    );
+    this.thumbnailCube?.material.forEach((material) => {
+      material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, amount);
+    });
   }
 
   removeThumbnailCube() {

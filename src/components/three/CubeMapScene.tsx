@@ -1141,8 +1141,8 @@ export default function CubeMapScene({
           glassOpacity: cubeSceneTheme.cube.glass.opacity,
           glassEnvMapIntensity: cubeSceneTheme.cube.glass.envMapIntensity,
           glassSpecularIntensity: cubeSceneTheme.cube.glass.specularIntensity,
-          fresnelStrength: cubeSceneTheme.cube.glass.fresnelStrength,
-          fresnelPower: cubeSceneTheme.cube.glass.fresnelPower,
+          glassAttenuationColor: cubeSceneTheme.cube.glass.attenuationColor,
+          glassAttenuationDistance: cubeSceneTheme.cube.glass.attenuationDistance,
           baseOpacity: cubeSceneTheme.cube.opacity,
           enterStart:
             now +
@@ -2730,6 +2730,10 @@ export default function CubeMapScene({
         }
 
         material.opacity = opacity;
+        mesh.updateVisualOpacity(
+          mesh.state.targetOpacity,
+          cubeSceneTheme.hover.materialLerp,
+        );
       });
 
       const activeOutlineSources = outlineSources;
