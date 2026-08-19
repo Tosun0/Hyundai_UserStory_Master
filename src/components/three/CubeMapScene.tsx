@@ -1140,6 +1140,10 @@ export default function CubeMapScene({
           glassEdgeWidth: cubeSceneTheme.cube.glass.edgeWidth,
           glassEdgeFalloffPower: cubeSceneTheme.cube.glass.edgeFalloffPower,
           glassFresnelPower: cubeSceneTheme.cube.glass.fresnelPower,
+          glassIridescence: cubeSceneTheme.cube.glass.iridescence,
+          glassIridescenceIOR: cubeSceneTheme.cube.glass.iridescenceIOR,
+          glassIridescenceThicknessRange:
+            cubeSceneTheme.cube.glass.iridescenceThicknessRange,
           glassIOR: cubeSceneTheme.cube.glass.ior,
           glassTransmission: cubeSceneTheme.cube.glass.transmission,
           glassThickness: cubeSceneTheme.cube.glass.thickness,

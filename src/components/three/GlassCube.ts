@@ -41,6 +41,9 @@ type GlassCubeOptions = {
   glassEdgeWidth: number;
   glassEdgeFalloffPower: number;
   glassFresnelPower: number;
+  glassIridescence: number;
+  glassIridescenceIOR: number;
+  glassIridescenceThicknessRange: readonly [number, number];
   glassIOR: number;
   glassTransmission: number;
   glassThickness: number;
@@ -76,6 +79,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     glassEdgeWidth,
     glassEdgeFalloffPower,
     glassFresnelPower,
+    glassIridescence,
+    glassIridescenceIOR,
+    glassIridescenceThicknessRange,
     glassIOR,
     glassTransmission,
     glassThickness,
@@ -131,8 +137,11 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       side: THREE.FrontSide,
       clearcoat: 0.45,
       clearcoatRoughness: 0.08,
+      iridescence: glassIridescence,
+      iridescenceIOR: glassIridescenceIOR,
+      iridescenceThicknessRange: [...glassIridescenceThicknessRange],
       specularIntensity: glassSpecularIntensity,
-      specularColor: new THREE.Color("#ffffff"),
+      specularColor: new THREE.Color(glassColor),
       attenuationColor: new THREE.Color(glassAttenuationColor),
       attenuationDistance: glassAttenuationDistance,
     });
