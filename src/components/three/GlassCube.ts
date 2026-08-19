@@ -8,16 +8,15 @@ export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMa
 type ThumbnailUnderlayOptions = {
   resolution: number;
   blur: number;
-  feather: number;
 };
 
 const thumbnailUnderlayCache = new WeakMap<THREE.Texture, Map<string, THREE.CanvasTexture>>();
 
 function createThumbnailUnderlay(
   texture: THREE.Texture,
-  { resolution, blur, feather }: ThumbnailUnderlayOptions,
+  { resolution, blur }: ThumbnailUnderlayOptions,
 ) {
-  const cacheKey = `${resolution}-${blur}-${feather}`;
+  const cacheKey = `${resolution}-${blur}`;
   const cachedTexture = thumbnailUnderlayCache.get(texture)?.get(cacheKey);
   if (cachedTexture) {
     return cachedTexture;
@@ -54,22 +53,6 @@ function createThumbnailUnderlay(
   canvas.height = resolution;
   const context = canvas.getContext("2d")!;
   context.drawImage(buffer, padding, padding, resolution, resolution, 0, 0, resolution, resolution);
-  context.globalCompositeOperation = "destination-in";
-  const edge = THREE.MathUtils.clamp(feather, 0.01, 0.49);
-  const horizontal = context.createLinearGradient(0, 0, resolution, 0);
-  horizontal.addColorStop(0, "transparent");
-  horizontal.addColorStop(edge, "white");
-  horizontal.addColorStop(1 - edge, "white");
-  horizontal.addColorStop(1, "transparent");
-  context.fillStyle = horizontal;
-  context.fillRect(0, 0, resolution, resolution);
-  const vertical = context.createLinearGradient(0, 0, 0, resolution);
-  vertical.addColorStop(0, "transparent");
-  vertical.addColorStop(edge, "white");
-  vertical.addColorStop(1 - edge, "white");
-  vertical.addColorStop(1, "transparent");
-  context.fillStyle = vertical;
-  context.fillRect(0, 0, resolution, resolution);
 
   const underlayTexture = new THREE.CanvasTexture(canvas);
   underlayTexture.colorSpace = texture.colorSpace;

@@ -223,7 +223,6 @@ export const cubeSceneTheme = {
       thumbnailUnderlay: {
         resolution: 384,
         blur: 26,
-        feather: 0.28,
       },
     },
     shader: {
