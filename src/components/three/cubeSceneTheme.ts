@@ -192,7 +192,7 @@ export const cubeSceneTheme = {
       iridescenceThicknessRange: [120, 650] as const,
       ior: 1.52,
       dispersion: 0.12,
-      transmission: 0.5,
+      transmission: 0.98,
       thickness: 0.68,
       opacity: 1,
       envMapIntensity: 1.2,
