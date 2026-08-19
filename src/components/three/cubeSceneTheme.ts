@@ -194,7 +194,7 @@ export const cubeSceneTheme = {
         viewShift: 0.14,
         instanceShift: 2,
         instanceBlend: 0.28,
-        colors: ["#22d3ee", "#3b82f6", "#6366f1", "#a855f7", "#f43f8c", "#ff3b5c"] as const,
+        colors: ["#39ffb6", "#22d3ee", "#6366f1", "#a855f7", "#f43f8c", "#ff3b5c"] as const,
       },
       iridescence: 0.38,
       iridescenceIOR: 1.8,
