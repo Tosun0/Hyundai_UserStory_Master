@@ -187,6 +187,12 @@ export const cubeSceneTheme = {
       edgeWidth: 0.28,
       edgeFalloffPower: 1.35,
       fresnelPower: 1.8,
+      fresnelTint: {
+        strength: 0.24,
+        worldScale: 0.018,
+        viewShift: 0.12,
+        colors: ["#4da8ff", "#63ffd4", "#a4ff63", "#a36bff", "#ff6db5"] as const,
+      },
       iridescence: 0.38,
       iridescenceIOR: 1.8,
       iridescenceThicknessRange: [120, 650] as const,

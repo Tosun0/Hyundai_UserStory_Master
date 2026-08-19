@@ -55,6 +55,18 @@ type GlassCubeOptions = {
   glassEdgeWidth: number;
   glassEdgeFalloffPower: number;
   glassFresnelPower: number;
+  glassFresnelTint: {
+    strength: number;
+    worldScale: number;
+    viewShift: number;
+    colors: readonly [
+      THREE.ColorRepresentation,
+      THREE.ColorRepresentation,
+      THREE.ColorRepresentation,
+      THREE.ColorRepresentation,
+      THREE.ColorRepresentation,
+    ];
+  };
   glassIridescence: number;
   glassIridescenceIOR: number;
   glassIridescenceThicknessRange: readonly [number, number];
@@ -106,6 +118,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     glassEdgeWidth,
     glassEdgeFalloffPower,
     glassFresnelPower,
+    glassFresnelTint,
     glassIridescence,
     glassIridescenceIOR,
     glassIridescenceThicknessRange,
@@ -191,6 +204,14 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       shader.uniforms.uGlassEdgeWidth = { value: glassEdgeWidth };
       shader.uniforms.uGlassEdgeFalloffPower = { value: glassEdgeFalloffPower };
       shader.uniforms.uGlassFresnelPower = { value: glassFresnelPower };
+      shader.uniforms.uGlassTintStrength = { value: glassFresnelTint.strength };
+      shader.uniforms.uGlassTintWorldScale = { value: glassFresnelTint.worldScale };
+      shader.uniforms.uGlassTintViewShift = { value: glassFresnelTint.viewShift };
+      shader.uniforms.uGlassTintBlue = { value: new THREE.Color(glassFresnelTint.colors[0]) };
+      shader.uniforms.uGlassTintMint = { value: new THREE.Color(glassFresnelTint.colors[1]) };
+      shader.uniforms.uGlassTintGreen = { value: new THREE.Color(glassFresnelTint.colors[2]) };
+      shader.uniforms.uGlassTintPurple = { value: new THREE.Color(glassFresnelTint.colors[3]) };
+      shader.uniforms.uGlassTintPink = { value: new THREE.Color(glassFresnelTint.colors[4]) };
       shader.vertexShader = shader.vertexShader
         .replace(
           "varying vec3 vViewPosition;",
@@ -198,6 +219,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             varying vec3 vViewPosition;
             varying vec3 vGlassLocalPosition;
             varying vec3 vGlassLocalNormal;
+            varying vec3 vGlassWorldPosition;
           `,
         )
         .replace(
@@ -206,6 +228,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             void main() {
               vGlassLocalPosition = position;
               vGlassLocalNormal = normal;
+              vGlassWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
           `,
         );
       shader.fragmentShader = shader.fragmentShader
@@ -215,12 +238,31 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             varying vec3 vViewPosition;
             varying vec3 vGlassLocalPosition;
             varying vec3 vGlassLocalNormal;
+            varying vec3 vGlassWorldPosition;
             uniform float uGlassHalfExtent;
             uniform float uGlassCoreRoughness;
             uniform float uGlassEdgeRoughness;
             uniform float uGlassEdgeWidth;
             uniform float uGlassEdgeFalloffPower;
             uniform float uGlassFresnelPower;
+            uniform float uGlassTintStrength;
+            uniform float uGlassTintWorldScale;
+            uniform float uGlassTintViewShift;
+            uniform vec3 uGlassTintBlue;
+            uniform vec3 uGlassTintMint;
+            uniform vec3 uGlassTintGreen;
+            uniform vec3 uGlassTintPurple;
+            uniform vec3 uGlassTintPink;
+
+            vec3 sampleGlassFresnelTint(float phase) {
+              float segment = fract(phase) * 5.0;
+              float blend = smoothstep(0.0, 1.0, fract(segment));
+              if (segment < 1.0) return mix(uGlassTintBlue, uGlassTintMint, blend);
+              if (segment < 2.0) return mix(uGlassTintMint, uGlassTintGreen, blend);
+              if (segment < 3.0) return mix(uGlassTintGreen, uGlassTintPurple, blend);
+              if (segment < 4.0) return mix(uGlassTintPurple, uGlassTintPink, blend);
+              return mix(uGlassTintPink, uGlassTintBlue, blend);
+            }
           `,
         )
         .replace(
@@ -253,6 +295,22 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
               uGlassCoreRoughness,
               uGlassEdgeRoughness,
               glassEdgeBlur
+            );
+            vec3 glassViewDirection = normalize(-vViewPosition);
+            float glassFresnelTintMask = pow(
+              clamp(1.0 - abs(dot(normalize(normal), glassViewDirection)), 0.0, 1.0),
+              uGlassFresnelPower
+            );
+            float glassTintPhase =
+              dot(vGlassWorldPosition, normalize(vec3(0.72, 0.43, 0.55))) *
+                uGlassTintWorldScale +
+              dot(glassViewDirection, normalize(vec3(0.31, 0.67, 0.47))) *
+                uGlassTintViewShift;
+            vec3 glassFresnelTint = sampleGlassFresnelTint(glassTintPhase);
+            diffuseColor.rgb = mix(
+              diffuseColor.rgb,
+              glassFresnelTint,
+              glassFresnelTintMask * uGlassTintStrength
             );
           `,
         );
