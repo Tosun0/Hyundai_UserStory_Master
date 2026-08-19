@@ -60,6 +60,7 @@ type GlassCubeOptions = {
     emissionStrength: number;
     worldScale: number;
     viewShift: number;
+    instanceShift: number;
     colors: readonly [
       THREE.ColorRepresentation,
       THREE.ColorRepresentation,
@@ -172,6 +173,12 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     };
     this.position.copy(definition.basePosition);
     this.name = "Glass Cube";
+    const glassTintInstanceOffset = THREE.MathUtils.euclideanModulo(
+      definition.node.x * 0.754877666 +
+        definition.node.y * 0.569840296 +
+        definition.node.z * 0.438289,
+      1,
+    );
 
     const glassMaterial = new THREE.MeshPhysicalMaterial({
       color: glassColor,
@@ -211,6 +218,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       };
       shader.uniforms.uGlassTintWorldScale = { value: glassFresnelTint.worldScale };
       shader.uniforms.uGlassTintViewShift = { value: glassFresnelTint.viewShift };
+      shader.uniforms.uGlassTintInstanceShift = { value: glassFresnelTint.instanceShift };
+      shader.uniforms.uGlassTintInstanceOffset = { value: glassTintInstanceOffset };
       shader.uniforms.uGlassTint0 = { value: new THREE.Color(glassFresnelTint.colors[0]) };
       shader.uniforms.uGlassTint1 = { value: new THREE.Color(glassFresnelTint.colors[1]) };
       shader.uniforms.uGlassTint2 = { value: new THREE.Color(glassFresnelTint.colors[2]) };
@@ -253,6 +262,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             uniform float uGlassTintEmissionStrength;
             uniform float uGlassTintWorldScale;
             uniform float uGlassTintViewShift;
+            uniform float uGlassTintInstanceShift;
+            uniform float uGlassTintInstanceOffset;
             uniform vec3 uGlassTint0;
             uniform vec3 uGlassTint1;
             uniform vec3 uGlassTint2;
@@ -308,6 +319,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             float glassTintPhase =
               dot(vGlassWorldPosition, normalize(vec3(0.72, 0.43, 0.55))) *
                 uGlassTintWorldScale +
+              uGlassTintInstanceOffset * uGlassTintInstanceShift +
               dot(glassViewDirection, normalize(vec3(0.31, 0.67, 0.47))) *
                 uGlassTintViewShift;
             vec3 glassFresnelTint = sampleGlassFresnelTint(glassTintPhase);
