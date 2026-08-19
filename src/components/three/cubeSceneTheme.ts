@@ -93,7 +93,6 @@ export const cubeSceneTheme = {
   background: "#d6d6d6",
   rendering: {
     toneMappingExposure: 1.15,
-    transmissionResolutionScale: 1,
     environmentRotation: [0, (Math.PI / 2) + (Math.PI / 9), 0] as const,
   },
   fog: {
@@ -226,8 +225,6 @@ export const cubeSceneTheme = {
         minimumStrength: 0.12,
       },
       thumbnailScale: 0.9,
-      thumbnailBlurRadius: 18,
-      thumbnailEdgeFeather: 0.34,
     },
     shader: {
       roughness: 0.32,

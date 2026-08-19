@@ -913,8 +913,6 @@ export default function CubeMapScene({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = cubeSceneTheme.rendering.toneMappingExposure;
-    renderer.transmissionResolutionScale =
-      cubeSceneTheme.rendering.transmissionResolutionScale;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.domElement.setAttribute("data-cube-map-canvas", "true");
     container.appendChild(renderer.domElement);
@@ -1213,8 +1211,6 @@ export default function CubeMapScene({
           glassSpecularIntensity: cubeSceneTheme.cube.glass.specularIntensity,
           glassClearcoat: cubeSceneTheme.cube.glass.clearcoat,
           glassClearcoatRoughness: cubeSceneTheme.cube.glass.clearcoatRoughness,
-          thumbnailBlurRadius: cubeSceneTheme.cube.glass.thumbnailBlurRadius,
-          thumbnailEdgeFeather: cubeSceneTheme.cube.glass.thumbnailEdgeFeather,
           glassEmptyOverrides: cubeSceneTheme.cube.glass.instances.empty,
           glassAttenuationColor: cubeSceneTheme.cube.glass.attenuationColor,
           glassAttenuationDistance: cubeSceneTheme.cube.glass.attenuationDistance,
@@ -2203,15 +2199,7 @@ export default function CubeMapScene({
         (_, index) => shuffledTextures[index % shuffledTextures.length],
       );
       const storyGeometry = new THREE.BoxGeometry(CUBE_MAP_UNIT, CUBE_MAP_UNIT, CUBE_MAP_UNIT);
-      const storyMaterials = faceTextures.map(
-        (texture) =>
-          createThumbnailMaterial(
-            texture,
-            1,
-            cubeSceneTheme.cube.glass.thumbnailBlurRadius,
-            cubeSceneTheme.cube.glass.thumbnailEdgeFeather,
-          ),
-      );
+      const storyMaterials = faceTextures.map((texture) => createThumbnailMaterial(texture));
 
       storyThumbnailCube = new THREE.Mesh(storyGeometry, storyMaterials);
       storyThumbnailCube.name = "Single Cube Orbit View Story Thumbnail Cube";
