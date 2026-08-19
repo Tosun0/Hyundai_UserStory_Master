@@ -292,7 +292,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             vec3 gradeGlassFresnelTint(vec3 color, float strength) {
               float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
               vec3 saturated = mix(vec3(luminance), color, 1.15);
-              vec3 lifted = pow(max(saturated, vec3(0.0)), vec3(0.9));
+              vec3 lifted = pow(max(saturated, vec3(0.0)), vec3(1.05));
               return lifted * strength;
             }
 
