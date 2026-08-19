@@ -2,16 +2,16 @@
 import * as THREE from "three";
 
 export type CubeEntryAnimationConfig = {
-  cameraDuration: number;
-  cameraDistance: number;
-  cameraSideOffset: number;
-  cameraLift: number;
-  cameraSweep: number;
-  cameraArcLift: number;
-  sway: number;
-  rotation: readonly [number, number, number];
-  startScale: number;
-  lift: number;
+  enterCameraDuration: number;
+  enterCameraDistance: number;
+  enterCameraSideOffset: number;
+  enterCameraLift: number;
+  enterCameraSweep: number;
+  enterCameraArcLift: number;
+  enterSway: number;
+  enterRotation: readonly [number, number, number];
+  enterStartScale: number;
+  enterLift: number;
   assemblyDistance: number;
 };
 
@@ -55,18 +55,18 @@ export function createCubeEntryCameraState(
   return {
     active: false,
     startTime: null,
-    duration: config.cameraDuration,
+    duration: config.enterCameraDuration,
     startPosition: endPosition
       .clone()
-      .addScaledVector(direction, config.cameraDistance)
-      .addScaledVector(side, config.cameraSideOffset)
-      .add(new THREE.Vector3(0, config.cameraLift, 0)),
+      .addScaledVector(direction, config.enterCameraDistance)
+      .addScaledVector(side, config.enterCameraSideOffset)
+      .add(new THREE.Vector3(0, config.enterCameraLift, 0)),
     endPosition: endPosition.clone(),
     center: center.clone(),
     side,
     target: center.clone(),
-    sweep: config.cameraSweep,
-    arcLift: config.cameraArcLift,
+    sweep: config.enterCameraSweep,
+    arcLift: config.enterCameraArcLift,
   } satisfies CubeEntryCameraState;
 }
 
@@ -141,24 +141,24 @@ export function updateCubeEntryPose({
   ).normalize();
 
   position.copy(targetPosition);
-  position.y += config.lift * (1 - progress);
+  position.y += config.enterLift * (1 - progress);
   position.addScaledVector(assemblyDirection, assemblyProgress * config.assemblyDistance);
-  position.x += Math.sin(sceneTime * 3.1 + entryPhase) * arcProgress * config.sway;
+  position.x += Math.sin(sceneTime * 3.1 + entryPhase) * arcProgress * config.enterSway;
   position.z +=
-    Math.cos(sceneTime * 2.7 + entryPhase * 1.23) * arcProgress * config.sway;
+    Math.cos(sceneTime * 2.7 + entryPhase * 1.23) * arcProgress * config.enterSway;
 
   scale.setScalar(
     progress <= 0
       ? 0
       : THREE.MathUtils.lerp(
-          config.startScale,
+          config.enterStartScale,
           targetScale,
           easeOutBack(progress),
         ),
   );
   rotation.set(
-    Math.sin(sceneTime * 2.4 + entryPhase) * arcProgress * config.rotation[0],
-    Math.cos(sceneTime * 2.1 + entryPhase * 1.17) * arcProgress * config.rotation[1],
-    Math.sin(sceneTime * 1.8 + entryPhase * 0.83) * arcProgress * config.rotation[2],
+    Math.sin(sceneTime * 2.4 + entryPhase) * arcProgress * config.enterRotation[0],
+    Math.cos(sceneTime * 2.1 + entryPhase * 1.17) * arcProgress * config.enterRotation[1],
+    Math.sin(sceneTime * 1.8 + entryPhase * 0.83) * arcProgress * config.enterRotation[2],
   );
 }
