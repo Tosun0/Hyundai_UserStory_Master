@@ -172,6 +172,15 @@ export const cubeSceneTheme = {
     segments: 2,
     opacity: 1,
     playbookThumbnailOpacity: 0.92,
+    glass: {
+      color: "#d8efff",
+      roughness: 0.2,
+      ior: 1.45,
+      transmission: 0.82,
+      thickness: 0.24,
+      opacity: 0.36,
+      thumbnailScale: 0.9,
+    },
     shader: {
       roughness: 0.32,
       metallic: 0,

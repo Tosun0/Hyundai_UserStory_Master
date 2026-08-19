@@ -1101,8 +1101,8 @@ export default function CubeMapScene({
           colorVibrance: shaderTheme.colorVibrance,
           opacityMap: opacityMask,
           orbitOpacityMap: orbitOpacityMask,
-          thumbnailMap: thumbnailTexture,
-          thumbnailOpacity: playbook ? cubeSceneTheme.cube.playbookThumbnailOpacity : 0,
+          thumbnailMap: null,
+          thumbnailOpacity: 0,
           opacityMapMix: 0,
           opacityMaskStrength: cubeSceneTheme.mapView.opacityMaskStrength,
           emissiveMap: emissiveMask,
@@ -1125,6 +1125,12 @@ export default function CubeMapScene({
           geometry: nodeGeometry,
           material,
           definition,
+          glassColor: cubeSceneTheme.cube.glass.color,
+          glassRoughness: cubeSceneTheme.cube.glass.roughness,
+          glassIOR: cubeSceneTheme.cube.glass.ior,
+          glassTransmission: cubeSceneTheme.cube.glass.transmission,
+          glassThickness: cubeSceneTheme.cube.glass.thickness,
+          glassOpacity: cubeSceneTheme.cube.glass.opacity,
           baseOpacity: cubeSceneTheme.cube.opacity,
           enterStart:
             now +
@@ -1150,6 +1156,12 @@ export default function CubeMapScene({
         axisDepthOccludersGroup.add(axisDepthOccluder);
 
         mesh.attachOccluders(maskOccluder, axisDepthOccluder);
+        if (thumbnailTexture) {
+          mesh.setThumbnailTexture(
+            thumbnailTexture,
+            CUBE_MAP_UNIT * cubeSceneTheme.cube.glass.thumbnailScale,
+          );
+        }
         mesh.visible = isVisibleCubeMesh(mesh);
         nodesGroup.add(mesh);
         cubeMeshes.push(mesh);
@@ -2303,8 +2315,10 @@ export default function CubeMapScene({
               return;
             }
 
-            mesh.material.uniforms.uThumbnailMap.value = thumbnailTexture;
-            mesh.material.uniforms.uUseThumbnailMap.value = 1;
+            mesh.setThumbnailTexture(
+              thumbnailTexture,
+              CUBE_MAP_UNIT * cubeSceneTheme.cube.glass.thumbnailScale,
+            );
           });
         });
 

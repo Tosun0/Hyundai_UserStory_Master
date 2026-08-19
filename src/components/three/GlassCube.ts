@@ -34,6 +34,12 @@ type GlassCubeOptions = {
   geometry: THREE.BufferGeometry;
   material: THREE.ShaderMaterial;
   definition: GlassCubeDefinition;
+  glassColor: THREE.ColorRepresentation;
+  glassRoughness: number;
+  glassIOR: number;
+  glassTransmission: number;
+  glassThickness: number;
+  glassOpacity: number;
   baseOpacity: number;
   enterStart: number;
   enterDuration: number;
@@ -46,12 +52,19 @@ type GlassCubeOptions = {
 export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial> {
   readonly definition: GlassCubeDefinition;
   readonly state: GlassCubeRuntimeState;
+  readonly glassShell: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
   private thumbnailCube: GlassCubeThumbnail | null = null;
 
   constructor({
     geometry,
     material,
     definition,
+    glassColor,
+    glassRoughness,
+    glassIOR,
+    glassTransmission,
+    glassThickness,
+    glassOpacity,
     baseOpacity,
     enterStart,
     enterDuration,
@@ -81,6 +94,28 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     };
     this.position.copy(definition.basePosition);
     this.name = "Glass Cube";
+
+    const glassMaterial = new THREE.MeshPhysicalMaterial({
+      color: glassColor,
+      roughness: glassRoughness,
+      metalness: 0,
+      transmission: glassTransmission,
+      thickness: glassThickness,
+      ior: glassIOR,
+      transparent: true,
+      opacity: glassOpacity,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      clearcoat: 0.45,
+      clearcoatRoughness: 0.08,
+      specularIntensity: 0.78,
+      specularColor: new THREE.Color("#d8efff"),
+    });
+    this.glassShell = new THREE.Mesh(geometry, glassMaterial);
+    this.glassShell.name = "Glass Shell";
+    this.glassShell.frustumCulled = false;
+    this.glassShell.renderOrder = 2;
+    this.add(this.glassShell);
   }
 
   get key() {
@@ -117,6 +152,24 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.add(thumbnailCube);
   }
 
+  setThumbnailTexture(texture: THREE.Texture, size: number) {
+    const geometry = new THREE.BoxGeometry(size, size, size);
+    const materials = Array.from(
+      { length: 6 },
+      () =>
+        new THREE.MeshBasicMaterial({
+          map: texture,
+          side: THREE.DoubleSide,
+          toneMapped: false,
+        }),
+    );
+    const thumbnailCube = new THREE.Mesh(geometry, materials) as GlassCubeThumbnail;
+    thumbnailCube.name = "Thumbnail Cube";
+    thumbnailCube.frustumCulled = false;
+    thumbnailCube.renderOrder = 1;
+    this.setThumbnailCube(thumbnailCube);
+  }
+
   removeThumbnailCube() {
     if (!this.thumbnailCube) {
       return;
@@ -144,6 +197,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
   disposeGlassCube() {
     this.removeThumbnailCube();
+    this.glassShell.material.dispose();
     this.geometry.dispose();
     this.material.dispose();
   }
