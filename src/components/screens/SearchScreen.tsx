@@ -104,7 +104,9 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
 
   const handleOrbitViewChange = (isActive: boolean, playbook: PlaybookItem | null) => {
     setIsOrbitView(isActive);
-    setFocusedPlaybook(isActive ? playbook : null);
+    if (isActive && playbook) {
+      setFocusedPlaybook(playbook);
+    }
   };
 
   const handleBackToCubeMap = () => {
@@ -139,25 +141,74 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
         resetSceneRef={resetSceneRef}
       />
 
-      {!isOrbitView ? (
+      <div
+        className={`screen-fill pointer-events-none z-10 transition-[opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isOrbitView ? "opacity-0 blur-[6px]" : "opacity-100 blur-0"
+        }`}
+        data-name="layout/cube-map-ui"
+        aria-hidden={isOrbitView}
+      >
         <AnimatedButton
           type="button"
           onClick={handleLogout}
-          className="gui-scale gui-origin-top-left absolute left-[calc(var(--safe-left)+32px)] top-[calc(var(--safe-top)+50px)] z-20 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#2c2c2d] text-white backdrop-blur-[18.29px]"
+          className="gui-scale gui-origin-top-left pointer-events-auto absolute left-[calc(var(--safe-left)+32px)] top-[calc(var(--safe-top)+50px)] z-20 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#2c2c2d] text-white backdrop-blur-[18.29px]"
           data-name="button/back-to-landing"
           aria-label="Back to access screen"
           title="Back to access screen"
         >
           <ArrowGlyph className="rotate-180" />
         </AnimatedButton>
-      ) : null}
 
-      {isOrbitView ? (
-        <>
+        <nav
+          className="gui-scale gui-origin-top-center cube-top-bar-scroll pointer-events-auto absolute left-[var(--viewport-center-x)] top-[calc(var(--safe-top)+44px)] z-10 w-max max-w-[calc(var(--viewport-width)-32px)] -translate-x-1/2 overflow-x-auto rounded-full p-[6px] backdrop-blur-[35px] [scrollbar-width:none]"
+          data-node-id="1929:1058"
+          data-name="nav/cube-view-top-bar"
+          aria-label="Cube View top menu"
+        >
+          <div className="flex w-max items-center justify-center gap-[5.486px]">
+            {cubeMapTopNavItems.map((item) => (
+              <AnimatedButton
+                key={item.nodeId}
+                type="button"
+                onClick={item.isActive ? handleBackToCubeMap : undefined}
+                className={`flex h-[54px] shrink-0 items-center justify-center rounded-[40.229px] px-[20px] py-[12px] backdrop-blur-[18.286px] ${
+                  item.isActive ? "bg-[#2c2c2d] text-white" : "bg-white text-[#2c2c2d]"
+                } ${item.isActive ? "gap-[6px]" : ""}`}
+                data-node-id={item.nodeId}
+                data-name={item.dataName}
+                aria-current={item.isActive ? "page" : undefined}
+              >
+                <img src={item.iconSrc} alt="" className="h-[24px] w-[24px]" />
+                {"label" in item ? (
+                  <span className="whitespace-nowrap text-[22px] font-medium leading-[1.5] tracking-[-0.22px]">
+                    {item.label}
+                  </span>
+                ) : null}
+              </AnimatedButton>
+            ))}
+          </div>
+        </nav>
+
+        <AiChatSortPanel
+          key={chatPanelResetId}
+          playbookGroup={playbookGroup}
+          onSortStageComplete={handleSortStageComplete}
+          onToggleAxisIndexes={() =>
+            setAreAxisIndexesVisible((isVisible) => !isVisible)
+          }
+        />
+      </div>
+
+      <div className="screen-fill pointer-events-none z-20" data-name="layout/orbit-ui">
           <header
-            className="gui-origin-top-center pointer-events-none absolute left-[var(--viewport-center-x)] top-[max(calc(var(--safe-top)+96px),calc(var(--viewport-center-y)-720px))] z-20 flex h-[102px] w-max max-w-[calc(var(--viewport-width)-64px)] -translate-x-1/2 flex-col items-center text-white"
+            className={`gui-origin-top-center pointer-events-none absolute left-[var(--viewport-center-x)] top-[max(calc(var(--safe-top)+96px),calc(var(--viewport-center-y)-720px))] z-20 flex h-[102px] w-max max-w-[calc(var(--viewport-width)-64px)] -translate-x-1/2 flex-col items-center text-white transition-[opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              isOrbitView
+                ? "delay-[140ms] opacity-100 blur-0"
+                : "delay-0 opacity-0 blur-[6px]"
+            }`}
             data-name="header/orbit-story-summary"
             aria-label={focusedPlaybook?.title ?? "Cube View"}
+            aria-hidden={!isOrbitView}
           >
             <div
               className="flex min-h-[48px] w-max max-w-full items-center justify-center rounded-[999px] border border-[rgb(15_23_42_/_0.12)] bg-[rgb(255_255_255_/_0.88)] px-[28px] py-[10px] text-center text-[clamp(18px,1.6vw,24px)] font-extrabold leading-[1.2] tracking-[-0.025em] text-[#0f172a] shadow-[0_8px_24px_rgb(0_0_0_/_0.12)] backdrop-blur-[16px]"
@@ -190,78 +241,51 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
             </div>
           </header>
 
-          <AnimatedButton
-            type="button"
-            onClick={handleBackToCubeMap}
-            className="gui-scale gui-origin-top-left absolute left-[calc(var(--safe-left)+32px)] top-[calc(var(--safe-top)+50px)] z-20 flex h-[54px] items-center justify-center gap-[8px] rounded-full bg-[#2c2c2d] px-[22px] text-[20px] font-medium leading-[1.5] text-white backdrop-blur-[18.29px]"
-            data-name="button/back-to-cube-map"
-            aria-label="Back to cube map"
-            title="Back to cube map"
+          <div
+            className={`absolute left-[calc(var(--safe-left)+32px)] top-[calc(var(--safe-top)+50px)] z-20 origin-left transition-[opacity,scale,translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              isOrbitView
+                ? "pointer-events-auto delay-[140ms] translate-x-0 scale-100 opacity-100"
+                : "pointer-events-none delay-0 -translate-x-[12px] scale-[0.82] opacity-0"
+            }`}
           >
-            <ArrowGlyph className="rotate-180" />
-            <span>Back</span>
-          </AnimatedButton>
-
-          <AnimatedButton
-            type="button"
-            onClick={() => setIsParallaxViewEnabled((isEnabled) => !isEnabled)}
-            className="gui-scale gui-origin-top-right absolute left-[calc(var(--safe-right)-86px)] top-[calc(var(--safe-top)+32px)] z-20 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#2c2c2d] text-white backdrop-blur-[18.29px]"
-            data-name="button/orbit-parallax-toggle"
-            aria-label={isParallaxViewEnabled ? "Disable HeadTrack" : "Enable HeadTrack"}
-            aria-pressed={isParallaxViewEnabled}
-            title={isParallaxViewEnabled ? "Disable HeadTrack" : "Enable HeadTrack"}
-          >
-            <span
-              className="material-symbols-outlined orbit-parallax-toggle-symbol"
-              aria-hidden="true"
+            <AnimatedButton
+              type="button"
+              onClick={handleBackToCubeMap}
+              className="gui-scale gui-origin-top-left flex h-[54px] items-center justify-center gap-[8px] rounded-full bg-[#2c2c2d] px-[22px] text-[20px] font-medium leading-[1.5] text-white backdrop-blur-[18.29px]"
+              data-name="button/back-to-cube-map"
+              aria-label="Back to cube map"
+              title="Back to cube map"
             >
-              {isParallaxViewEnabled ? "visibility" : "visibility_off"}
-            </span>
-          </AnimatedButton>
+              <ArrowGlyph className="rotate-180" />
+              <span>Back</span>
+            </AnimatedButton>
+          </div>
 
-        </>
-      ) : (
-        <>
-          <nav
-            className="gui-scale gui-origin-top-center cube-top-bar-scroll absolute left-[var(--viewport-center-x)] top-[calc(var(--safe-top)+44px)] z-10 w-max max-w-[calc(var(--viewport-width)-32px)] -translate-x-1/2 overflow-x-auto rounded-full p-[6px] backdrop-blur-[35px] [scrollbar-width:none]"
-            data-node-id="1929:1058"
-            data-name="nav/cube-view-top-bar"
-            aria-label="Cube View top menu"
+          <div
+            className={`absolute left-[calc(var(--safe-right)-86px)] top-[calc(var(--safe-top)+32px)] z-20 origin-right transition-[opacity,scale] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              isOrbitView
+                ? "pointer-events-auto delay-[140ms] scale-100 opacity-100"
+                : "pointer-events-none delay-0 scale-[0.86] opacity-0"
+            }`}
           >
-            <div className="flex w-max items-center justify-center gap-[5.486px]">
-              {cubeMapTopNavItems.map((item) => (
-                <AnimatedButton
-                  key={item.nodeId}
-                  type="button"
-                  onClick={item.isActive ? handleBackToCubeMap : undefined}
-                  className={`flex h-[54px] shrink-0 items-center justify-center rounded-[40.229px] px-[20px] py-[12px] backdrop-blur-[18.286px] ${
-                    item.isActive ? "bg-[#2c2c2d] text-white" : "bg-white text-[#2c2c2d]"
-                  } ${item.isActive ? "gap-[6px]" : ""}`}
-                  data-node-id={item.nodeId}
-                  data-name={item.dataName}
-                  aria-current={item.isActive ? "page" : undefined}
-                >
-                  <img src={item.iconSrc} alt="" className="h-[24px] w-[24px]" />
-                  {"label" in item ? (
-                    <span className="whitespace-nowrap text-[22px] font-medium leading-[1.5] tracking-[-0.22px]">
-                      {item.label}
-                    </span>
-      ) : null}
-                </AnimatedButton>
-              ))}
-            </div>
-          </nav>
-
-          <AiChatSortPanel
-            key={chatPanelResetId}
-            playbookGroup={playbookGroup}
-            onSortStageComplete={handleSortStageComplete}
-            onToggleAxisIndexes={() =>
-              setAreAxisIndexesVisible((isVisible) => !isVisible)
-            }
-          />
-        </>
-      )}
+            <AnimatedButton
+              type="button"
+              onClick={() => setIsParallaxViewEnabled((isEnabled) => !isEnabled)}
+              className="gui-scale gui-origin-top-right flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#2c2c2d] text-white backdrop-blur-[18.29px]"
+              data-name="button/orbit-parallax-toggle"
+              aria-label={isParallaxViewEnabled ? "Disable HeadTrack" : "Enable HeadTrack"}
+              aria-pressed={isParallaxViewEnabled}
+              title={isParallaxViewEnabled ? "Disable HeadTrack" : "Enable HeadTrack"}
+            >
+              <span
+                className="material-symbols-outlined orbit-parallax-toggle-symbol"
+                aria-hidden="true"
+              >
+                {isParallaxViewEnabled ? "visibility" : "visibility_off"}
+              </span>
+            </AnimatedButton>
+          </div>
+      </div>
     </section>
   );
 }
