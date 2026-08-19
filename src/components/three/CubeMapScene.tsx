@@ -89,6 +89,10 @@ type OrbitCameraTransitionState = SearchHighlightZoomState & {
   direction: "in" | "out";
   fromFocusOffset?: THREE.Vector3;
   toFocusOffset?: THREE.Vector3;
+  fromFocusPosition?: THREE.Vector3;
+  toFocusPosition?: THREE.Vector3;
+  fromFocusScale?: number;
+  toFocusScale?: number;
   onComplete?: () => void;
 };
 
@@ -1703,6 +1707,10 @@ export default function CubeMapScene({
         direction: "in",
         fromFocusOffset: camera.position.clone().sub(focusPosition),
         toFocusOffset: orbitCameraOffset.clone(),
+        fromFocusPosition: focusPosition.clone(),
+        toFocusPosition: focusedMesh?.state.targetPosition.clone(),
+        fromFocusScale: focusedMesh?.scale.x,
+        toFocusScale: focusedMesh?.state.targetScale,
       };
     };
 
@@ -1797,6 +1805,27 @@ export default function CubeMapScene({
         (frameTime - transition.startTime) /
         cubeSceneTheme.orbitView.cameraTransitionDurationMs;
       const easedProgress = THREE.MathUtils.smootherstep(progress, 0, 1);
+
+      if (
+        focusedMesh &&
+        transition.fromFocusPosition &&
+        transition.toFocusPosition &&
+        transition.fromFocusScale !== undefined &&
+        transition.toFocusScale !== undefined
+      ) {
+        focusedMesh.position.lerpVectors(
+          transition.fromFocusPosition,
+          transition.toFocusPosition,
+          easedProgress,
+        );
+        focusedMesh.scale.setScalar(
+          THREE.MathUtils.lerp(
+            transition.fromFocusScale,
+            transition.toFocusScale,
+            easedProgress,
+          ),
+        );
+      }
 
       if (
         transition.direction === "in" &&
@@ -2118,8 +2147,8 @@ export default function CubeMapScene({
       container.dataset.cubeViewMode = "orbit";
       container.dataset.focusedCubeKey = selectedMesh.userData.key;
       container.style.cursor = "grab";
-      applyOrbitControls();
       applyOrbitViewTargets();
+      applyOrbitControls();
       disposeStoryThumbnailCube();
       notifyOrbitViewChange();
     };
@@ -2175,6 +2204,10 @@ export default function CubeMapScene({
         toPosition: returnPosition.clone(),
         toTarget: returnTarget.clone(),
         direction: "out",
+        fromFocusPosition: focusedMesh?.position.clone(),
+        toFocusPosition: focusedMesh?.state.targetPosition.clone(),
+        fromFocusScale: focusedMesh?.scale.x,
+        toFocusScale: focusedMesh?.state.targetScale,
         onComplete: finishExitOrbitView,
       };
     };
@@ -2783,8 +2816,11 @@ export default function CubeMapScene({
           targetScale: mesh.state.targetScale,
           config: cubeSceneTheme.cube,
         });
-        mesh.position.lerp(entryPositionVector, cubeSceneTheme.hover.positionLerp);
-        mesh.scale.lerp(targetScaleVector, cubeSceneTheme.hover.scaleLerp);
+        const isFocusTransitionMesh = orbitCameraTransition && mesh === focusedMesh;
+        if (!isFocusTransitionMesh) {
+          mesh.position.lerp(entryPositionVector, cubeSceneTheme.hover.positionLerp);
+          mesh.scale.lerp(targetScaleVector, cubeSceneTheme.hover.scaleLerp);
+        }
         const shouldOccludeAxisGuide = viewMode === "map" && entryVisibility > 0.01;
         mesh.state.axisDepthOccluder.visible = shouldOccludeAxisGuide;
 
