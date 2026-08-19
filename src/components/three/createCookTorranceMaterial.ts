@@ -40,6 +40,7 @@ const fragmentShader = `
   uniform float uRimStrength;
   uniform float uRimPower;
   uniform float uTransmissionStrength;
+  uniform float uGlassStrength;
   uniform float uShadowStrength;
   uniform float uShadowSoftness;
   uniform float uShadowLift;
@@ -233,6 +234,10 @@ const fragmentShader = `
       mix(baseColor, subsurfaceTint, clamp(subsurfaceStrength * 0.1, 0.0, 1.0)) *
       fillShadow;
     vec3 color = direct + ambient + subsurface;
+    float glassStrength = clamp(uGlassStrength, 0.0, 1.0);
+    float glassFresnel = pow(clamp(1.0 - NdotV, 0.0, 1.0), 3.2);
+    vec3 glassEdge = mix(vec3(0.72, 0.86, 1.0), vec3(1.0), glassFresnel);
+    color += glassEdge * glassFresnel * glassStrength * 0.72;
     float opacityMask = 1.0;
 
     if (uUseOpacityMap > 0.5) {
@@ -270,7 +275,14 @@ const fragmentShader = `
     );
     color = mix(color, frontViewDesaturated, frontViewFactor);
 
-    float finalAlpha = clamp(uOpacity * opacityMask, 0.0, 1.0);
+    float glassAlpha = mix(
+      1.0,
+      uUseThumbnailMap > 0.5
+        ? mix(0.72, 1.0, glassFresnel)
+        : mix(0.28, 0.78, glassFresnel),
+      glassStrength
+    );
+    float finalAlpha = clamp(uOpacity * opacityMask * glassAlpha, 0.0, 1.0);
     finalAlpha *= mix(
       1.0,
       clamp(uFrontViewAlphaMultiplier, 0.0, 1.0),
@@ -297,6 +309,7 @@ type CookTorranceMaterialOptions = {
   rimStrength?: number;
   rimPower?: number;
   transmissionStrength?: number;
+  glassStrength?: number;
   shadowStrength?: number;
   shadowSoftness?: number;
   shadowLift?: number;
@@ -337,6 +350,7 @@ export function createCookTorranceMaterial({
   rimStrength = 0,
   rimPower = 2.4,
   transmissionStrength = 0,
+  glassStrength = 0,
   shadowStrength = 0,
   shadowSoftness = 0.58,
   shadowLift = 0.38,
@@ -377,6 +391,7 @@ export function createCookTorranceMaterial({
       uRimStrength: { value: rimStrength },
       uRimPower: { value: rimPower },
       uTransmissionStrength: { value: transmissionStrength },
+      uGlassStrength: { value: glassStrength },
       uShadowStrength: { value: shadowStrength },
       uShadowSoftness: { value: shadowSoftness },
       uShadowLift: { value: shadowLift },

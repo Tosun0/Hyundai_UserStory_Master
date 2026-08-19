@@ -184,6 +184,7 @@ export const cubeSceneTheme = {
       rimStrength: 0.18,
       rimPower: 2.4,
       transmissionStrength: 0.08,
+      glassStrength: 0.78,
       shadowStrength: 0.32,
       shadowSoftness: 0.58,
       shadowLift: 0.38,

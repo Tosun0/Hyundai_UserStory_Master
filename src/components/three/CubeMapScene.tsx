@@ -1088,6 +1088,7 @@ export default function CubeMapScene({
           rimStrength: shaderTheme.rimStrength,
           rimPower: shaderTheme.rimPower,
           transmissionStrength: shaderTheme.transmissionStrength,
+          glassStrength: shaderTheme.glassStrength,
           shadowStrength: shaderTheme.shadowStrength,
           shadowSoftness: shaderTheme.shadowSoftness,
           shadowLift: shaderTheme.shadowLift,
