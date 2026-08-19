@@ -183,9 +183,9 @@ export const cubeSceneTheme = {
     glass: {
       color: "#edf7ff",
       roughness: 0.84,
-      edgeRoughness: 0.78,
-      edgeWidth: 0.38,
-      edgeFalloffPower: 0.9,
+      edgeRoughness: 0.32,
+      edgeWidth: 0.28,
+      edgeFalloffPower: 1.35,
       fresnelPower: 1.8,
       iridescence: 0.38,
       iridescenceIOR: 1.8,
@@ -202,9 +202,9 @@ export const cubeSceneTheme = {
       instances: {
         empty: {
           roughness: 0.88,
-          edgeRoughness: 0.82,
-          edgeWidth: 0.42,
-          edgeFalloffPower: 0.85,
+          edgeRoughness: 0.36,
+          edgeWidth: 0.3,
+          edgeFalloffPower: 1.3,
           fresnelPower: 1.35,
           iridescence: 0.38,
           ior: 1.42,
@@ -220,10 +220,6 @@ export const cubeSceneTheme = {
       attenuationColor: "#dcecff",
       attenuationDistance: 7.5,
       thumbnailScale: 0.9,
-      thumbnailUnderlay: {
-        resolution: 384,
-        blur: 26,
-      },
     },
     shader: {
       roughness: 0.32,

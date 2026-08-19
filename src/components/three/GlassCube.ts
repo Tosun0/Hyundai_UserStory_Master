@@ -5,92 +5,9 @@ import type { PlaybookItem } from "../../data/playbookCatalog";
 
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
 
-type ThumbnailUnderlayOptions = {
-  resolution: number;
-  blur: number;
-};
-
-const thumbnailUnderlayCache = new WeakMap<THREE.Texture, Map<string, THREE.CanvasTexture>>();
-
-function createThumbnailUnderlay(
-  texture: THREE.Texture,
-  { resolution, blur }: ThumbnailUnderlayOptions,
-) {
-  const cacheKey = `${resolution}-${blur}`;
-  const cachedTexture = thumbnailUnderlayCache.get(texture)?.get(cacheKey);
-  if (cachedTexture) {
-    return cachedTexture;
-  }
-
-  const image = texture.image as CanvasImageSource & {
-    naturalWidth?: number;
-    naturalHeight?: number;
-    width: number;
-    height: number;
-  };
-  const padding = Math.ceil(blur * 2);
-  const sourceCanvas = document.createElement("canvas");
-  sourceCanvas.width = resolution;
-  sourceCanvas.height = resolution;
-  const sourceContext = sourceCanvas.getContext("2d")!;
-  const sourceWidth = image.naturalWidth || image.width;
-  const sourceHeight = image.naturalHeight || image.height;
-  const scale = Math.max(resolution / sourceWidth, resolution / sourceHeight);
-  const drawWidth = sourceWidth * scale;
-  const drawHeight = sourceHeight * scale;
-  sourceContext.drawImage(
-    image,
-    (resolution - drawWidth) * 0.5,
-    (resolution - drawHeight) * 0.5,
-    drawWidth,
-    drawHeight,
-  );
-
-  const buffer = document.createElement("canvas");
-  buffer.width = resolution + padding * 2;
-  buffer.height = resolution + padding * 2;
-  const bufferContext = buffer.getContext("2d")!;
-  bufferContext.drawImage(sourceCanvas, padding, padding);
-  bufferContext.drawImage(sourceCanvas, 0, 0, 1, resolution, 0, padding, padding, resolution);
-  bufferContext.drawImage(sourceCanvas, resolution - 1, 0, 1, resolution, padding + resolution, padding, padding, resolution);
-  bufferContext.drawImage(sourceCanvas, 0, 0, resolution, 1, padding, 0, resolution, padding);
-  bufferContext.drawImage(sourceCanvas, 0, resolution - 1, resolution, 1, padding, padding + resolution, resolution, padding);
-  bufferContext.drawImage(sourceCanvas, 0, 0, 1, 1, 0, 0, padding, padding);
-  bufferContext.drawImage(sourceCanvas, resolution - 1, 0, 1, 1, padding + resolution, 0, padding, padding);
-  bufferContext.drawImage(sourceCanvas, 0, resolution - 1, 1, 1, 0, padding + resolution, padding, padding);
-  bufferContext.drawImage(sourceCanvas, resolution - 1, resolution - 1, 1, 1, padding + resolution, padding + resolution, padding, padding);
-
-  const blurredBuffer = document.createElement("canvas");
-  blurredBuffer.width = buffer.width;
-  blurredBuffer.height = buffer.height;
-  const blurredContext = blurredBuffer.getContext("2d")!;
-  blurredContext.filter = `blur(${blur}px)`;
-  blurredContext.drawImage(buffer, 0, 0);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = resolution;
-  canvas.height = resolution;
-  const context = canvas.getContext("2d")!;
-  context.drawImage(blurredBuffer, padding, padding, resolution, resolution, 0, 0, resolution, resolution);
-
-  const underlayTexture = new THREE.CanvasTexture(canvas);
-  underlayTexture.colorSpace = texture.colorSpace;
-  underlayTexture.minFilter = THREE.LinearMipmapLinearFilter;
-  underlayTexture.magFilter = THREE.LinearFilter;
-  underlayTexture.generateMipmaps = true;
-  underlayTexture.name = `${texture.name || "Thumbnail"}_FrostedUnderlay`;
-  const textureCache = thumbnailUnderlayCache.get(texture) ?? new Map();
-  textureCache.set(cacheKey, underlayTexture);
-  thumbnailUnderlayCache.set(texture, textureCache);
-  return underlayTexture;
-}
-
-export function createThumbnailMaterial(
-  texture: THREE.Texture,
-  underlayOptions: ThumbnailUnderlayOptions,
-) {
+export function createThumbnailMaterial(texture: THREE.Texture) {
   return new THREE.MeshBasicMaterial({
-    map: createThumbnailUnderlay(texture, underlayOptions),
+    map: texture,
     color: 0xffffff,
     side: THREE.FrontSide,
     toneMapped: true,
@@ -440,15 +357,11 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.add(thumbnailCube);
   }
 
-  setThumbnailTexture(
-    texture: THREE.Texture,
-    size: number,
-    underlayOptions: ThumbnailUnderlayOptions,
-  ) {
+  setThumbnailTexture(texture: THREE.Texture, size: number) {
     const geometry = new THREE.BoxGeometry(size, size, size);
     const materials = Array.from(
       { length: 6 },
-      () => createThumbnailMaterial(texture, underlayOptions),
+      () => createThumbnailMaterial(texture),
     );
     const thumbnailCube = new THREE.Mesh(geometry, materials) as GlassCubeThumbnail;
     thumbnailCube.name = "Thumbnail Cube";

@@ -1243,7 +1243,6 @@ export default function CubeMapScene({
           mesh.setThumbnailTexture(
             thumbnailTexture,
             CUBE_MAP_UNIT * cubeSceneTheme.cube.glass.thumbnailScale,
-            cubeSceneTheme.cube.glass.thumbnailUnderlay,
           );
         }
         mesh.visible = isVisibleCubeMesh(mesh);
@@ -2199,9 +2198,7 @@ export default function CubeMapScene({
         (_, index) => shuffledTextures[index % shuffledTextures.length],
       );
       const storyGeometry = new THREE.BoxGeometry(CUBE_MAP_UNIT, CUBE_MAP_UNIT, CUBE_MAP_UNIT);
-      const storyMaterials = faceTextures.map((texture) =>
-        createThumbnailMaterial(texture, cubeSceneTheme.cube.glass.thumbnailUnderlay),
-      );
+      const storyMaterials = faceTextures.map((texture) => createThumbnailMaterial(texture));
 
       storyThumbnailCube = new THREE.Mesh(storyGeometry, storyMaterials);
       storyThumbnailCube.name = "Single Cube Orbit View Story Thumbnail Cube";
@@ -2550,7 +2547,6 @@ export default function CubeMapScene({
             mesh.setThumbnailTexture(
               thumbnailTexture,
               CUBE_MAP_UNIT * cubeSceneTheme.cube.glass.thumbnailScale,
-              cubeSceneTheme.cube.glass.thumbnailUnderlay,
             );
           });
         });
