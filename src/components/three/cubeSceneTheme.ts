@@ -177,7 +177,7 @@ export const cubeSceneTheme = {
       color: "#ffffff",
       roughness: 0.035,
       edgeRoughness: 0.16,
-      edgeWidth: 0.12,
+      edgeWidth: 0.14,
       edgeFalloffPower: 2.2,
       fresnelPower: 1.8,
       iridescence: 0.38,
@@ -361,7 +361,7 @@ export const cubeSceneTheme = {
     filteredHighlightHoverScale: 1.08,
   },
   hoverGlow: {
-    outlineColor: 0x4f73e3,
+    outlineColor: 0xffffff,
     glowColor: 0x4f73e3,
     outlineOpacity: 0.82,
     glowOpacity: 0.24,
