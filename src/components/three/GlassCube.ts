@@ -5,16 +5,97 @@ import type { PlaybookItem } from "../../data/playbookCatalog";
 
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
 
-export function createThumbnailMaterial(texture: THREE.Texture) {
+type ThumbnailUnderlayOptions = {
+  resolution: number;
+  blur: number;
+  feather: number;
+};
+
+const thumbnailUnderlayCache = new WeakMap<THREE.Texture, Map<string, THREE.CanvasTexture>>();
+
+function createThumbnailUnderlay(
+  texture: THREE.Texture,
+  { resolution, blur, feather }: ThumbnailUnderlayOptions,
+) {
+  const cacheKey = `${resolution}-${blur}-${feather}`;
+  const cachedTexture = thumbnailUnderlayCache.get(texture)?.get(cacheKey);
+  if (cachedTexture) {
+    return cachedTexture;
+  }
+
+  const image = texture.image as CanvasImageSource & {
+    naturalWidth?: number;
+    naturalHeight?: number;
+    width: number;
+    height: number;
+  };
+  const padding = Math.ceil(blur * 2);
+  const buffer = document.createElement("canvas");
+  buffer.width = resolution + padding * 2;
+  buffer.height = resolution + padding * 2;
+  const bufferContext = buffer.getContext("2d")!;
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const scale = Math.max(resolution / sourceWidth, resolution / sourceHeight);
+  const drawWidth = sourceWidth * scale;
+  const drawHeight = sourceHeight * scale;
+
+  bufferContext.filter = `blur(${blur}px)`;
+  bufferContext.drawImage(
+    image,
+    padding + (resolution - drawWidth) * 0.5,
+    padding + (resolution - drawHeight) * 0.5,
+    drawWidth,
+    drawHeight,
+  );
+
+  const canvas = document.createElement("canvas");
+  canvas.width = resolution;
+  canvas.height = resolution;
+  const context = canvas.getContext("2d")!;
+  context.drawImage(buffer, padding, padding, resolution, resolution, 0, 0, resolution, resolution);
+  context.globalCompositeOperation = "destination-in";
+  const edge = THREE.MathUtils.clamp(feather, 0.01, 0.49);
+  const horizontal = context.createLinearGradient(0, 0, resolution, 0);
+  horizontal.addColorStop(0, "transparent");
+  horizontal.addColorStop(edge, "white");
+  horizontal.addColorStop(1 - edge, "white");
+  horizontal.addColorStop(1, "transparent");
+  context.fillStyle = horizontal;
+  context.fillRect(0, 0, resolution, resolution);
+  const vertical = context.createLinearGradient(0, 0, 0, resolution);
+  vertical.addColorStop(0, "transparent");
+  vertical.addColorStop(edge, "white");
+  vertical.addColorStop(1 - edge, "white");
+  vertical.addColorStop(1, "transparent");
+  context.fillStyle = vertical;
+  context.fillRect(0, 0, resolution, resolution);
+
+  const underlayTexture = new THREE.CanvasTexture(canvas);
+  underlayTexture.colorSpace = texture.colorSpace;
+  underlayTexture.minFilter = THREE.LinearMipmapLinearFilter;
+  underlayTexture.magFilter = THREE.LinearFilter;
+  underlayTexture.generateMipmaps = true;
+  underlayTexture.name = `${texture.name || "Thumbnail"}_FrostedUnderlay`;
+  const textureCache = thumbnailUnderlayCache.get(texture) ?? new Map();
+  textureCache.set(cacheKey, underlayTexture);
+  thumbnailUnderlayCache.set(texture, textureCache);
+  return underlayTexture;
+}
+
+export function createThumbnailMaterial(
+  texture: THREE.Texture,
+  underlayOptions: ThumbnailUnderlayOptions,
+) {
   return new THREE.MeshBasicMaterial({
-    map: texture,
-    color: 0xe9edf4,
+    map: createThumbnailUnderlay(texture, underlayOptions),
+    color: 0xffffff,
     side: THREE.FrontSide,
     toneMapped: true,
-    transparent: false,
+    transparent: true,
     opacity: 1,
     depthTest: true,
-    depthWrite: true,
+    depthWrite: false,
     dithering: true,
   });
 }
@@ -357,11 +438,15 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.add(thumbnailCube);
   }
 
-  setThumbnailTexture(texture: THREE.Texture, size: number) {
+  setThumbnailTexture(
+    texture: THREE.Texture,
+    size: number,
+    underlayOptions: ThumbnailUnderlayOptions,
+  ) {
     const geometry = new THREE.BoxGeometry(size, size, size);
     const materials = Array.from(
       { length: 6 },
-      () => createThumbnailMaterial(texture),
+      () => createThumbnailMaterial(texture, underlayOptions),
     );
     const thumbnailCube = new THREE.Mesh(geometry, materials) as GlassCubeThumbnail;
     thumbnailCube.name = "Thumbnail Cube";
@@ -376,6 +461,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       amount,
     );
     this.thumbnailCube?.material.forEach((material) => {
+      material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, amount);
       const brightness = THREE.MathUtils.lerp(
         material.color.r,
         Math.max(targetOpacity, 0.28),
