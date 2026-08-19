@@ -182,8 +182,8 @@ export const cubeSceneTheme = {
     playbookThumbnailOpacity: 0.92,
     glass: {
       color: "#ffffff",
-      roughness: 0.035,
-      edgeRoughness: 0.16,
+      roughness: 0.42,
+      edgeRoughness: 0.64,
       edgeWidth: 0.14,
       edgeFalloffPower: 2.2,
       fresnelPower: 1.8,
@@ -201,8 +201,8 @@ export const cubeSceneTheme = {
       clearcoatRoughness: 0.025,
       instances: {
         empty: {
-          roughness: 0.055,
-          edgeRoughness: 0.24,
+          roughness: 0.48,
+          edgeRoughness: 0.7,
           edgeWidth: 0.18,
           edgeFalloffPower: 1.8,
           fresnelPower: 1.35,
