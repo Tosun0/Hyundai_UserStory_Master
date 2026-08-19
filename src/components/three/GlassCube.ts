@@ -91,6 +91,14 @@ type GlassCubeOptions = {
     thumbnailColor: THREE.ColorRepresentation;
     thumbnailDensity: number;
     thumbnailMaxOpacity: number;
+    colors: readonly [
+      THREE.ColorRepresentation,
+      THREE.ColorRepresentation,
+      THREE.ColorRepresentation,
+      THREE.ColorRepresentation,
+    ];
+    gradientScale: number;
+    gradientStrength: number;
     scale: number;
   };
   glassAttenuationColor: THREE.ColorRepresentation;
@@ -426,15 +434,27 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
         uMaxOpacity: {
           value: hasThumbnail ? glassScatter.thumbnailMaxOpacity : glassScatter.maxOpacity,
         },
+        uHalfExtent: { value: glassHalfExtent },
+        uInstanceOffset: { value: glassTintInstanceOffset },
+        uGradientScale: { value: glassScatter.gradientScale },
+        uGradientStrength: { value: glassScatter.gradientStrength },
+        uTint0: { value: new THREE.Color(glassScatter.colors[0]) },
+        uTint1: { value: new THREE.Color(glassScatter.colors[1]) },
+        uTint2: { value: new THREE.Color(glassScatter.colors[2]) },
+        uTint3: { value: new THREE.Color(glassScatter.colors[3]) },
         uVisibility: { value: 0 },
       },
       vertexShader: `
         varying vec3 vViewPosition;
         varying vec3 vViewNormal;
+        varying vec3 vLocalPosition;
+        varying vec3 vWorldPosition;
         void main() {
           vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
           vViewPosition = viewPosition.xyz;
           vViewNormal = normalize(normalMatrix * normal);
+          vLocalPosition = position;
+          vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
           gl_Position = projectionMatrix * viewPosition;
         }
       `,
@@ -442,15 +462,55 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
         uniform vec3 uColor;
         uniform float uDensity;
         uniform float uMaxOpacity;
+        uniform float uHalfExtent;
+        uniform float uInstanceOffset;
+        uniform float uGradientScale;
+        uniform float uGradientStrength;
+        uniform vec3 uTint0;
+        uniform vec3 uTint1;
+        uniform vec3 uTint2;
+        uniform vec3 uTint3;
         uniform float uVisibility;
         varying vec3 vViewPosition;
         varying vec3 vViewNormal;
+        varying vec3 vLocalPosition;
+        varying vec3 vWorldPosition;
+
+        vec3 sampleScatterTint(float phase) {
+          float segment = fract(phase) * 4.0;
+          float blend = smoothstep(0.12, 0.88, fract(segment));
+          if (segment < 1.0) return mix(uTint0, uTint1, blend);
+          if (segment < 2.0) return mix(uTint1, uTint2, blend);
+          if (segment < 3.0) return mix(uTint2, uTint3, blend);
+          return mix(uTint3, uTint0, blend);
+        }
+
         void main() {
           vec3 viewDirection = normalize(-vViewPosition);
           float facing = max(abs(dot(normalize(vViewNormal), viewDirection)), 0.18);
           float pathLength = 1.0 / facing;
-          float opacity = min(1.0 - exp(-uDensity * pathLength), uMaxOpacity) * uVisibility;
-          gl_FragColor = vec4(uColor, opacity);
+          vec3 localPosition = vLocalPosition / max(uHalfExtent, 0.0001);
+          float worldPhase = dot(
+            vWorldPosition,
+            normalize(vec3(0.57, 0.73, 0.38))
+          ) * uGradientScale;
+          float localPhase = dot(
+            localPosition,
+            normalize(vec3(0.71, 0.43, 0.55))
+          ) * 0.18;
+          float phase = worldPhase + localPhase + uInstanceOffset * 0.42;
+          float cloudA = 0.5 + 0.5 * sin((phase * 0.67 + localPosition.y * 0.12) * 6.283185);
+          float cloudB = 0.5 + 0.5 * sin((phase * 0.41 - localPosition.x * 0.09) * 6.283185);
+          float cloud = smoothstep(0.18, 0.82, cloudA * 0.68 + cloudB * 0.32);
+          vec3 tint = sampleScatterTint(phase);
+          vec3 scatterColor = mix(
+            uColor,
+            tint,
+            uGradientStrength * mix(0.48, 1.0, cloud)
+          );
+          float density = uDensity * mix(0.82, 1.28, cloud);
+          float opacity = min(1.0 - exp(-density * pathLength), uMaxOpacity) * uVisibility;
+          gl_FragColor = vec4(scatterColor, opacity);
         }
       `,
       transparent: true,
