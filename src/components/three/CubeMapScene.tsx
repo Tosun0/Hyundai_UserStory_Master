@@ -85,7 +85,12 @@ type SearchHighlightZoomState = {
   toTarget: THREE.Vector3;
 };
 
-type OrbitCameraTransitionState = SearchHighlightZoomState;
+type OrbitCameraTransitionState = SearchHighlightZoomState & {
+  direction: "in" | "out";
+  fromFocusOffset?: THREE.Vector3;
+  toFocusOffset?: THREE.Vector3;
+  onComplete?: () => void;
+};
 
 type CubeMesh = GlassCube;
 
@@ -1241,6 +1246,7 @@ export default function CubeMapScene({
     const entryPositionVector = new THREE.Vector3();
     const refractionWorldPosition = new THREE.Vector3();
     const orbitCameraOffset = new THREE.Vector3();
+    const orbitTransitionOffset = new THREE.Vector3();
     const searchZoomTarget = new THREE.Vector3();
     const searchZoomOffset = new THREE.Vector3();
     const parallaxBasePosition = new THREE.Vector3();
@@ -1682,16 +1688,21 @@ export default function CubeMapScene({
       controls.minDistance = cubeSceneTheme.orbitView.minDistance;
       controls.maxDistance = cubeSceneTheme.orbitView.maxDistance;
       controls.enablePan = false;
+      controls.enabled = false;
       orbitCameraOffset
         .set(...cubeSceneTheme.orbitView.cameraOffset)
         .normalize()
         .multiplyScalar(cubeSceneTheme.orbitView.cameraDistance);
+      const focusPosition = focusedMesh?.position ?? GRAPH_CENTER;
       orbitCameraTransition = {
         startTime: performance.now(),
         fromPosition: camera.position.clone(),
-        fromTarget: controls.target.clone(),
+        fromTarget: focusPosition.clone(),
         toPosition: GRAPH_CENTER.clone().add(orbitCameraOffset),
         toTarget: GRAPH_CENTER.clone(),
+        direction: "in",
+        fromFocusOffset: camera.position.clone().sub(focusPosition),
+        toFocusOffset: orbitCameraOffset.clone(),
       };
     };
 
@@ -1777,31 +1788,51 @@ export default function CubeMapScene({
     };
 
     const updateOrbitCameraTransition = (frameTime: number) => {
-      if (!orbitCameraTransition || viewMode !== "orbit") {
+      if (!orbitCameraTransition) {
         return;
       }
 
+      const transition = orbitCameraTransition;
       const progress =
-        (frameTime - orbitCameraTransition.startTime) /
+        (frameTime - transition.startTime) /
         cubeSceneTheme.orbitView.cameraTransitionDurationMs;
-      const easedProgress = easeOutCubic(progress);
+      const easedProgress = THREE.MathUtils.smootherstep(progress, 0, 1);
 
-      camera.position.lerpVectors(
-        orbitCameraTransition.fromPosition,
-        orbitCameraTransition.toPosition,
-        easedProgress,
-      );
-      controls.target.lerpVectors(
-        orbitCameraTransition.fromTarget,
-        orbitCameraTransition.toTarget,
-        easedProgress,
-      );
+      if (
+        transition.direction === "in" &&
+        focusedMesh &&
+        transition.fromFocusOffset &&
+        transition.toFocusOffset
+      ) {
+        orbitTransitionOffset.lerpVectors(
+          transition.fromFocusOffset,
+          transition.toFocusOffset,
+          easedProgress,
+        );
+        controls.target.copy(focusedMesh.position);
+        camera.position.copy(focusedMesh.position).add(orbitTransitionOffset);
+      } else {
+        camera.position.lerpVectors(
+          transition.fromPosition,
+          transition.toPosition,
+          easedProgress,
+        );
+        controls.target.lerpVectors(
+          transition.fromTarget,
+          transition.toTarget,
+          easedProgress,
+        );
+      }
 
       if (progress >= 1) {
-        camera.position.copy(orbitCameraTransition.toPosition);
-        controls.target.copy(orbitCameraTransition.toTarget);
+        camera.position.copy(transition.toPosition);
+        controls.target.copy(transition.toTarget);
         orbitCameraTransition = null;
-        scheduleOrbitAutoRotateResume();
+        controls.enabled = true;
+        transition.onComplete?.();
+        if (transition.direction === "in" && viewMode === "orbit") {
+          scheduleOrbitAutoRotateResume();
+        }
       }
     };
 
@@ -2093,35 +2124,7 @@ export default function CubeMapScene({
       notifyOrbitViewChange();
     };
 
-    const exitOrbitView = () => {
-      if (viewMode !== "orbit") {
-        return;
-      }
-
-      viewMode = "map";
-      orbitCameraTransition = null;
-      stopParallaxInput();
-      stopOrbitAutoRotate();
-      disposeStoryThumbnailCube();
-      focusedMesh = null;
-      delete container.dataset.focusedCubeKey;
-      container.dataset.cubeViewMode = "map";
-      container.style.cursor = "default";
-
-      if (savedMapCameraState) {
-        camera.position.copy(savedMapCameraState.position);
-        controls.target.copy(savedMapCameraState.target);
-        controls.minDistance = savedMapCameraState.minDistance;
-        controls.maxDistance = savedMapCameraState.maxDistance;
-        controls.enablePan = savedMapCameraState.enablePan;
-        savedMapCameraState = null;
-      } else {
-        applyMapControls();
-        controls.target.copy(GRAPH_CENTER);
-      }
-
-      controls.update();
-
+    const applyMapReturnTargets = () => {
       if (isChatSortActive()) {
         applyChatSortHighlightTargets();
       } else if (selectedMesh) {
@@ -2129,8 +2132,51 @@ export default function CubeMapScene({
       } else {
         setDefaultCubeTargets();
       }
+    };
+
+    const finishExitOrbitView = () => {
+      viewMode = "map";
+      stopParallaxInput();
+      disposeStoryThumbnailCube();
+      focusedMesh = null;
+      delete container.dataset.focusedCubeKey;
+      container.dataset.cubeViewMode = "map";
+      container.style.cursor = "default";
+
+      if (savedMapCameraState) {
+        controls.minDistance = savedMapCameraState.minDistance;
+        controls.maxDistance = savedMapCameraState.maxDistance;
+        controls.enablePan = savedMapCameraState.enablePan;
+        savedMapCameraState = null;
+      } else {
+        applyMapControls();
+      }
+
+      controls.update();
 
       notifyOrbitViewChange();
+    };
+
+    const exitOrbitView = () => {
+      if (viewMode !== "orbit" || orbitCameraTransition?.direction === "out") {
+        return;
+      }
+
+      stopOrbitAutoRotate();
+      restoreParallaxCamera();
+      applyMapReturnTargets();
+      controls.enabled = false;
+      const returnPosition = savedMapCameraState?.position ?? camera.position;
+      const returnTarget = savedMapCameraState?.target ?? GRAPH_CENTER;
+      orbitCameraTransition = {
+        startTime: performance.now(),
+        fromPosition: camera.position.clone(),
+        fromTarget: controls.target.clone(),
+        toPosition: returnPosition.clone(),
+        toTarget: returnTarget.clone(),
+        direction: "out",
+        onComplete: finishExitOrbitView,
+      };
     };
 
     const resetHighlightState = () => {
