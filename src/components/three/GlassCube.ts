@@ -255,13 +255,12 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             uniform vec3 uGlassTintPink;
 
             vec3 sampleGlassFresnelTint(float phase) {
-              float segment = fract(phase) * 5.0;
+              float segment = abs(fract(phase * 0.5) * 2.0 - 1.0) * 4.0;
               float blend = smoothstep(0.0, 1.0, fract(segment));
-              if (segment < 1.0) return mix(uGlassTintBlue, uGlassTintMint, blend);
-              if (segment < 2.0) return mix(uGlassTintMint, uGlassTintGreen, blend);
-              if (segment < 3.0) return mix(uGlassTintGreen, uGlassTintPurple, blend);
-              if (segment < 4.0) return mix(uGlassTintPurple, uGlassTintPink, blend);
-              return mix(uGlassTintPink, uGlassTintBlue, blend);
+              if (segment < 1.0) return mix(uGlassTintGreen, uGlassTintMint, blend);
+              if (segment < 2.0) return mix(uGlassTintMint, uGlassTintBlue, blend);
+              if (segment < 3.0) return mix(uGlassTintBlue, uGlassTintPurple, blend);
+              return mix(uGlassTintPurple, uGlassTintPink, blend);
             }
           `,
         )
