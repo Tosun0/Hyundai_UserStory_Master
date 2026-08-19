@@ -57,6 +57,7 @@ type GlassCubeOptions = {
   glassFresnelPower: number;
   glassFresnelTint: {
     strength: number;
+    emissionStrength: number;
     worldScale: number;
     viewShift: number;
     colors: readonly [
@@ -205,6 +206,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       shader.uniforms.uGlassEdgeFalloffPower = { value: glassEdgeFalloffPower };
       shader.uniforms.uGlassFresnelPower = { value: glassFresnelPower };
       shader.uniforms.uGlassTintStrength = { value: glassFresnelTint.strength };
+      shader.uniforms.uGlassTintEmissionStrength = {
+        value: glassFresnelTint.emissionStrength,
+      };
       shader.uniforms.uGlassTintWorldScale = { value: glassFresnelTint.worldScale };
       shader.uniforms.uGlassTintViewShift = { value: glassFresnelTint.viewShift };
       shader.uniforms.uGlassTint0 = { value: new THREE.Color(glassFresnelTint.colors[0]) };
@@ -246,6 +250,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             uniform float uGlassEdgeFalloffPower;
             uniform float uGlassFresnelPower;
             uniform float uGlassTintStrength;
+            uniform float uGlassTintEmissionStrength;
             uniform float uGlassTintWorldScale;
             uniform float uGlassTintViewShift;
             uniform vec3 uGlassTint0;
@@ -306,10 +311,18 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
               dot(glassViewDirection, normalize(vec3(0.31, 0.67, 0.47))) *
                 uGlassTintViewShift;
             vec3 glassFresnelTint = sampleGlassFresnelTint(glassTintPhase);
-            diffuseColor.rgb = mix(
-              diffuseColor.rgb,
+            totalEmissiveRadiance +=
+              glassFresnelTint * glassFresnelTintMask * uGlassTintEmissionStrength;
+          `,
+        )
+        .replace(
+          "#include <lights_physical_fragment>",
+          `
+            #include <lights_physical_fragment>
+            material.specularColor = mix(
+              material.specularColor,
               glassFresnelTint,
-              glassFresnelTintMask * uGlassTintStrength
+              clamp(glassFresnelTintMask * uGlassTintStrength, 0.0, 1.0)
             );
           `,
         );
