@@ -93,7 +93,7 @@ export const cubeSceneTheme = {
   background: "#d6d6d6",
   rendering: {
     toneMappingExposure: 1.15,
-    environmentRotation: [0, Math.PI / 2, 0] as const,
+    environmentRotation: [0, (Math.PI / 2) + (Math.PI / 9), 0] as const,
   },
   fog: {
     density: 0.0004,
@@ -129,7 +129,7 @@ export const cubeSceneTheme = {
     minDistance: 500,
     maxDistance: 700,
     cameraOffset: [64, 42, 76],
-    cameraTransitionDurationMs: 420,
+    cameraTransitionDurationMs: 700,
     opacityMaskSrc: "/assets/models/cube%20mask%20textures/Cube%20Opacity%20Mask_2.png",
     opacityMaskTransitionLerp: 0.08,
     autoRotate: {
@@ -353,7 +353,7 @@ export const cubeSceneTheme = {
   },
   hoverGlow: {
     outlineColor: 0xffffff,
-    glowColor: 0xe8f2ff,
+    glowColor: 0xd7e6ff,
     outlineOpacity: 0.82,
     glowOpacity: 0.24,
     outlineThickness: 0.75,

@@ -1059,6 +1059,7 @@ export default function CubeMapScene({
       Boolean(mesh.playbook) && isVisibleCubeMesh(mesh);
 
     const getVisibleCubeMeshes = () => cubeMeshes.filter(isVisiblePlaybookMesh);
+    const getVisibleSceneCubeMeshes = () => cubeMeshes.filter(isVisibleCubeMesh);
 
     const primaryLight = cubeSceneTheme.lights.directional[0];
     const shaderTheme = cubeSceneTheme.cube.shader;
@@ -1660,6 +1661,7 @@ export default function CubeMapScene({
     };
 
     const applyOrbitControls = () => {
+      stopOrbitAutoRotate();
       controls.minDistance = cubeSceneTheme.orbitView.minDistance;
       controls.maxDistance = cubeSceneTheme.orbitView.maxDistance;
       controls.enablePan = false;
@@ -1782,6 +1784,7 @@ export default function CubeMapScene({
         camera.position.copy(orbitCameraTransition.toPosition);
         controls.target.copy(orbitCameraTransition.toTarget);
         orbitCameraTransition = null;
+        scheduleOrbitAutoRotateResume();
       }
     };
 
@@ -1803,7 +1806,7 @@ export default function CubeMapScene({
       const falloffDistance = CUBE_MAP_UNIT * cubeSceneTheme.hover.spreadFalloffUnits;
 
       const buildCandidates = (spreadMultiplier: number) =>
-        getVisibleCubeMeshes().map<TargetCandidate>((mesh) => {
+        getVisibleSceneCubeMeshes().map<TargetCandidate>((mesh) => {
           const basePosition = mesh.basePosition;
           const scale =
             mesh === anchorMesh ? cubeSceneTheme.hover.hoverScale : cubeSceneTheme.hover.dimScale;
@@ -2068,7 +2071,6 @@ export default function CubeMapScene({
       container.dataset.focusedCubeKey = selectedMesh.userData.key;
       container.style.cursor = "grab";
       applyOrbitControls();
-      startOrbitAutoRotate();
       applyOrbitViewTargets();
       disposeStoryThumbnailCube();
       notifyOrbitViewChange();
@@ -2395,7 +2397,7 @@ export default function CubeMapScene({
 
       raycaster.setFromCamera(pointer, camera);
       intersectedCubes = raycaster
-        .intersectObjects(getVisibleCubeMeshes(), false)
+        .intersectObjects(getVisibleSceneCubeMeshes(), false)
         .map((intersection) => intersection.object as CubeMesh);
       pointerRaycastDirty = false;
       return intersectedCubes;
@@ -2825,31 +2827,8 @@ export default function CubeMapScene({
 
       if (shouldRenderOutlineMesh && maskMesh) {
         maskMesh.visible = false;
-        const shouldUseOutlineOcclusion =
-          viewMode === "map" && !isSearchHighlightActive() && !isChatSortActive();
 
         activeOutlineSources.forEach((currentOutlineSource) => {
-          if (shouldUseOutlineOcclusion) {
-            maskOccludersGroup.visible = true;
-            cubeMeshes.forEach((mesh) => {
-              const { maskOccluder } = mesh.state;
-              const shouldOcclude =
-                mesh !== currentOutlineSource && mesh.state.entryProgress > 0.001;
-              maskOccluder.visible = shouldOcclude;
-
-              if (shouldOcclude) {
-                mesh.updateWorldMatrix(true, false);
-                maskOccluder.matrix.copy(mesh.matrixWorld);
-                maskOccluder.matrixWorldNeedsUpdate = true;
-                maskOccluder.updateMatrixWorld(true);
-              }
-            });
-            renderer.render(maskScene, camera);
-          } else {
-            maskOccludersGroup.visible = false;
-          }
-
-          maskOccludersGroup.visible = false;
           currentOutlineSource.updateWorldMatrix(true, false);
           maskMesh.visible = true;
           maskMesh.matrix.copy(currentOutlineSource.matrixWorld);
