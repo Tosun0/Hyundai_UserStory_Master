@@ -93,7 +93,7 @@ export const cubeSceneTheme = {
   background: "#d6d6d6",
   rendering: {
     toneMappingExposure: 1.15,
-    transmissionResolutionScale: 0.45,
+    transmissionResolutionScale: 0.35,
     environmentRotation: [0, (Math.PI / 2) + (Math.PI / 9), 0] as const,
   },
   fog: {
@@ -183,8 +183,8 @@ export const cubeSceneTheme = {
     playbookThumbnailOpacity: 0.92,
     glass: {
       color: "#ffffff",
-      roughness: 0.42,
-      edgeRoughness: 0.64,
+      roughness: 0.68,
+      edgeRoughness: 0.1,
       edgeWidth: 0.14,
       edgeFalloffPower: 2.2,
       fresnelPower: 1.8,
@@ -202,8 +202,8 @@ export const cubeSceneTheme = {
       clearcoatRoughness: 0.025,
       instances: {
         empty: {
-          roughness: 0.48,
-          edgeRoughness: 0.7,
+          roughness: 0.74,
+          edgeRoughness: 0.14,
           edgeWidth: 0.18,
           edgeFalloffPower: 1.8,
           fresnelPower: 1.35,
@@ -226,7 +226,7 @@ export const cubeSceneTheme = {
         minimumStrength: 0.12,
       },
       thumbnailScale: 0.9,
-      thumbnailBlurRadius: 6,
+      thumbnailBlurRadius: 18,
     },
     shader: {
       roughness: 0.32,
