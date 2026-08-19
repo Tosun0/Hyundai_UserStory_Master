@@ -284,7 +284,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
             vec3 sampleGlassFresnelTint(float phase) {
               float segment = abs(fract(phase * 0.5) * 2.0 - 1.0) * 5.0;
-              float blend = smoothstep(0.2, 0.8, fract(segment));
+              float blend = smoothstep(0.35, 0.65, fract(segment));
               if (segment < 1.0) return mix(uGlassTint0, uGlassTint1, blend);
               if (segment < 2.0) return mix(uGlassTint1, uGlassTint2, blend);
               if (segment < 3.0) return mix(uGlassTint2, uGlassTint3, blend);
@@ -294,14 +294,14 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
             vec3 gradeGlassFresnelTint(vec3 color, float strength) {
               float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-              vec3 saturated = mix(vec3(luminance), color, 1.15);
-              vec3 lifted = pow(max(saturated, vec3(0.0)), vec3(1.05));
+              vec3 saturated = mix(vec3(luminance), color, 1.28);
+              vec3 lifted = pow(max(saturated, vec3(0.0)), vec3(1.12));
               return lifted * strength;
             }
 
             float gradeGlassFresnelFalloff(float value) {
-              float expanded = pow(clamp(value, 0.0, 1.0), 0.82);
-              return clamp(max(value * 1.45, expanded), 0.0, 1.0);
+              float contrasted = smoothstep(0.08, 0.92, clamp(value, 0.0, 1.0));
+              return pow(contrasted, 0.82);
             }
 
             float sampleGlassTintDistribution(
@@ -317,12 +317,12 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
                 dot(worldPosition, vec3(-0.23, 0.09, 0.19)) -
                 instanceOffset * 3.883222
               );
-              float breakup = smoothstep(0.42, 0.78, broadFlow * 0.72 + crossFlow * 0.28);
+              float breakup = smoothstep(0.5, 0.68, broadFlow * 0.72 + crossFlow * 0.28);
               float faceBias = 0.42 + 0.58 * abs(dot(
                 normalize(localNormal),
                 normalize(vec3(0.37, 0.79, 0.49))
               ));
-              return mix(0.18, 1.0, breakup) * faceBias;
+              return mix(0.05, 1.0, breakup) * faceBias;
             }
           `,
         )
@@ -365,6 +365,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             float glassFresnelTintFalloff = gradeGlassFresnelFalloff(
               glassFresnelTintMask
             );
+            glassFresnelTintFalloff *= smoothstep(0.12, 0.9, glassDistanceFalloff);
             glassFresnelTintFalloff *= sampleGlassTintDistribution(
               vGlassWorldPosition,
               vGlassLocalNormal,
