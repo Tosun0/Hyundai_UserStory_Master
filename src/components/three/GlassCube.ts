@@ -5,6 +5,22 @@ import type { PlaybookItem } from "../../data/playbookCatalog";
 
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial[]>;
 
+export function createThumbnailMaterial(texture: THREE.Texture, opacity = 1) {
+  return new THREE.MeshStandardMaterial({
+    map: texture,
+    color: 0xe9edf4,
+    roughness: 0.48,
+    metalness: 0,
+    envMapIntensity: 0.42,
+    side: THREE.FrontSide,
+    toneMapped: true,
+    transparent: opacity < 1,
+    opacity,
+    depthWrite: opacity > 0.05,
+    dithering: true,
+  });
+}
+
 export type GlassCubeDefinition = {
   node: CubeMapOverviewNode;
   playbook: PlaybookItem | null;
@@ -350,17 +366,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     const geometry = new THREE.BoxGeometry(size, size, size);
     const materials = Array.from(
       { length: 6 },
-      () =>
-        new THREE.MeshStandardMaterial({
-          map: texture,
-          color: 0xffffff,
-          roughness: 0.62,
-          metalness: 0,
-          side: THREE.DoubleSide,
-          toneMapped: true,
-          transparent: true,
-          opacity: 0,
-        }),
+      () => createThumbnailMaterial(texture, 0),
     );
     const thumbnailCube = new THREE.Mesh(geometry, materials) as GlassCubeThumbnail;
     thumbnailCube.name = "Thumbnail Cube";
