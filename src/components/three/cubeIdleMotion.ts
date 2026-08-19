@@ -5,22 +5,17 @@ export function applyCubeIdleMotion({
   position,
   rotation,
   basePosition,
-  center,
   sceneTime,
   strength,
-  unit,
   config,
 }: {
   position: THREE.Vector3;
   rotation: THREE.Euler;
   basePosition: THREE.Vector3;
-  center: THREE.Vector3;
   sceneTime: number;
   strength: number;
-  unit: number;
   config: {
     periodSeconds: number;
-    waveLengthUnits: number;
     verticalAmplitude: number;
     lateralAmplitude: number;
     depthAmplitude: number;
@@ -31,21 +26,19 @@ export function applyCubeIdleMotion({
     return;
   }
 
+  const seed =
+    basePosition.x * 0.754877666 +
+    basePosition.y * 0.569840296 +
+    basePosition.z * 0.438289471;
   const cycle = (sceneTime / config.periodSeconds) * Math.PI * 2;
-  const offsetX = basePosition.x - center.x;
-  const offsetZ = basePosition.z - center.z;
-  const radialDistance = Math.hypot(offsetX, offsetZ);
-  const layerPhase = basePosition.y * 0.037;
-  const wavePhase =
-    cycle -
-    (radialDistance / Math.max(unit * config.waveLengthUnits, 0.001)) * Math.PI * 2 +
-    layerPhase;
-  const organicPhase = Math.sin(cycle * 0.43 + layerPhase) * 0.28;
+  const phaseX = cycle * (0.83 + Math.sin(seed * 1.7) * 0.12) + seed * 1.31;
+  const phaseY = cycle * (1.07 + Math.cos(seed * 1.1) * 0.14) + seed * 1.73;
+  const phaseZ = cycle * (0.69 + Math.sin(seed * 0.9) * 0.11) + seed * 2.17;
 
-  position.x += Math.sin(wavePhase * 0.71 + organicPhase) * config.lateralAmplitude * strength;
-  position.y += Math.sin(wavePhase + organicPhase) * config.verticalAmplitude * strength;
-  position.z += Math.cos(wavePhase * 0.63 - organicPhase) * config.depthAmplitude * strength;
-  rotation.x += Math.sin(wavePhase * 0.67) * config.rotationAmplitude[0] * strength;
-  rotation.y += Math.cos(wavePhase * 0.53) * config.rotationAmplitude[1] * strength;
-  rotation.z += Math.sin(wavePhase * 0.79) * config.rotationAmplitude[2] * strength;
+  position.x += Math.sin(phaseX) * config.lateralAmplitude * strength;
+  position.y += Math.sin(phaseY) * config.verticalAmplitude * strength;
+  position.z += Math.cos(phaseZ) * config.depthAmplitude * strength;
+  rotation.x += Math.sin(phaseY * 0.61) * config.rotationAmplitude[0] * strength;
+  rotation.y += Math.cos(phaseX * 0.57) * config.rotationAmplitude[1] * strength;
+  rotation.z += Math.sin(phaseZ * 0.73) * config.rotationAmplitude[2] * strength;
 }

@@ -263,9 +263,7 @@ export const cubeSceneTheme = {
     enterFadeEnd: 0.62,
     idleMotion: {
       enabled: true,
-      centerXZRatio: [0.5, 0.5] as const,
       periodSeconds: 9.5,
-      waveLengthUnits: 5,
       verticalAmplitude: 0.42,
       lateralAmplitude: 0.16,
       depthAmplitude: 0.2,

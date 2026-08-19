@@ -1258,11 +1258,6 @@ export default function CubeMapScene({
     const spreadDirection = new THREE.Vector3();
     const targetScaleVector = new THREE.Vector3();
     const entryPositionVector = new THREE.Vector3();
-    const idleMotionCenter = new THREE.Vector3(
-      SIZE * cubeSceneTheme.cube.idleMotion.centerXZRatio[0],
-      GRAPH_CENTER.y,
-      SIZE * cubeSceneTheme.cube.idleMotion.centerXZRatio[1],
-    );
     const refractionWorldPosition = new THREE.Vector3();
     const orbitCameraOffset = new THREE.Vector3();
     const orbitTransitionOffset = new THREE.Vector3();
@@ -2892,10 +2887,8 @@ export default function CubeMapScene({
           position: entryPositionVector,
           rotation: mesh.rotation,
           basePosition: mesh.basePosition,
-          center: idleMotionCenter,
           sceneTime,
           strength: idleMotionBlend * mesh.state.entryProgress,
-          unit: CUBE_MAP_UNIT,
           config: cubeSceneTheme.cube.idleMotion,
         });
         const isFocusTransitionMesh = orbitCameraTransition && mesh === focusedMesh;
