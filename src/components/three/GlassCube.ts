@@ -6,7 +6,7 @@ import type { PlaybookItem } from "../../data/playbookCatalog";
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial[]>;
 
 export function createThumbnailMaterial(texture: THREE.Texture, opacity = 1) {
-  return new THREE.MeshStandardMaterial({
+  const material = new THREE.MeshStandardMaterial({
     map: texture,
     color: 0xe9edf4,
     roughness: 0.48,
@@ -16,9 +16,21 @@ export function createThumbnailMaterial(texture: THREE.Texture, opacity = 1) {
     toneMapped: true,
     transparent: opacity < 1,
     opacity,
-    depthWrite: opacity > 0.05,
+    depthTest: true,
+    depthWrite: false,
     dithering: true,
   });
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      "#include <map_fragment>",
+      `
+        #include <map_fragment>
+        diffuseColor.a = opacity;
+      `,
+    );
+  };
+  material.customProgramCacheKey = () => "thumbnail-ignore-source-alpha-v1";
+  return material;
 }
 
 export type GlassCubeDefinition = {
@@ -359,6 +371,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   setThumbnailCube(thumbnailCube: GlassCubeThumbnail) {
     this.removeThumbnailCube();
     this.thumbnailCube = thumbnailCube;
+    thumbnailCube.renderOrder = 1;
     this.add(thumbnailCube);
   }
 
@@ -382,7 +395,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     );
     this.thumbnailCube?.material.forEach((material) => {
       material.opacity = THREE.MathUtils.lerp(material.opacity, targetOpacity, amount);
-      material.depthWrite = material.opacity > 0.05;
+      material.depthWrite = false;
       const brightness = THREE.MathUtils.lerp(
         material.color.r,
         Math.max(targetOpacity, 0.28),
