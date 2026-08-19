@@ -29,30 +29,49 @@ function createThumbnailUnderlay(
     height: number;
   };
   const padding = Math.ceil(blur * 2);
-  const buffer = document.createElement("canvas");
-  buffer.width = resolution + padding * 2;
-  buffer.height = resolution + padding * 2;
-  const bufferContext = buffer.getContext("2d")!;
+  const sourceCanvas = document.createElement("canvas");
+  sourceCanvas.width = resolution;
+  sourceCanvas.height = resolution;
+  const sourceContext = sourceCanvas.getContext("2d")!;
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
   const scale = Math.max(resolution / sourceWidth, resolution / sourceHeight);
   const drawWidth = sourceWidth * scale;
   const drawHeight = sourceHeight * scale;
-
-  bufferContext.filter = `blur(${blur}px)`;
-  bufferContext.drawImage(
+  sourceContext.drawImage(
     image,
-    padding + (resolution - drawWidth) * 0.5,
-    padding + (resolution - drawHeight) * 0.5,
+    (resolution - drawWidth) * 0.5,
+    (resolution - drawHeight) * 0.5,
     drawWidth,
     drawHeight,
   );
+
+  const buffer = document.createElement("canvas");
+  buffer.width = resolution + padding * 2;
+  buffer.height = resolution + padding * 2;
+  const bufferContext = buffer.getContext("2d")!;
+  bufferContext.drawImage(sourceCanvas, padding, padding);
+  bufferContext.drawImage(sourceCanvas, 0, 0, 1, resolution, 0, padding, padding, resolution);
+  bufferContext.drawImage(sourceCanvas, resolution - 1, 0, 1, resolution, padding + resolution, padding, padding, resolution);
+  bufferContext.drawImage(sourceCanvas, 0, 0, resolution, 1, padding, 0, resolution, padding);
+  bufferContext.drawImage(sourceCanvas, 0, resolution - 1, resolution, 1, padding, padding + resolution, resolution, padding);
+  bufferContext.drawImage(sourceCanvas, 0, 0, 1, 1, 0, 0, padding, padding);
+  bufferContext.drawImage(sourceCanvas, resolution - 1, 0, 1, 1, padding + resolution, 0, padding, padding);
+  bufferContext.drawImage(sourceCanvas, 0, resolution - 1, 1, 1, 0, padding + resolution, padding, padding);
+  bufferContext.drawImage(sourceCanvas, resolution - 1, resolution - 1, 1, 1, padding + resolution, padding + resolution, padding, padding);
+
+  const blurredBuffer = document.createElement("canvas");
+  blurredBuffer.width = buffer.width;
+  blurredBuffer.height = buffer.height;
+  const blurredContext = blurredBuffer.getContext("2d")!;
+  blurredContext.filter = `blur(${blur}px)`;
+  blurredContext.drawImage(buffer, 0, 0);
 
   const canvas = document.createElement("canvas");
   canvas.width = resolution;
   canvas.height = resolution;
   const context = canvas.getContext("2d")!;
-  context.drawImage(buffer, padding, padding, resolution, resolution, 0, 0, resolution, resolution);
+  context.drawImage(blurredBuffer, padding, padding, resolution, resolution, 0, 0, resolution, resolution);
 
   const underlayTexture = new THREE.CanvasTexture(canvas);
   underlayTexture.colorSpace = texture.colorSpace;
@@ -75,10 +94,10 @@ export function createThumbnailMaterial(
     color: 0xffffff,
     side: THREE.FrontSide,
     toneMapped: true,
-    transparent: true,
+    transparent: false,
     opacity: 1,
     depthTest: true,
-    depthWrite: false,
+    depthWrite: true,
     dithering: true,
   });
 }
