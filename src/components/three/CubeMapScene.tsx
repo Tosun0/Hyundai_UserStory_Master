@@ -37,6 +37,7 @@ import {
   updateCubeEntryCamera,
   updateCubeEntryPose,
 } from "./cubeEntryAnimation";
+import { applyCubeIdleMotion } from "./cubeIdleMotion";
 import { createCookTorranceMaterial } from "./createCookTorranceMaterial";
 import {
   createThumbnailMaterial,
@@ -1257,6 +1258,11 @@ export default function CubeMapScene({
     const spreadDirection = new THREE.Vector3();
     const targetScaleVector = new THREE.Vector3();
     const entryPositionVector = new THREE.Vector3();
+    const idleMotionCenter = new THREE.Vector3(
+      SIZE * cubeSceneTheme.cube.idleMotion.centerXZRatio[0],
+      GRAPH_CENTER.y,
+      SIZE * cubeSceneTheme.cube.idleMotion.centerXZRatio[1],
+    );
     const refractionWorldPosition = new THREE.Vector3();
     const orbitCameraOffset = new THREE.Vector3();
     const orbitTransitionOffset = new THREE.Vector3();
@@ -1318,6 +1324,8 @@ export default function CubeMapScene({
     } | null = null;
     let orbitAutoRotateResumeAt: number | null = null;
     let isOrbitControlsInteractionActive = false;
+    let previousFrameTime = performance.now();
+    let idleMotionBlend = 0;
     container.dataset.cubeViewMode = "map";
     container.dataset.visiblePlaybookGroup = visiblePlaybookGroup;
 
@@ -2794,6 +2802,8 @@ export default function CubeMapScene({
 
       animationFrame = requestAnimationFrame(render);
       const frameTime = performance.now();
+      const frameDeltaMs = Math.min(frameTime - previousFrameTime, 100);
+      previousFrameTime = frameTime;
       syncParallaxInput();
       updateSearchHighlightZoom(frameTime);
       updateOrbitAutoRotate(frameTime);
@@ -2829,6 +2839,22 @@ export default function CubeMapScene({
       }
 
       const sceneTime = frameTime * 0.001;
+      const shouldRunIdleMotion =
+        cubeSceneTheme.cube.idleMotion.enabled &&
+        viewMode === "map" &&
+        !cubeEntryCamera.active &&
+        !hovered &&
+        !selectedMesh &&
+        !isChatSortActive() &&
+        !searchHighlightZoom &&
+        !orbitCameraTransition &&
+        !hasPointerDown &&
+        !isOrbitControlsInteractionActive;
+      idleMotionBlend = lerpValue(
+        idleMotionBlend,
+        shouldRunIdleMotion ? 1 : 0,
+        getTimeAlpha(cubeSceneTheme.cube.idleMotion.blendResponseMs, frameDeltaMs),
+      );
       cubeMeshes.forEach((mesh) => {
         const elapsed = frameTime - mesh.state.enterStart;
 
@@ -2857,6 +2883,16 @@ export default function CubeMapScene({
           sceneTime,
           targetScale: mesh.state.targetScale,
           config: cubeSceneTheme.cube,
+        });
+        applyCubeIdleMotion({
+          position: entryPositionVector,
+          rotation: mesh.rotation,
+          basePosition: mesh.basePosition,
+          center: idleMotionCenter,
+          sceneTime,
+          strength: idleMotionBlend * mesh.state.entryProgress,
+          unit: CUBE_MAP_UNIT,
+          config: cubeSceneTheme.cube.idleMotion,
         });
         const isFocusTransitionMesh = orbitCameraTransition && mesh === focusedMesh;
         if (!isFocusTransitionMesh) {

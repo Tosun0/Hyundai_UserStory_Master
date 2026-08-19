@@ -261,6 +261,17 @@ export const cubeSceneTheme = {
     enterRotation: [0.14, 0.24, 0.1] as const,
     assemblyDistance: 26,
     enterFadeEnd: 0.62,
+    idleMotion: {
+      enabled: true,
+      centerXZRatio: [0.5, 0.5] as const,
+      periodSeconds: 11,
+      waveLengthUnits: 5,
+      verticalAmplitude: 0.18,
+      lateralAmplitude: 0.07,
+      depthAmplitude: 0.09,
+      rotationAmplitude: [0.004, 0.007, 0.003] as const,
+      blendResponseMs: 850,
+    },
   },
   grid: {
     color: 0xc3c1c7,
