@@ -31,6 +31,12 @@ import {
 } from "./cubeSceneAssets";
 import type { CubeSceneCommand } from "./cubeSceneCommands";
 import { cubeSceneTheme } from "./cubeSceneTheme";
+import {
+  createCubeEntryCameraState,
+  startCubeEntryCamera,
+  updateCubeEntryCamera,
+  updateCubeEntryPose,
+} from "./cubeEntryAnimation";
 import { createCookTorranceMaterial } from "./createCookTorranceMaterial";
 import {
   createThumbnailMaterial,
@@ -969,6 +975,16 @@ export default function CubeMapScene({
     controls.target.copy(GRAPH_CENTER);
     controls.update();
 
+    const cubeEntryCamera = createCubeEntryCameraState(
+      camera.position,
+      GRAPH_CENTER,
+      cubeSceneTheme.cube,
+    );
+    camera.position.copy(cubeEntryCamera.startPosition);
+    controls.target.copy(GRAPH_CENTER);
+    controls.enabled = false;
+    controls.update();
+
     scene.add(
       new THREE.AmbientLight(
         cubeSceneTheme.lights.ambient.color,
@@ -1086,6 +1102,7 @@ export default function CubeMapScene({
       maskScene.add(maskMesh);
 
       const now = performance.now();
+      startCubeEntryCamera(cubeEntryCamera, now);
 
       groupNodes.forEach((node, index) => {
         const playbook = getPlaybookByCubeKey(node.key);
@@ -2660,6 +2677,11 @@ export default function CubeMapScene({
       updateSearchHighlightZoom(frameTime);
       updateOrbitAutoRotate(frameTime);
       updateOrbitCameraTransition(frameTime);
+      if (
+        updateCubeEntryCamera(cubeEntryCamera, frameTime, camera.position, controls.target)
+      ) {
+        controls.enabled = true;
+      }
       if (searchHighlightZoom || orbitCameraTransition) {
         pointerRaycastDirty = true;
       }
@@ -2703,19 +2725,19 @@ export default function CubeMapScene({
           0,
           cubeSceneTheme.cube.enterFadeEnd,
         );
-        entryPositionVector.copy(mesh.state.targetPosition);
-        entryPositionVector.y +=
-          cubeSceneTheme.cube.enterLift * (1 - mesh.state.entryProgress);
+        updateCubeEntryPose({
+          position: entryPositionVector,
+          rotation: mesh.rotation,
+          scale: targetScaleVector,
+          targetPosition: mesh.state.targetPosition,
+          basePosition: mesh.basePosition,
+          enterStart: mesh.state.enterStart,
+          progress: mesh.state.entryProgress,
+          sceneTime,
+          targetScale: mesh.state.targetScale,
+          config: cubeSceneTheme.cube,
+        });
         mesh.position.lerp(entryPositionVector, cubeSceneTheme.hover.positionLerp);
-        const entryScale =
-          mesh.state.entryProgress <= 0
-            ? 0
-            : THREE.MathUtils.lerp(
-                cubeSceneTheme.cube.enterStartScale,
-                mesh.state.targetScale,
-                mesh.state.entryProgress,
-              );
-        targetScaleVector.setScalar(entryScale);
         mesh.scale.lerp(targetScaleVector, cubeSceneTheme.hover.scaleLerp);
         const shouldOccludeAxisGuide = viewMode === "map" && entryVisibility > 0.01;
         mesh.state.axisDepthOccluder.visible = shouldOccludeAxisGuide;
