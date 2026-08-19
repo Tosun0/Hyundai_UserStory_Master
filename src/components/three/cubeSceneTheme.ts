@@ -173,15 +173,15 @@ export const cubeSceneTheme = {
     opacity: 1,
     playbookThumbnailOpacity: 0.92,
     glass: {
-      color: "#d8efff",
+      color: "#ffffff",
       roughness: 0.2,
       ior: 1.45,
       transmission: 0.92,
       thickness: 0.8,
       opacity: 1,
-      envMapIntensity: 1.8,
+      envMapIntensity: 1.35,
       specularIntensity: 1,
-      attenuationColor: "#d8efff",
+      attenuationColor: "#ffffff",
       attenuationDistance: 7.5,
       thumbnailScale: 0.9,
     },
@@ -329,12 +329,12 @@ export const cubeSceneTheme = {
   lights: {
     ambient: {
       color: 0xffffff,
-      intensity: 0.64,
+      intensity: 0.35,
     },
     directional: [
-      { color: 0xe8f6ff, position: [2.2, 3.4, 2.1], intensity: 1.35 },
-      { color: 0xffffff, position: [-2, 1.4, -2.6], intensity: 0.42 },
-      { color: 0xb9d9ff, position: [0.2, -2, 1.2], intensity: 0.22 },
+      { color: 0xffffff, position: [2.2, 3.4, 2.1], intensity: 1.2 },
+      { color: 0xffffff, position: [-2, 1.4, -2.6], intensity: 0.35 },
+      { color: 0xffffff, position: [0.2, -2, 1.2], intensity: 0.2 },
     ],
   },
 } as const;

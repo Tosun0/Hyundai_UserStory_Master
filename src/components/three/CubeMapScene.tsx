@@ -1997,10 +1997,13 @@ export default function CubeMapScene({
       const storyGeometry = new THREE.BoxGeometry(CUBE_MAP_UNIT, CUBE_MAP_UNIT, CUBE_MAP_UNIT);
       const storyMaterials = faceTextures.map(
         (texture) =>
-          new THREE.MeshBasicMaterial({
+          new THREE.MeshStandardMaterial({
             map: texture,
-            side: THREE.DoubleSide,
-            toneMapped: false,
+            color: 0xffffff,
+            roughness: 0.62,
+            metalness: 0,
+            side: THREE.FrontSide,
+            toneMapped: true,
           }),
       );
 
