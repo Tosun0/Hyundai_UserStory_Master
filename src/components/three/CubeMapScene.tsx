@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import {
   aiChatSortConfig,
   type AiChatSortRequest,
@@ -886,9 +886,20 @@ export default function CubeMapScene({
     container.appendChild(renderer.domElement);
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    const roomEnvironment = new RoomEnvironment();
-    const environmentRenderTarget = pmremGenerator.fromScene(roomEnvironment, 0.04);
-    scene.environment = environmentRenderTarget.texture;
+    let isEnvironmentDisposed = false;
+    let environmentRenderTarget: THREE.WebGLRenderTarget | null = null;
+    new RGBELoader().load(
+      "/assets/hdr/studio_country_hall_2k.hdr",
+      (hdrTexture) => {
+        if (isEnvironmentDisposed) {
+          hdrTexture.dispose();
+          return;
+        }
+        environmentRenderTarget = pmremGenerator.fromEquirectangular(hdrTexture);
+        scene.environment = environmentRenderTarget.texture;
+        hdrTexture.dispose();
+      },
+    );
 
     const maskRenderTarget = new THREE.WebGLRenderTarget(1, 1, {
       format: THREE.RGBAFormat,
@@ -2859,9 +2870,9 @@ export default function CubeMapScene({
       disposeAxisGuideGroup(axisGuideGroup);
       axisDepthOccludersGroup.clear();
       disposeStoryThumbnailCube();
+      isEnvironmentDisposed = true;
       disposeObject(scene);
-      disposeObject(roomEnvironment);
-      environmentRenderTarget.dispose();
+      environmentRenderTarget?.dispose();
       pmremGenerator.dispose();
       nodeGeometry?.dispose();
       opacityMaskTexture?.dispose();
