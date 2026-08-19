@@ -67,22 +67,6 @@ type GlassCubeOptions = {
   glassSpecularIntensity: number;
   glassClearcoat: number;
   glassClearcoatRoughness: number;
-  glassEmptyOverrides: {
-    roughness: number;
-    edgeRoughness: number;
-    edgeWidth: number;
-    edgeFalloffPower: number;
-    fresnelPower: number;
-    iridescence: number;
-    ior: number;
-    dispersion: number;
-    transmission: number;
-    thickness: number;
-    envMapIntensity: number;
-    specularIntensity: number;
-    clearcoat: number;
-    clearcoatRoughness: number;
-  };
   glassAttenuationColor: THREE.ColorRepresentation;
   glassAttenuationDistance: number;
   baseOpacity: number;
@@ -130,7 +114,6 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     glassSpecularIntensity,
     glassClearcoat,
     glassClearcoatRoughness,
-    glassEmptyOverrides,
     glassAttenuationColor,
     glassAttenuationDistance,
     baseOpacity,
@@ -142,57 +125,16 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     targetFrontViewFadeStrength,
   }: GlassCubeOptions) {
     super(geometry, material);
-    const isEmptyCube = !definition.playbook;
-    const resolvedGlassRoughness = isEmptyCube
-      ? glassEmptyOverrides.roughness
-      : glassRoughness;
-    const resolvedGlassEdgeRoughness = isEmptyCube
-      ? glassEmptyOverrides.edgeRoughness
-      : glassEdgeRoughness;
-    const resolvedGlassEdgeWidth = isEmptyCube
-      ? glassEmptyOverrides.edgeWidth
-      : glassEdgeWidth;
-    const resolvedGlassEdgeFalloffPower = isEmptyCube
-      ? glassEmptyOverrides.edgeFalloffPower
-      : glassEdgeFalloffPower;
-    const resolvedGlassFresnelPower = isEmptyCube
-      ? glassEmptyOverrides.fresnelPower
-      : glassFresnelPower;
-    const resolvedGlassIridescence = isEmptyCube
-      ? glassEmptyOverrides.iridescence
-      : glassIridescence;
-    const resolvedGlassIOR = isEmptyCube ? glassEmptyOverrides.ior : glassIOR;
-    const resolvedGlassDispersion = isEmptyCube
-      ? glassEmptyOverrides.dispersion
-      : glassDispersion;
-    const resolvedGlassTransmission = isEmptyCube
-      ? glassEmptyOverrides.transmission
-      : glassTransmission;
-    const resolvedGlassThickness = isEmptyCube
-      ? glassEmptyOverrides.thickness
-      : glassThickness;
-    const resolvedGlassEnvMapIntensity = isEmptyCube
-      ? glassEmptyOverrides.envMapIntensity
-      : glassEnvMapIntensity;
-    const resolvedGlassSpecularIntensity = isEmptyCube
-      ? glassEmptyOverrides.specularIntensity
-      : glassSpecularIntensity;
-    const resolvedGlassClearcoat = isEmptyCube
-      ? glassEmptyOverrides.clearcoat
-      : glassClearcoat;
-    const resolvedGlassClearcoatRoughness = isEmptyCube
-      ? glassEmptyOverrides.clearcoatRoughness
-      : glassClearcoatRoughness;
     material.colorWrite = false;
     material.depthWrite = false;
     this.definition = definition;
     this.glassOpacity = glassOpacity;
-    this.glassIOR = resolvedGlassIOR;
-    this.glassDispersion = resolvedGlassDispersion;
-    this.glassThickness = resolvedGlassThickness;
-    this.glassEnvMapIntensity = resolvedGlassEnvMapIntensity;
-    this.glassSpecularIntensity = resolvedGlassSpecularIntensity;
-    this.glassClearcoatRoughness = resolvedGlassClearcoatRoughness;
+    this.glassIOR = glassIOR;
+    this.glassDispersion = glassDispersion;
+    this.glassThickness = glassThickness;
+    this.glassEnvMapIntensity = glassEnvMapIntensity;
+    this.glassSpecularIntensity = glassSpecularIntensity;
+    this.glassClearcoatRoughness = glassClearcoatRoughness;
     this.userData.key = definition.node.key;
     this.userData.playbook = definition.playbook;
     this.state = {
@@ -216,37 +158,37 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.name = "Glass Cube";
 
     const glassMaterial = new THREE.MeshPhysicalMaterial({
-      color: isEmptyCube ? 0xffffff : glassColor,
-      roughness: resolvedGlassRoughness,
+      color: glassColor,
+      roughness: glassRoughness,
       metalness: 0,
-      transmission: resolvedGlassTransmission,
+      transmission: glassTransmission,
       thickness: this.glassThickness,
       ior: this.glassIOR,
       dispersion: this.glassDispersion,
       transparent: true,
       opacity: 0,
-      envMapIntensity: resolvedGlassEnvMapIntensity,
+      envMapIntensity: glassEnvMapIntensity,
       depthWrite: false,
       side: THREE.DoubleSide,
-      clearcoat: resolvedGlassClearcoat,
-      clearcoatRoughness: resolvedGlassClearcoatRoughness,
-      iridescence: resolvedGlassIridescence,
+      clearcoat: glassClearcoat,
+      clearcoatRoughness: glassClearcoatRoughness,
+      iridescence: glassIridescence,
       iridescenceIOR: glassIridescenceIOR,
       iridescenceThicknessRange: [...glassIridescenceThicknessRange],
-      specularIntensity: resolvedGlassSpecularIntensity,
-      specularColor: new THREE.Color(isEmptyCube ? 0xffffff : glassColor),
-      attenuationColor: new THREE.Color(isEmptyCube ? 0xffffff : glassAttenuationColor),
+      specularIntensity: glassSpecularIntensity,
+      specularColor: new THREE.Color(glassColor),
+      attenuationColor: new THREE.Color(glassAttenuationColor),
       attenuationDistance: glassAttenuationDistance,
     });
-    glassMaterial.name = isEmptyCube ? "MI_EmptyGlass" : "MI_Glass";
+    glassMaterial.name = "MI_Glass";
     glassMaterial.userData.masterMaterial = "M_GlassCube";
     glassMaterial.onBeforeCompile = (shader) => {
       shader.uniforms.uGlassHalfExtent = { value: glassHalfExtent };
-      shader.uniforms.uGlassCoreRoughness = { value: resolvedGlassRoughness };
-      shader.uniforms.uGlassEdgeRoughness = { value: resolvedGlassEdgeRoughness };
-      shader.uniforms.uGlassEdgeWidth = { value: resolvedGlassEdgeWidth };
-      shader.uniforms.uGlassEdgeFalloffPower = { value: resolvedGlassEdgeFalloffPower };
-      shader.uniforms.uGlassFresnelPower = { value: resolvedGlassFresnelPower };
+      shader.uniforms.uGlassCoreRoughness = { value: glassRoughness };
+      shader.uniforms.uGlassEdgeRoughness = { value: glassEdgeRoughness };
+      shader.uniforms.uGlassEdgeWidth = { value: glassEdgeWidth };
+      shader.uniforms.uGlassEdgeFalloffPower = { value: glassEdgeFalloffPower };
+      shader.uniforms.uGlassFresnelPower = { value: glassFresnelPower };
       shader.vertexShader = shader.vertexShader
         .replace(
           "varying vec3 vViewPosition;",
@@ -314,7 +256,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
         );
     };
     glassMaterial.customProgramCacheKey = () =>
-      `glass-edge-${resolvedGlassEdgeRoughness}-${resolvedGlassEdgeWidth}-${resolvedGlassEdgeFalloffPower}-${resolvedGlassFresnelPower}`;
+      `glass-edge-${glassEdgeRoughness}-${glassEdgeWidth}-${glassEdgeFalloffPower}-${glassFresnelPower}`;
     this.glassShell = new THREE.Mesh(geometry, glassMaterial);
     this.glassShell.name = "Glass Shell";
     this.glassShell.frustumCulled = false;
