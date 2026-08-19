@@ -1154,7 +1154,6 @@ export default function CubeMapScene({
           glassEdgeWidth: cubeSceneTheme.cube.glass.edgeWidth,
           glassEdgeFalloffPower: cubeSceneTheme.cube.glass.edgeFalloffPower,
           glassFresnelPower: cubeSceneTheme.cube.glass.fresnelPower,
-          glassEmptyMaterialProfile: cubeSceneTheme.cube.glass.emptyMaterial,
           glassIridescence: cubeSceneTheme.cube.glass.iridescence,
           glassIridescenceIOR: cubeSceneTheme.cube.glass.iridescenceIOR,
           glassIridescenceThicknessRange:
@@ -1166,6 +1165,8 @@ export default function CubeMapScene({
           glassOpacity: cubeSceneTheme.cube.glass.opacity,
           glassEnvMapIntensity: cubeSceneTheme.cube.glass.envMapIntensity,
           glassSpecularIntensity: cubeSceneTheme.cube.glass.specularIntensity,
+          glassClearcoat: cubeSceneTheme.cube.glass.clearcoat,
+          glassClearcoatRoughness: cubeSceneTheme.cube.glass.clearcoatRoughness,
           glassAttenuationColor: cubeSceneTheme.cube.glass.attenuationColor,
           glassAttenuationDistance: cubeSceneTheme.cube.glass.attenuationDistance,
           baseOpacity: cubeSceneTheme.cube.opacity,
