@@ -142,8 +142,8 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
       />
 
       <div
-        className={`screen-fill pointer-events-none z-10 transition-[opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isOrbitView ? "opacity-0 blur-[6px]" : "opacity-100 blur-0"
+        className={`screen-fill pointer-events-none z-10 transition-[opacity,filter] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isOrbitView ? "opacity-0 blur-[3px]" : "opacity-100 blur-0"
         }`}
         data-name="layout/cube-map-ui"
         aria-hidden={isOrbitView}
@@ -201,10 +201,10 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
 
       <div className="screen-fill pointer-events-none z-20" data-name="layout/orbit-ui">
           <header
-            className={`gui-origin-top-center pointer-events-none absolute left-[var(--viewport-center-x)] top-[max(calc(var(--safe-top)+96px),calc(var(--viewport-center-y)-720px))] z-20 flex h-[102px] w-max max-w-[calc(var(--viewport-width)-64px)] -translate-x-1/2 flex-col items-center text-white transition-[opacity,filter] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`gui-origin-top-center pointer-events-none absolute left-[var(--viewport-center-x)] top-[max(calc(var(--safe-top)+96px),calc(var(--viewport-center-y)-720px))] z-20 flex h-[102px] w-max max-w-[calc(var(--viewport-width)-64px)] -translate-x-1/2 flex-col items-center text-white transition-[opacity,filter] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
               isOrbitView
-                ? "delay-[140ms] opacity-100 blur-0"
-                : "delay-0 opacity-0 blur-[6px]"
+                ? "delay-[100ms] opacity-100 blur-0"
+                : "delay-0 opacity-0 blur-[3px]"
             }`}
             data-name="header/orbit-story-summary"
             aria-label={focusedPlaybook?.title ?? "Cube View"}
@@ -242,10 +242,10 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
           </header>
 
           <div
-            className={`absolute left-[calc(var(--safe-left)+32px)] top-[calc(var(--safe-top)+50px)] z-20 origin-left transition-[opacity,scale,translate] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            className={`absolute left-[calc(var(--safe-left)+32px)] top-[calc(var(--safe-top)+50px)] z-20 origin-left transition-[opacity,scale,translate] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isOrbitView
-                ? "pointer-events-auto delay-[140ms] translate-x-0 scale-100 opacity-100"
-                : "pointer-events-none delay-0 -translate-x-[12px] scale-[0.82] opacity-0"
+                ? "pointer-events-auto delay-[100ms] translate-x-0 scale-100 opacity-100"
+                : "pointer-events-none delay-0 -translate-x-[8px] scale-[0.9] opacity-0"
             }`}
           >
             <AnimatedButton
@@ -262,10 +262,10 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
           </div>
 
           <div
-            className={`absolute left-[calc(var(--safe-right)-86px)] top-[calc(var(--safe-top)+32px)] z-20 origin-right transition-[opacity,scale] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+            className={`absolute left-[calc(var(--safe-right)-86px)] top-[calc(var(--safe-top)+32px)] z-20 origin-right transition-[opacity,scale] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isOrbitView
-                ? "pointer-events-auto delay-[140ms] scale-100 opacity-100"
-                : "pointer-events-none delay-0 scale-[0.86] opacity-0"
+                ? "pointer-events-auto delay-[100ms] scale-100 opacity-100"
+                : "pointer-events-none delay-0 scale-[0.92] opacity-0"
             }`}
           >
             <AnimatedButton

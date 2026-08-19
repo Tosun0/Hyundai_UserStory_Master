@@ -126,6 +126,13 @@ function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - THREE.MathUtils.clamp(t, 0, 1), 3);
 }
 
+function easeInOutCubic(t: number) {
+  const progress = THREE.MathUtils.clamp(t, 0, 1);
+  return progress < 0.5
+    ? 4 * progress * progress * progress
+    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+}
+
 function lerpValue(current: number, target: number, amount: number) {
   return current + (target - current) * amount;
 }
@@ -1689,8 +1696,8 @@ export default function CubeMapScene({
 
     const applyOrbitControls = () => {
       stopOrbitAutoRotate();
-      controls.minDistance = cubeSceneTheme.orbitView.minDistance;
-      controls.maxDistance = cubeSceneTheme.orbitView.maxDistance;
+      controls.minDistance = 0;
+      controls.maxDistance = Infinity;
       controls.enablePan = false;
       controls.enabled = false;
       orbitCameraOffset
@@ -1804,7 +1811,7 @@ export default function CubeMapScene({
       const progress =
         (frameTime - transition.startTime) /
         cubeSceneTheme.orbitView.cameraTransitionDurationMs;
-      const easedProgress = THREE.MathUtils.smootherstep(progress, 0, 1);
+      const easedProgress = easeInOutCubic(progress);
 
       if (
         focusedMesh &&
@@ -1860,6 +1867,8 @@ export default function CubeMapScene({
         controls.enabled = true;
         transition.onComplete?.();
         if (transition.direction === "in" && viewMode === "orbit") {
+          controls.minDistance = cubeSceneTheme.orbitView.minDistance;
+          controls.maxDistance = cubeSceneTheme.orbitView.maxDistance;
           scheduleOrbitAutoRotateResume();
         }
       }
@@ -2194,6 +2203,8 @@ export default function CubeMapScene({
       stopOrbitAutoRotate();
       restoreParallaxCamera();
       applyMapReturnTargets();
+      controls.minDistance = 0;
+      controls.maxDistance = Infinity;
       controls.enabled = false;
       const returnPosition = savedMapCameraState?.position ?? camera.position;
       const returnTarget = savedMapCameraState?.target ?? GRAPH_CENTER;
