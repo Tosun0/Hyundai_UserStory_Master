@@ -174,7 +174,11 @@ export const cubeSceneTheme = {
     playbookThumbnailOpacity: 0.92,
     glass: {
       color: "#ffffff",
-      roughness: 0.2,
+      roughness: 0.02,
+      edgeRoughness: 0.2,
+      edgeWidth: 0.14,
+      edgeFalloffPower: 1.8,
+      fresnelPower: 3,
       ior: 1.45,
       transmission: 0.92,
       thickness: 0.8,

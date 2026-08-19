@@ -35,7 +35,12 @@ type GlassCubeOptions = {
   material: THREE.ShaderMaterial;
   definition: GlassCubeDefinition;
   glassColor: THREE.ColorRepresentation;
+  glassHalfExtent: number;
   glassRoughness: number;
+  glassEdgeRoughness: number;
+  glassEdgeWidth: number;
+  glassEdgeFalloffPower: number;
+  glassFresnelPower: number;
   glassIOR: number;
   glassTransmission: number;
   glassThickness: number;
@@ -65,7 +70,12 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     material,
     definition,
     glassColor,
+    glassHalfExtent,
     glassRoughness,
+    glassEdgeRoughness,
+    glassEdgeWidth,
+    glassEdgeFalloffPower,
+    glassFresnelPower,
     glassIOR,
     glassTransmission,
     glassThickness,
@@ -126,6 +136,85 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       attenuationColor: new THREE.Color(glassAttenuationColor),
       attenuationDistance: glassAttenuationDistance,
     });
+    glassMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uGlassHalfExtent = { value: glassHalfExtent };
+      shader.uniforms.uGlassCoreRoughness = { value: glassRoughness };
+      shader.uniforms.uGlassEdgeRoughness = { value: glassEdgeRoughness };
+      shader.uniforms.uGlassEdgeWidth = { value: glassEdgeWidth };
+      shader.uniforms.uGlassEdgeFalloffPower = { value: glassEdgeFalloffPower };
+      shader.uniforms.uGlassFresnelPower = { value: glassFresnelPower };
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          "varying vec3 vViewPosition;",
+          `
+            varying vec3 vViewPosition;
+            varying vec3 vGlassLocalPosition;
+            varying vec3 vGlassLocalNormal;
+          `,
+        )
+        .replace(
+          "void main() {",
+          `
+            void main() {
+              vGlassLocalPosition = position;
+              vGlassLocalNormal = normal;
+          `,
+        );
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          "varying vec3 vViewPosition;",
+          `
+            varying vec3 vViewPosition;
+            varying vec3 vGlassLocalPosition;
+            varying vec3 vGlassLocalNormal;
+            uniform float uGlassHalfExtent;
+            uniform float uGlassCoreRoughness;
+            uniform float uGlassEdgeRoughness;
+            uniform float uGlassEdgeWidth;
+            uniform float uGlassEdgeFalloffPower;
+            uniform float uGlassFresnelPower;
+          `,
+        )
+        .replace(
+          "#include <normal_fragment_maps>",
+          `
+            #include <normal_fragment_maps>
+            vec3 glassAbsNormal = abs(normalize(vGlassLocalNormal));
+            vec2 glassFacePosition;
+            if (glassAbsNormal.x >= glassAbsNormal.y && glassAbsNormal.x >= glassAbsNormal.z) {
+              glassFacePosition = vGlassLocalPosition.zy;
+            } else if (glassAbsNormal.y >= glassAbsNormal.x && glassAbsNormal.y >= glassAbsNormal.z) {
+              glassFacePosition = vGlassLocalPosition.xz;
+            } else {
+              glassFacePosition = vGlassLocalPosition.xy;
+            }
+            float glassFaceRadius = max(abs(glassFacePosition.x), abs(glassFacePosition.y)) /
+              max(uGlassHalfExtent, 0.0001);
+            float glassEdgeStart = 1.0 - uGlassEdgeWidth;
+            float glassEdgeDistance = clamp(
+              (glassFaceRadius - glassEdgeStart) / max(uGlassEdgeWidth, 0.0001),
+              0.0,
+              1.0
+            );
+            float glassDistanceFalloff = pow(
+              smoothstep(0.0, 1.0, glassEdgeDistance),
+              uGlassEdgeFalloffPower
+            );
+            float glassFresnel = pow(
+              1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0),
+              uGlassFresnelPower
+            );
+            float glassEdgeBlur = glassDistanceFalloff * mix(0.55, 1.0, glassFresnel);
+            roughnessFactor = mix(
+              uGlassCoreRoughness,
+              uGlassEdgeRoughness,
+              glassEdgeBlur
+            );
+          `,
+        );
+    };
+    glassMaterial.customProgramCacheKey = () =>
+      `glass-edge-${glassEdgeRoughness}-${glassEdgeWidth}-${glassEdgeFalloffPower}-${glassFresnelPower}`;
     this.glassShell = new THREE.Mesh(geometry, glassMaterial);
     this.glassShell.name = "Glass Shell";
     this.glassShell.frustumCulled = false;
