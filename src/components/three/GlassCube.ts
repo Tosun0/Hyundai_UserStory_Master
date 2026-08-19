@@ -134,7 +134,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       opacity: glassOpacity,
       envMapIntensity: glassEnvMapIntensity,
       depthWrite: false,
-      side: THREE.FrontSide,
+      side: THREE.DoubleSide,
       clearcoat: 0.45,
       clearcoatRoughness: 0.08,
       iridescence: glassIridescence,
@@ -146,6 +146,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       attenuationDistance: glassAttenuationDistance,
     });
     glassMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uGlassPearlStrength = {
+        value: Math.min(glassIridescence * 0.72, 0.34),
+      };
       shader.uniforms.uGlassHalfExtent = { value: glassHalfExtent };
       shader.uniforms.uGlassCoreRoughness = { value: glassRoughness };
       shader.uniforms.uGlassEdgeRoughness = { value: glassEdgeRoughness };
@@ -182,6 +185,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             uniform float uGlassEdgeWidth;
             uniform float uGlassEdgeFalloffPower;
             uniform float uGlassFresnelPower;
+            uniform float uGlassPearlStrength;
           `,
         )
         .replace(
@@ -221,6 +225,39 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             );
           `,
         );
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;",
+        `
+          vec3 outgoingLight = totalDiffuse + totalSpecular + totalEmissiveRadiance;
+          float pearlFacing = abs(dot(normalize(normal), normalize(vViewPosition)));
+          float pearlEdge = pow(1.0 - clamp(pearlFacing, 0.0, 1.0), 0.82);
+          float pearlPosition = clamp(
+            0.5 + vGlassLocalPosition.x * 0.22 + vGlassLocalPosition.y * 0.16 +
+            vGlassLocalPosition.z * 0.18 + pearlEdge * 0.48,
+            0.0,
+            1.0
+          );
+          vec3 pearlBlue = vec3(0.64, 0.92, 1.0);
+          vec3 pearlPurple = vec3(0.78, 0.72, 1.0);
+          vec3 pearlPink = vec3(1.0, 0.78, 0.9);
+          vec3 pearlBluePurple = mix(
+            pearlBlue,
+            pearlPurple,
+            smoothstep(0.12, 0.56, pearlPosition)
+          );
+          vec3 pearlTint = mix(
+            pearlBluePurple,
+            pearlPink,
+            smoothstep(0.56, 0.94, pearlPosition)
+          );
+          float pearlMask = uGlassPearlStrength * (0.34 + pearlEdge * 0.66);
+          outgoingLight = mix(
+            outgoingLight,
+            outgoingLight * 0.78 + pearlTint * 0.22,
+            pearlMask
+          );
+        `,
+      );
     };
     glassMaterial.customProgramCacheKey = () =>
       `glass-edge-${glassEdgeRoughness}-${glassEdgeWidth}-${glassEdgeFalloffPower}-${glassFresnelPower}`;
@@ -275,7 +312,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
           color: 0xffffff,
           roughness: 0.62,
           metalness: 0,
-          side: THREE.FrontSide,
+          side: THREE.DoubleSide,
           toneMapped: true,
         }),
     );

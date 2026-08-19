@@ -920,18 +920,21 @@ export default function CubeMapScene({
       color: 0xffffff,
       depthTest: true,
       depthWrite: true,
+      side: THREE.DoubleSide,
     });
     const maskOccluderMaterial = new THREE.MeshBasicMaterial({
       color: 0x000000,
       colorWrite: false,
       depthTest: true,
       depthWrite: true,
+      side: THREE.DoubleSide,
     });
     const axisDepthOccluderMaterial = new THREE.MeshBasicMaterial({
       color: 0x000000,
       colorWrite: false,
       depthTest: true,
       depthWrite: true,
+      side: THREE.DoubleSide,
     });
     const overlayScene = new THREE.Scene();
     const overlayCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -2827,7 +2830,6 @@ export default function CubeMapScene({
       renderer.render(scene, camera);
 
       if (axisGuideGroup.visible) {
-        renderer.clearDepth();
         renderer.render(axisDepthScene, camera);
         renderer.render(axisGuideScene, camera);
       }
