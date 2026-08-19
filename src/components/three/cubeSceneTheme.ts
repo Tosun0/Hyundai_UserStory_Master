@@ -131,6 +131,12 @@ export const cubeSceneTheme = {
     cameraOffset: [64, 42, 76],
     cameraTransitionDurationMs: 850,
     oppositeViewDurationMultiplier: 1.65,
+    otherCubesFade: {
+      startProgress: 0.06,
+      staggerProgress: 0.42,
+      jitterProgress: 0.06,
+      durationProgress: 0.24,
+    },
     opacityMaskSrc: "/assets/models/cube%20mask%20textures/Cube%20Opacity%20Mask_2.png",
     opacityMaskTransitionLerp: 0.08,
     autoRotate: {

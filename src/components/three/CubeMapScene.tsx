@@ -96,6 +96,12 @@ type OrbitCameraTransitionState = SearchHighlightZoomState & {
   toFocusPosition?: THREE.Vector3;
   fromFocusScale?: number;
   toFocusScale?: number;
+  fadingMeshes?: Array<{
+    mesh: GlassCube;
+    fromOpacity: number;
+    fromScale: number;
+    delayProgress: number;
+  }>;
   onComplete?: () => void;
 };
 
@@ -1719,6 +1725,14 @@ export default function CubeMapScene({
         toFocusOffset.clone().normalize(),
       );
       const focusArcRatio = fromFocusOffset.angleTo(toFocusOffset) / Math.PI;
+      const focusBasePosition = focusedMesh?.basePosition ?? GRAPH_CENTER;
+      const fadingCandidates = cubeMeshes.filter(
+        (mesh) => mesh !== focusedMesh && isVisibleCubeMesh(mesh),
+      );
+      const maximumFadeDistance = Math.max(
+        ...fadingCandidates.map((mesh) => mesh.basePosition.distanceTo(focusBasePosition)),
+        1,
+      );
       orbitCameraTransition = {
         startTime: performance.now(),
         durationMs:
@@ -1740,6 +1754,24 @@ export default function CubeMapScene({
         toFocusPosition: focusedMesh?.state.targetPosition.clone(),
         fromFocusScale: focusedMesh?.scale.x,
         toFocusScale: focusedMesh?.state.targetScale,
+        fadingMeshes: fadingCandidates.map((mesh) => {
+          const seed = Math.abs(
+            Math.sin(
+              mesh.basePosition.x * 12.9898 +
+                mesh.basePosition.y * 78.233 +
+                mesh.basePosition.z * 37.719,
+            ) * 43758.5453,
+          ) % 1;
+          return {
+            mesh,
+            fromOpacity: mesh.state.targetOpacity,
+            fromScale: mesh.state.targetScale,
+            delayProgress:
+              (mesh.basePosition.distanceTo(focusBasePosition) / maximumFadeDistance) *
+                cubeSceneTheme.orbitView.otherCubesFade.staggerProgress +
+              seed * cubeSceneTheme.orbitView.otherCubesFade.jitterProgress,
+          };
+        }),
       };
     };
 
@@ -1833,6 +1865,21 @@ export default function CubeMapScene({
       const progress =
         (frameTime - transition.startTime) / transition.durationMs;
       const easedProgress = easeInOutCubic(progress);
+
+      if (transition.direction === "in" && transition.fadingMeshes) {
+        transition.fadingMeshes.forEach(
+          ({ mesh, fromOpacity, fromScale, delayProgress }) => {
+            const fadeProgress = easeInOutCubic(
+              (progress -
+                cubeSceneTheme.orbitView.otherCubesFade.startProgress -
+                delayProgress) /
+                cubeSceneTheme.orbitView.otherCubesFade.durationProgress,
+            );
+            mesh.state.targetOpacity = THREE.MathUtils.lerp(fromOpacity, 0, fadeProgress);
+            mesh.state.targetScale = THREE.MathUtils.lerp(fromScale, 0, fadeProgress);
+          },
+        );
+      }
 
       if (
         focusedMesh &&
@@ -2088,7 +2135,7 @@ export default function CubeMapScene({
       });
     };
 
-    const applyOrbitViewTargets = () => {
+    const applyOrbitViewTargets = (holdOtherCubes = false) => {
       if (!focusedMesh) {
         return;
       }
@@ -2098,8 +2145,13 @@ export default function CubeMapScene({
         mesh.state.targetPosition.copy(
           mesh === focusedMesh ? GRAPH_CENTER : mesh.basePosition,
         );
-        mesh.state.targetScale = mesh === focusedMesh ? cubeSceneTheme.orbitView.focusedScale : 0;
-        mesh.state.targetOpacity = mesh === focusedMesh ? cubeSceneTheme.hover.highlightOpacity : 0;
+        if (mesh === focusedMesh) {
+          mesh.state.targetScale = cubeSceneTheme.orbitView.focusedScale;
+          mesh.state.targetOpacity = cubeSceneTheme.hover.highlightOpacity;
+        } else if (!holdOtherCubes) {
+          mesh.state.targetScale = 0;
+          mesh.state.targetOpacity = 0;
+        }
         mesh.state.targetOpacityMapMix = mesh === focusedMesh ? 1 : 0;
         if (mesh === focusedMesh) {
           setOrbitViewMaterialTargets(mesh);
@@ -2189,7 +2241,7 @@ export default function CubeMapScene({
       container.dataset.cubeViewMode = "orbit";
       container.dataset.focusedCubeKey = selectedMesh.userData.key;
       container.style.cursor = "grab";
-      applyOrbitViewTargets();
+      applyOrbitViewTargets(true);
       applyOrbitControls();
       disposeStoryThumbnailCube();
       notifyOrbitViewChange();
