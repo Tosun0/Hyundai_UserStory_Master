@@ -6,6 +6,7 @@ import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import {
   aiChatSortConfig,
@@ -45,6 +46,7 @@ import { applyCubeIdleMotion } from "./cubeIdleMotion";
 import { createCookTorranceMaterial } from "./createCookTorranceMaterial";
 import {
   createThumbnailMaterial,
+  GLASS_BLOOM_LAYER,
   GlassCube,
   type GlassCubeThumbnail,
 } from "./GlassCube";
@@ -991,17 +993,51 @@ export default function CubeMapScene({
       .copy(GRAPH_CENTER)
       .add(cameraOffset.normalize().multiplyScalar(cubeSceneTheme.camera.distance));
 
-    const composer = new EffectComposer(renderer);
-    const renderPass = new RenderPass(scene, camera);
+    const bloomComposer = new EffectComposer(renderer);
+    bloomComposer.renderToScreen = false;
+    const bloomRenderPass = new RenderPass(scene, camera);
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(1, 1),
       cubeSceneTheme.rendering.bloom.strength,
       cubeSceneTheme.rendering.bloom.radius,
       cubeSceneTheme.rendering.bloom.threshold,
     );
-    composer.addPass(renderPass);
-    composer.addPass(bloomPass);
-    composer.addPass(new OutputPass());
+    bloomComposer.addPass(bloomRenderPass);
+    bloomComposer.addPass(bloomPass);
+
+    const finalComposer = new EffectComposer(renderer);
+    finalComposer.addPass(new RenderPass(scene, camera));
+    finalComposer.addPass(
+      new ShaderPass(
+        new THREE.ShaderMaterial({
+          uniforms: {
+            baseTexture: { value: null },
+            bloomTexture: { value: bloomComposer.renderTarget2.texture },
+          },
+          vertexShader: `
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `
+            uniform sampler2D baseTexture;
+            uniform sampler2D bloomTexture;
+            varying vec2 vUv;
+            void main() {
+              vec4 base = texture2D(baseTexture, vUv);
+              vec3 bloom = texture2D(bloomTexture, vUv).rgb;
+              gl_FragColor = vec4(base.rgb + bloom, base.a);
+            }
+          `,
+          depthTest: false,
+          depthWrite: false,
+        }),
+        "baseTexture",
+      ),
+    );
+    finalComposer.addPass(new OutputPass());
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -2834,7 +2870,8 @@ export default function CubeMapScene({
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
-      composer.setSize(width, height);
+      bloomComposer.setSize(width, height);
+      finalComposer.setSize(width, height);
 
       const pixelRatio = renderer.getPixelRatio();
       const bufferWidth = Math.max(1, Math.floor(width * pixelRatio));
@@ -3071,7 +3108,10 @@ export default function CubeMapScene({
       renderer.setRenderTarget(null);
       renderer.setClearColor(cubeSceneTheme.background, 0);
       renderer.clear(true, true, true);
-      composer.render();
+      camera.layers.set(GLASS_BLOOM_LAYER);
+      bloomComposer.render();
+      camera.layers.set(0);
+      finalComposer.render();
 
       if (axisGuideGroup.visible) {
         renderer.render(axisDepthScene, camera);
@@ -3131,7 +3171,8 @@ export default function CubeMapScene({
       axisDepthOccluderMaterial.dispose();
       overlayGeometry.dispose();
       outlineMaterial.dispose();
-      composer.dispose();
+      bloomComposer.dispose();
+      finalComposer.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
