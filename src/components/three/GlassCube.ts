@@ -58,6 +58,7 @@ type GlassCubeOptions = {
   glassFresnelTint: {
     strength: number;
     emissionStrength: number;
+    gradeStrength: number;
     worldScale: number;
     viewShift: number;
     instanceShift: number;
@@ -218,6 +219,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       shader.uniforms.uGlassTintEmissionStrength = {
         value: glassFresnelTint.emissionStrength,
       };
+      shader.uniforms.uGlassTintGradeStrength = { value: glassFresnelTint.gradeStrength };
       shader.uniforms.uGlassTintWorldScale = { value: glassFresnelTint.worldScale };
       shader.uniforms.uGlassTintViewShift = { value: glassFresnelTint.viewShift };
       shader.uniforms.uGlassTintInstanceShift = { value: glassFresnelTint.instanceShift };
@@ -264,6 +266,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             uniform float uGlassFresnelPower;
             uniform float uGlassTintStrength;
             uniform float uGlassTintEmissionStrength;
+            uniform float uGlassTintGradeStrength;
             uniform float uGlassTintWorldScale;
             uniform float uGlassTintViewShift;
             uniform float uGlassTintInstanceShift;
@@ -284,6 +287,18 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
               if (segment < 3.0) return mix(uGlassTint2, uGlassTint3, blend);
               if (segment < 4.0) return mix(uGlassTint3, uGlassTint4, blend);
               return mix(uGlassTint4, uGlassTint5, blend);
+            }
+
+            vec3 gradeGlassFresnelTint(vec3 color, float strength) {
+              float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+              vec3 saturated = mix(vec3(luminance), color, 1.35);
+              vec3 lifted = pow(max(saturated, vec3(0.0)), vec3(0.82));
+              return lifted * strength;
+            }
+
+            float gradeGlassFresnelFalloff(float value) {
+              float expanded = pow(clamp(value, 0.0, 1.0), 0.65);
+              return clamp(max(value * 2.0, expanded), 0.0, 1.0);
             }
           `,
         )
@@ -323,6 +338,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
               clamp(1.0 - abs(dot(normalize(normal), glassViewDirection)), 0.0, 1.0),
               uGlassFresnelPower
             );
+            float glassFresnelTintFalloff = gradeGlassFresnelFalloff(
+              glassFresnelTintMask
+            );
             float glassViewTintPhase =
               dot(glassViewDirection, normalize(vec3(0.31, 0.67, 0.47))) *
                 uGlassTintViewShift;
@@ -335,13 +353,12 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
               glassViewTintPhase * 0.35;
             vec3 glassWorldTint = sampleGlassFresnelTint(glassWorldTintPhase);
             vec3 glassInstanceTint = sampleGlassFresnelTint(glassInstanceTintPhase);
-            vec3 glassFresnelTint = mix(
-              glassWorldTint,
-              glassInstanceTint,
-              uGlassTintInstanceBlend
+            vec3 glassFresnelTint = gradeGlassFresnelTint(
+              mix(glassWorldTint, glassInstanceTint, uGlassTintInstanceBlend),
+              uGlassTintGradeStrength
             );
             totalEmissiveRadiance +=
-              glassFresnelTint * glassFresnelTintMask * uGlassTintEmissionStrength;
+              glassFresnelTint * glassFresnelTintFalloff * uGlassTintEmissionStrength;
           `,
         )
         .replace(
@@ -350,8 +367,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
             #include <lights_physical_fragment>
             material.specularColor = mix(
               material.specularColor,
-              glassFresnelTint,
-              clamp(glassFresnelTintMask * uGlassTintStrength, 0.0, 1.0)
+              min(glassFresnelTint, vec3(1.0)),
+              clamp(glassFresnelTintFalloff * uGlassTintStrength, 0.0, 1.0)
             );
           `,
         );

@@ -190,6 +190,7 @@ export const cubeSceneTheme = {
       fresnelTint: {
         strength: 0.95,
         emissionStrength: 0.3,
+        gradeStrength: 2,
         worldScale: 0.045,
         viewShift: 0.14,
         instanceShift: 4,
@@ -210,8 +211,8 @@ export const cubeSceneTheme = {
       clearcoatRoughness: 0.025,
       scatter: {
         color: "#eef7ff",
-        density: 0.12,
-        maxOpacity: 0.18,
+        density: 0.24,
+        maxOpacity: 0.36,
         scale: 0.94,
       },
       attenuationColor: "#dcecff",
