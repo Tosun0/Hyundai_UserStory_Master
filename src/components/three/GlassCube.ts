@@ -88,6 +88,9 @@ type GlassCubeOptions = {
     color: THREE.ColorRepresentation;
     density: number;
     maxOpacity: number;
+    thumbnailColor: THREE.ColorRepresentation;
+    thumbnailDensity: number;
+    thumbnailMaxOpacity: number;
     colors: readonly [
       THREE.ColorRepresentation,
       THREE.ColorRepresentation,
@@ -416,12 +419,21 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassShell.renderOrder = 2;
     this.add(this.glassShell);
 
+    const hasThumbnail = Boolean(definition.playbook);
     const scatterMaterial = new THREE.ShaderMaterial({
       name: "MI_GlassScatter",
       uniforms: {
-        uColor: { value: new THREE.Color(glassScatter.color) },
-        uDensity: { value: glassScatter.density },
-        uMaxOpacity: { value: glassScatter.maxOpacity },
+        uColor: {
+          value: new THREE.Color(
+            hasThumbnail ? glassScatter.thumbnailColor : glassScatter.color,
+          ),
+        },
+        uDensity: {
+          value: hasThumbnail ? glassScatter.thumbnailDensity : glassScatter.density,
+        },
+        uMaxOpacity: {
+          value: hasThumbnail ? glassScatter.thumbnailMaxOpacity : glassScatter.maxOpacity,
+        },
         uHalfExtent: { value: glassHalfExtent },
         uInstanceOffset: { value: glassTintInstanceOffset },
         uGradientScale: { value: glassScatter.gradientScale },
@@ -494,9 +506,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
           vec3 scatterColor = mix(
             uColor,
             tint,
-            uGradientStrength * mix(0.7, 1.0, cloud)
+            uGradientStrength * mix(0.48, 1.0, cloud)
           );
-          float density = uDensity * mix(0.92, 1.08, cloud);
+          float density = uDensity * mix(0.82, 1.28, cloud);
           float opacity = min(1.0 - exp(-density * pathLength), uMaxOpacity) * uVisibility;
           gl_FragColor = vec4(scatterColor, opacity);
         }

@@ -211,8 +211,11 @@ export const cubeSceneTheme = {
       clearcoatRoughness: 0.18,
       scatter: {
         color: "#ffffff",
-        density: 0.28,
-        maxOpacity: 0.42,
+        density: 0.22,
+        maxOpacity: 0.34,
+        thumbnailColor: "#f7fbff",
+        thumbnailDensity: 0.18,
+        thumbnailMaxOpacity: 0.26,
         colors: ["#67e8f9", "#60a5fa", "#818cf8", "#c4b5fd"] as const,
         gradientScale: 0.014,
         gradientStrength: 0.74,
