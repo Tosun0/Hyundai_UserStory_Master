@@ -92,7 +92,7 @@ export const cubeOrbitParallaxConfig = {
 export const cubeSceneTheme = {
   background: "#d6d6d6",
   rendering: {
-    toneMappingExposure: 0.98,
+    toneMappingExposure: 1.08,
     environmentRotation: [0, (Math.PI / 2) + (Math.PI / 9), 0] as const,
   },
   fog: {
@@ -181,7 +181,7 @@ export const cubeSceneTheme = {
     opacity: 1,
     playbookThumbnailOpacity: 0.92,
     glass: {
-      color: "#edf7ff",
+      color: "#ffffff",
       roughness: 0.2,
       edgeRoughness: 0.2,
       edgeWidth: 0.2,
@@ -205,20 +205,20 @@ export const cubeSceneTheme = {
       transmission: 0.98,
       thickness: 0.68,
       opacity: 1,
-      envMapIntensity: 1.05,
+      envMapIntensity: 1.15,
       specularIntensity: 0.92,
       clearcoat: 0.35,
       clearcoatRoughness: 0.08,
       scatter: {
-        color: "#e7eefc",
+        color: "#ffffff",
         density: 0.1,
         maxOpacity: 0.14,
-        thumbnailColor: "#dbeafe",
+        thumbnailColor: "#f7fbff",
         thumbnailDensity: 0.18,
         thumbnailMaxOpacity: 0.22,
         scale: 0.94,
       },
-      attenuationColor: "#dcecff",
+      attenuationColor: "#ffffff",
       attenuationDistance: 7.5,
       thumbnailScale: 0.9,
     },
