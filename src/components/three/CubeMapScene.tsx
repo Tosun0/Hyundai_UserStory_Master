@@ -2886,6 +2886,7 @@ export default function CubeMapScene({
         applyCubeIdleMotion({
           position: entryPositionVector,
           rotation: mesh.rotation,
+          scale: targetScaleVector,
           basePosition: mesh.basePosition,
           center: GRAPH_CENTER,
           sceneTime,

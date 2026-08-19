@@ -4,6 +4,7 @@ import * as THREE from "three";
 export function applyCubeIdleMotion({
   position,
   rotation,
+  scale,
   basePosition,
   center,
   sceneTime,
@@ -13,6 +14,7 @@ export function applyCubeIdleMotion({
 }: {
   position: THREE.Vector3;
   rotation: THREE.Euler;
+  scale: THREE.Vector3;
   basePosition: THREE.Vector3;
   center: THREE.Vector3;
   sceneTime: number;
@@ -22,7 +24,9 @@ export function applyCubeIdleMotion({
     periodSeconds: number;
     normalWavePeriodSeconds: number;
     normalWaveAmplitude: number;
-    normalWaveLayerDelay: number;
+    normalWaveSpatialFrequency: number;
+    normalWavePulsePower: number;
+    normalWaveScaleAmplitude: number;
     normalWaveRotationAmplitude: number;
     verticalAmplitude: number;
     lateralAmplitude: number;
@@ -56,14 +60,30 @@ export function applyCubeIdleMotion({
   const absoluteX = Math.abs(deltaX);
   const absoluteY = Math.abs(deltaY);
   const absoluteZ = Math.abs(deltaZ);
-  const layer = (center.y * 2 - basePosition.y) / Math.max(unit, 0.001);
+  const gridX = basePosition.x / Math.max(unit, 0.001);
+  const gridY = basePosition.y / Math.max(unit, 0.001);
+  const gridZ = basePosition.z / Math.max(unit, 0.001);
+  const spatialPhase =
+    (gridX * 0.74 + gridY * 1.0 + gridZ * 0.58) *
+    config.normalWaveSpatialFrequency;
   const normalWavePhase =
     (sceneTime / config.normalWavePeriodSeconds) * Math.PI * 2 -
-    layer * config.normalWaveLayerDelay +
-    Math.sin(seed) * 0.16;
-  const normalPulse = Math.sin(normalWavePhase) * config.normalWaveAmplitude * strength;
+    spatialPhase +
+    Math.sin(gridX * 0.83 - gridZ * 0.61 + cycle * 0.31) * 0.42 +
+    Math.sin(seed) * 0.08;
+  const normalWave = Math.sin(normalWavePhase) * 0.5 + 0.5;
+  const normalPulse =
+    Math.pow(normalWave, config.normalWavePulsePower) *
+    config.normalWaveAmplitude *
+    strength;
   const normalBend =
     Math.cos(normalWavePhase) * config.normalWaveRotationAmplitude * strength;
+  scale.multiplyScalar(
+    1 +
+      Math.pow(normalWave, config.normalWavePulsePower * 0.82) *
+        config.normalWaveScaleAmplitude *
+        strength,
+  );
 
   if (absoluteX >= absoluteY && absoluteX >= absoluteZ) {
     position.x += Math.sign(deltaX || Math.sin(seed)) * normalPulse;
