@@ -30,8 +30,8 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   }
 
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.textAlign = "right";
-  context.textBaseline = "bottom";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
   context.fillStyle = "rgba(255, 255, 255, 1)";
   context.font = `900 ${fontSize}px "Pretendard"`;
 
@@ -51,12 +51,32 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
     lines.push(line);
   }
 
-  const visibleLines = lines.slice(0, 2).reverse();
+  const visibleLines = lines.slice(0, 2);
+  const lineHeight = fontSize + 12;
+  const widestLine = Math.max(
+    ...visibleLines.map((lineText) => context.measureText(lineText).width),
+  );
+  const boxWidth = Math.min(canvas.width - 72, widestLine + 112);
+  const boxHeight = visibleLines.length * lineHeight + 72;
+  const boxX = (canvas.width - boxWidth) / 2;
+  const boxY = (canvas.height - boxHeight) / 2;
+  const radius = Math.min(36, boxHeight / 2);
+
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.3)";
+  context.shadowBlur = 30;
+  context.shadowOffsetY = 10;
+  context.fillStyle = "rgba(0, 0, 0, 0.42)";
+  context.beginPath();
+  context.roundRect(boxX, boxY, boxWidth, boxHeight, radius);
+  context.fill();
+  context.restore();
+
   visibleLines.forEach((lineText, index) => {
     context.fillText(
       lineText,
-      canvas.width - 48,
-      canvas.height - 36 - index * (fontSize + 12),
+      canvas.width / 2,
+      boxY + 36 + lineHeight / 2 + index * lineHeight,
     );
   });
 
@@ -689,17 +709,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     };
 
     const codenameMesh = createTextMesh(codenameTexture, "Unscattered Codename");
-    codenameMesh.position.set(
-      size / 2 - codenameMesh.userData.surfaceWidth / 2 - size * 0.06,
-      -size / 2 + codenameMesh.userData.surfaceHeight / 2 + size * 0.06,
-      size / 2 + 0.04,
-    );
+    codenameMesh.position.z = size / 2 + 0.04;
     const titleMesh = createTextMesh(titleTexture, "Unscattered Title");
-    titleMesh.position.set(
-      size / 2 + 0.04,
-      -size / 2 + titleMesh.userData.surfaceHeight / 2 + size * 0.06,
-      -size / 2 + titleMesh.userData.surfaceWidth / 2 + size * 0.06,
-    );
+    titleMesh.position.x = size / 2 + 0.04;
     titleMesh.rotation.y = Math.PI / 2;
     this.surfaceTextMesh = codenameMesh;
     this.surfaceTextLayer.add(codenameMesh, titleMesh);
