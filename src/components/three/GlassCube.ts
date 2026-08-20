@@ -19,6 +19,48 @@ export function createThumbnailMaterial(texture: THREE.Texture) {
   });
 }
 
+function createSurfaceTextTexture(text: string, fontSize: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 512;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return null;
+  }
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillStyle = "rgba(12, 18, 32, 0.9)";
+  context.font = `700 ${fontSize}px Pretendard, Arial, sans-serif`;
+
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+  words.forEach((word) => {
+    const candidate = line ? `${line} ${word}` : word;
+    if (context.measureText(candidate).width > 760 && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  });
+  if (line) {
+    lines.push(line);
+  }
+
+  lines.slice(0, 4).forEach((lineText, index) => {
+    context.fillText(lineText, canvas.width / 2, 190 + index * (fontSize + 12));
+  });
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 export type GlassCubeDefinition = {
   node: CubeMapOverviewNode;
   playbook: PlaybookItem | null;
@@ -125,6 +167,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   private readonly glassDispersion: number;
   private readonly glassThickness: number;
   private thumbnailCube: GlassCubeThumbnail | null = null;
+  private surfaceTextMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null = null;
 
   constructor({
     geometry,
@@ -593,6 +636,48 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     thumbnailCube.name = "Thumbnail Cube";
     thumbnailCube.frustumCulled = false;
     this.setThumbnailCube(thumbnailCube);
+  }
+
+  setSurfaceText(size: number) {
+    if (!this.definition.codename || !this.definition.title) {
+      return;
+    }
+
+    const codenameTexture = createSurfaceTextTexture(this.definition.codename, 64);
+    const titleTexture = createSurfaceTextTexture(this.definition.title, 42);
+    if (!codenameTexture || !titleTexture) {
+      return;
+    }
+
+    this.surfaceTextMesh?.geometry.dispose();
+    this.surfaceTextMesh?.material.map?.dispose();
+    this.surfaceTextMesh?.material.dispose();
+    this.surfaceTextLayer.clear();
+
+    const createTextMesh = (texture: THREE.Texture, name: string) => {
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(size * 0.82, size * 0.41),
+        new THREE.MeshBasicMaterial({
+          map: texture,
+          transparent: true,
+          depthTest: true,
+          depthWrite: false,
+          toneMapped: false,
+          side: THREE.FrontSide,
+        }),
+      );
+      mesh.name = name;
+      mesh.renderOrder = 3;
+      return mesh;
+    };
+
+    const codenameMesh = createTextMesh(codenameTexture, "Unscattered Codename");
+    codenameMesh.position.z = size / 2 + 0.04;
+    const titleMesh = createTextMesh(titleTexture, "Unscattered Title");
+    titleMesh.position.x = size / 2 + 0.04;
+    titleMesh.rotation.y = Math.PI / 2;
+    this.surfaceTextMesh = codenameMesh;
+    this.surfaceTextLayer.add(codenameMesh, titleMesh);
   }
 
   updateVisualOpacity(targetOpacity: number, amount: number) {
