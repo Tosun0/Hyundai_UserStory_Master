@@ -33,7 +33,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   context.textAlign = "right";
   context.textBaseline = "bottom";
   context.fillStyle = "rgba(255, 255, 255, 1)";
-  context.font = `900 ${fontSize}px Pretendard, Arial, sans-serif`;
+  context.font = `900 ${fontSize}px "Pretendard"`;
 
   const words = text.split(" ");
   const lines: string[] = [];
@@ -668,8 +668,10 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.surfaceTextLayer.clear();
 
     const createTextMesh = (texture: THREE.Texture, name: string) => {
+      const width = size * 0.82;
+      const height = size * 0.41;
       const mesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(size * 0.82, size * 0.41),
+        new THREE.PlaneGeometry(width, height),
         new THREE.MeshBasicMaterial({
           map: texture,
           transparent: true,
@@ -681,13 +683,23 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       );
       mesh.name = name;
       mesh.renderOrder = 3;
+      mesh.userData.surfaceWidth = width;
+      mesh.userData.surfaceHeight = height;
       return mesh;
     };
 
     const codenameMesh = createTextMesh(codenameTexture, "Unscattered Codename");
-    codenameMesh.position.z = size / 2 + 0.04;
+    codenameMesh.position.set(
+      size / 2 - codenameMesh.userData.surfaceWidth / 2 - size * 0.06,
+      -size / 2 + codenameMesh.userData.surfaceHeight / 2 + size * 0.06,
+      size / 2 + 0.04,
+    );
     const titleMesh = createTextMesh(titleTexture, "Unscattered Title");
-    titleMesh.position.x = size / 2 + 0.04;
+    titleMesh.position.set(
+      size / 2 + 0.04,
+      -size / 2 + titleMesh.userData.surfaceHeight / 2 + size * 0.06,
+      -size / 2 + titleMesh.userData.surfaceWidth / 2 + size * 0.06,
+    );
     titleMesh.rotation.y = Math.PI / 2;
     this.surfaceTextMesh = codenameMesh;
     this.surfaceTextLayer.add(codenameMesh, titleMesh);
