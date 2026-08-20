@@ -30,10 +30,10 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   }
 
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.fillStyle = "rgba(12, 18, 32, 0.9)";
-  context.font = `700 ${fontSize}px Pretendard, Arial, sans-serif`;
+  context.textAlign = "right";
+  context.textBaseline = "bottom";
+  context.fillStyle = "rgba(255, 255, 255, 1)";
+  context.font = `900 ${fontSize}px Pretendard, Arial, sans-serif`;
 
   const words = text.split(" ");
   const lines: string[] = [];
@@ -51,8 +51,13 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
     lines.push(line);
   }
 
-  lines.slice(0, 4).forEach((lineText, index) => {
-    context.fillText(lineText, canvas.width / 2, 190 + index * (fontSize + 12));
+  const visibleLines = lines.slice(0, 4).reverse();
+  visibleLines.forEach((lineText, index) => {
+    context.fillText(
+      lineText,
+      canvas.width - 48,
+      canvas.height - 36 - index * (fontSize + 12),
+    );
   });
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -643,8 +648,16 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       return;
     }
 
-    const codenameTexture = createSurfaceTextTexture(this.definition.codename, 64);
-    const titleTexture = createSurfaceTextTexture(this.definition.title, 42);
+    const codenameTexture = createSurfaceTextTexture(this.definition.codename, 448);
+    const titleFontSize = THREE.MathUtils.clamp(
+      Math.round(900 / Math.max(this.definition.title.length, 8)),
+      52,
+      132,
+    );
+    const titleTexture = createSurfaceTextTexture(
+      this.definition.title,
+      titleFontSize,
+    );
     if (!codenameTexture || !titleTexture) {
       return;
     }
