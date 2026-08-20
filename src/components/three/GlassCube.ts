@@ -4,6 +4,7 @@ import type { CubeMapOverviewNode } from "./cubeMapData";
 import type { PlaybookItem } from "../../data/playbookCatalog";
 
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
+const SURFACE_TEXT_BOX_RADIUS = 36;
 
 export function createThumbnailMaterial(texture: THREE.Texture) {
   return new THREE.MeshBasicMaterial({
@@ -60,7 +61,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   const boxHeight = visibleLines.length * lineHeight + 72;
   const boxX = (canvas.width - boxWidth) / 2;
   const boxY = (canvas.height - boxHeight) / 2;
-  const radius = Math.min(36, boxHeight / 2);
+  const radius = SURFACE_TEXT_BOX_RADIUS;
 
   context.save();
   context.shadowColor = "rgba(0, 0, 0, 0.3)";
