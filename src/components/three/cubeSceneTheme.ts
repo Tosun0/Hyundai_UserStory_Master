@@ -94,6 +94,7 @@ export const cubeSceneTheme = {
   rendering: {
     toneMappingExposure: 1.08,
     environmentRotation: [0, (Math.PI / 2) + (Math.PI / 9), 0] as const,
+    environmentIntensity: 0.88,
   },
   fog: {
     density: 0.0004,
@@ -399,12 +400,12 @@ export const cubeSceneTheme = {
   lights: {
     ambient: {
       color: 0xffffff,
-      intensity: 0.35,
+      intensity: 0.26,
     },
     directional: [
-      { color: 0xffffff, position: [2.2, 3.4, 2.1], intensity: 1.2 },
-      { color: 0xffffff, position: [-2, 1.4, -2.6], intensity: 0.35 },
-      { color: 0xffffff, position: [0.2, -2, 1.2], intensity: 0.2 },
+      { color: 0xdfe9ff, position: [2.2, 3.4, 2.1], intensity: 1.35 },
+      { color: 0x768dff, position: [-2, 1.4, -2.6], intensity: 0.45 },
+      { color: 0x9cf6ff, position: [0.2, -2, 1.2], intensity: 0.32 },
     ],
   },
 } as const;
