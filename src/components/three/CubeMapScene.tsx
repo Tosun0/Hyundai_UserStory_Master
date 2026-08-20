@@ -1185,6 +1185,8 @@ export default function CubeMapScene({
         const definition = {
           node,
           playbook,
+          codename: playbook?.id ?? "",
+          title: playbook?.title ?? "",
           basePosition,
           baseColor: cubeBaseColor,
         };

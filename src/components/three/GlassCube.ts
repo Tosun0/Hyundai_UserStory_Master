@@ -22,6 +22,8 @@ export function createThumbnailMaterial(texture: THREE.Texture) {
 export type GlassCubeDefinition = {
   node: CubeMapOverviewNode;
   playbook: PlaybookItem | null;
+  codename: string;
+  title: string;
   basePosition: THREE.Vector3;
   baseColor: THREE.Color;
 };
@@ -117,6 +119,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   readonly state: GlassCubeRuntimeState;
   readonly glassShell: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
   readonly scatterShell: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  readonly surfaceTextLayer: THREE.Group;
   private readonly glassOpacity: number;
   private readonly glassIOR: number;
   private readonly glassDispersion: number;
@@ -168,6 +171,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.glassThickness = glassThickness;
     this.userData.key = definition.node.key;
     this.userData.playbook = definition.playbook;
+    this.userData.codename = definition.codename;
+    this.userData.title = definition.title;
     this.state = {
       targetPosition: definition.basePosition.clone(),
       targetScale: 1,
@@ -526,6 +531,13 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.scatterShell.renderOrder = 1.5;
     this.scatterShell.scale.setScalar(glassScatter.scale);
     this.add(this.scatterShell);
+
+    this.surfaceTextLayer = new THREE.Group();
+    this.surfaceTextLayer.name = "Cube Surface Text Layer";
+    this.surfaceTextLayer.userData.renderMode = "unscattered";
+    this.surfaceTextLayer.userData.codename = definition.codename;
+    this.surfaceTextLayer.userData.title = definition.title;
+    this.add(this.surfaceTextLayer);
   }
 
   get key() {
@@ -534,6 +546,14 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
   get playbook() {
     return this.definition.playbook;
+  }
+
+  get codename() {
+    return this.definition.codename;
+  }
+
+  get title() {
+    return this.definition.title;
   }
 
   get basePosition() {
