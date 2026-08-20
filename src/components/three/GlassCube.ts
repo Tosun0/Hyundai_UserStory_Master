@@ -51,7 +51,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
     lines.push(line);
   }
 
-  const visibleLines = lines.slice(0, 4).reverse();
+  const visibleLines = lines.slice(0, 2).reverse();
   visibleLines.forEach((lineText, index) => {
     context.fillText(
       lineText,
@@ -650,9 +650,9 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
     const codenameTexture = createSurfaceTextTexture(this.definition.codename, 448);
     const titleFontSize = THREE.MathUtils.clamp(
-      Math.round(900 / Math.max(this.definition.title.length, 8)),
-      52,
-      132,
+      Math.round(1800 / Math.max(this.definition.title.length, 8)),
+      72,
+      180,
     );
     const titleTexture = createSurfaceTextTexture(
       this.definition.title,
