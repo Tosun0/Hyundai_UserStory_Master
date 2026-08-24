@@ -241,7 +241,7 @@ export function PrototypeStage({
         style={stageStyle}
         aria-label="User Story Cube View prototype"
       >
-        {/* <div className="prototype-background" aria-hidden="true">
+        <div className="prototype-background" aria-hidden="true">
           {backgroundLayers.map((layer) => (
             <BackgroundLayerView
               key={layer.id}
@@ -249,7 +249,7 @@ export function PrototypeStage({
               onExitDone={removeBackgroundLayer}
             />
           ))}
-        </div> */}
+        </div>
 
         <StageScaleContext.Provider value={viewportMetrics.guiScale}>
           <div className="prototype-canvas text-crisp">{children}</div>
