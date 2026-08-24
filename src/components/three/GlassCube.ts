@@ -669,18 +669,16 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       return;
     }
 
-    const isGn8 = this.definition.playbook?.group === "GN8";
-    const labelScale = isGn8 ? 0.62 : 1;
-    const codenameTexture = createSurfaceTextTexture(
-      this.definition.codename,
-      Math.round(448 * labelScale),
-    );
     const titleFontSize = THREE.MathUtils.clamp(
       Math.round(
         1800 / Math.max(this.definition.title.length, 8),
       ),
       72,
       180,
+    );
+    const codenameTexture = createSurfaceTextTexture(
+      this.definition.codename,
+      titleFontSize,
     );
     const titleTexture = createSurfaceTextTexture(
       this.definition.title,
