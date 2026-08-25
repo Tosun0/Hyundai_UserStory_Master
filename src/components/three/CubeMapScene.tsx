@@ -1249,7 +1249,7 @@ export default function CubeMapScene({
             CUBE_MAP_UNIT * cubeSceneTheme.cube.glass.thumbnailScale,
           );
         }
-        mesh.setSurfaceText(CUBE_MAP_UNIT * cubeSceneTheme.cube.glass.thumbnailScale);
+        mesh.setSurfaceText(CUBE_MAP_UNIT);
         mesh.visible = isVisibleCubeMesh(mesh);
         nodesGroup.add(mesh);
         cubeMeshes.push(mesh);
