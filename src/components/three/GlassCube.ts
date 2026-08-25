@@ -34,7 +34,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillStyle = "rgba(255, 255, 255, 1)";
+  context.fillStyle = "rgba(0, 0, 0, 1)";
   context.font = `900 ${fontSize}px "Pretendard"`;
   context.shadowColor = "rgba(24, 32, 48, 0.24)";
   context.shadowBlur = 28;
@@ -68,6 +68,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   const boxY = (canvas.height - boxHeight) / 2;
   const radius = SURFACE_TEXT_BOX_RADIUS;
 
+  /*
   context.save();
   const backdropPaddingX = 30;
   const backdropPaddingY = 14;
@@ -96,6 +97,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   );
   context.fill();
   context.restore();
+  */
 
   visibleLines.forEach((lineText, index) => {
     context.fillText(
