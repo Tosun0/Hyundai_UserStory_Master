@@ -224,7 +224,7 @@ export const cubeSceneTheme = {
       },
       attenuationColor: "#ffffff",
       attenuationDistance: 4.5,
-      thumbnailScale: 0.9,
+      thumbnailScale: 0.75,
     },
     shader: {
       roughness: 0.32,
