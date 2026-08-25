@@ -5,6 +5,7 @@ import type { PlaybookItem } from "../../data/playbookCatalog";
 
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
 const SURFACE_TEXT_BOX_RADIUS = 36;
+const SURFACE_TEXT_FONT_SIZE = 180;
 
 export function createThumbnailMaterial(texture: THREE.Texture) {
   return new THREE.MeshBasicMaterial({
@@ -33,7 +34,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillStyle = "rgba(255, 255, 255, 1)";
+  context.fillStyle = "rgba(0, 0, 0, 1)";
   context.font = `900 ${fontSize}px "Pretendard"`;
 
   const words = text.split(" ");
@@ -671,20 +672,13 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       return;
     }
 
-    const titleFontSize = THREE.MathUtils.clamp(
-      Math.round(
-        1800 / Math.max(this.definition.title.length, 8),
-      ),
-      72,
-      180,
-    );
     const codenameTexture = createSurfaceTextTexture(
       this.definition.codename,
-      titleFontSize,
+      SURFACE_TEXT_FONT_SIZE,
     );
     const titleTexture = createSurfaceTextTexture(
       this.definition.title,
-      titleFontSize,
+      SURFACE_TEXT_FONT_SIZE,
     );
     if (!codenameTexture || !titleTexture) {
       return;
