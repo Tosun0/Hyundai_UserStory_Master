@@ -34,8 +34,8 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillStyle = "rgba(0, 0, 0, 1)";
-  context.font = `900 ${fontSize}px "Pretendard"`;
+  context.fillStyle = "rgba(0, 0, 0, 0.8)";
+  context.font = `400 ${fontSize}px "Pretendard"`;
   context.shadowColor = "rgba(24, 32, 48, 0.24)";
   context.shadowBlur = 28;
   context.shadowOffsetX = 0;
