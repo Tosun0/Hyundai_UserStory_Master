@@ -34,7 +34,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillStyle = "rgba(0, 0, 0, 0.8)";
+  context.fillStyle = "rgba(0, 0, 0, 0.7)";
   context.font = `400 ${fontSize}px "Pretendard"`;
   context.shadowColor = "rgba(24, 32, 48, 0.24)";
   context.shadowBlur = 28;
@@ -57,7 +57,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
     lines.push(line);
   }
 
-  const visibleLines = lines.slice(0, 2);
+  const visibleLines = lines.slice(0, 3);
   const lineHeight = fontSize + 12;
   const widestLine = Math.max(
     ...visibleLines.map((lineText) => context.measureText(lineText).width),
