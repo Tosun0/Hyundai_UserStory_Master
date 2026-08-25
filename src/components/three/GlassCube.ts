@@ -58,7 +58,12 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   }
 
   const visibleLines = lines.slice(0, 3);
-  const lineHeight = fontSize + 12;
+  const renderFontSize = Math.min(
+    fontSize,
+    Math.floor((canvas.height - 96) / visibleLines.length - 12),
+  );
+  context.font = `400 ${renderFontSize}px "Pretendard"`;
+  const lineHeight = renderFontSize + 12;
   const widestLine = Math.max(
     ...visibleLines.map((lineText) => context.measureText(lineText).width),
   );
