@@ -69,27 +69,30 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   const radius = SURFACE_TEXT_BOX_RADIUS;
 
   context.save();
-  const backdropPadding = 30;
+  const backdropPaddingX = 30;
+  const backdropPaddingY = 14;
+  const backdropRadius = Math.max(boxWidth, boxHeight) * 0.58;
   const backdropGradient = context.createRadialGradient(
     canvas.width / 2,
     canvas.height / 2,
     Math.min(boxWidth, boxHeight) * 0.08,
     canvas.width / 2,
     canvas.height / 2,
-    Math.max(boxWidth, boxHeight) * 0.72,
+    backdropRadius,
   );
-  backdropGradient.addColorStop(0, "rgba(24, 32, 48, 0.3)");
-  backdropGradient.addColorStop(0.52, "rgba(24, 32, 48, 0.16)");
-  backdropGradient.addColorStop(1, "rgba(24, 32, 48, 0)");
-  context.filter = "blur(24px)";
+  backdropGradient.addColorStop(0, "rgba(12, 18, 32, 0.42)");
+  backdropGradient.addColorStop(0.38, "rgba(12, 18, 32, 0.26)");
+  backdropGradient.addColorStop(0.76, "rgba(12, 18, 32, 0.06)");
+  backdropGradient.addColorStop(1, "rgba(12, 18, 32, 0)");
+  context.filter = "blur(20px)";
   context.fillStyle = backdropGradient;
   context.beginPath();
   context.roundRect(
-    boxX - backdropPadding,
-    boxY - backdropPadding,
-    boxWidth + backdropPadding * 2,
-    boxHeight + backdropPadding * 2,
-    radius + backdropPadding,
+    boxX - backdropPaddingX,
+    boxY - backdropPaddingY,
+    boxWidth + backdropPaddingX * 2,
+    boxHeight + backdropPaddingY * 2,
+    radius + backdropPaddingY,
   );
   context.fill();
   context.restore();
