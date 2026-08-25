@@ -34,8 +34,12 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillStyle = "rgba(0, 0, 0, 1)";
+  context.fillStyle = "rgba(255, 255, 255, 1)";
   context.font = `900 ${fontSize}px "Pretendard"`;
+  context.shadowColor = "rgba(0, 0, 0, 0.38)";
+  context.shadowBlur = 16;
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 4;
 
   const words = text.split(" ");
   const lines: string[] = [];
