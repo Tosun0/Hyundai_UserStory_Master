@@ -70,8 +70,19 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
 
   context.save();
   const backdropPadding = 18;
-  context.filter = "blur(14px)";
-  context.fillStyle = "rgba(24, 32, 48, 0.24)";
+  const backdropGradient = context.createRadialGradient(
+    canvas.width / 2,
+    canvas.height / 2,
+    Math.min(boxWidth, boxHeight) * 0.08,
+    canvas.width / 2,
+    canvas.height / 2,
+    Math.max(boxWidth, boxHeight) * 0.72,
+  );
+  backdropGradient.addColorStop(0, "rgba(24, 32, 48, 0.3)");
+  backdropGradient.addColorStop(0.52, "rgba(24, 32, 48, 0.16)");
+  backdropGradient.addColorStop(1, "rgba(24, 32, 48, 0)");
+  context.filter = "blur(10px)";
+  context.fillStyle = backdropGradient;
   context.beginPath();
   context.roundRect(
     boxX - backdropPadding,
