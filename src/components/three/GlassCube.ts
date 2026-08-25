@@ -68,17 +68,16 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   const boxY = (canvas.height - boxHeight) / 2;
   const radius = SURFACE_TEXT_BOX_RADIUS;
 
-  /*
   context.save();
-  context.shadowColor = "rgba(0, 0, 0, 0.3)";
-  context.shadowBlur = 30;
-  context.shadowOffsetY = 10;
-  context.fillStyle = "rgba(0, 0, 0, 0.42)";
+  context.shadowColor = "rgba(24, 32, 48, 0.22)";
+  context.shadowBlur = 22;
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 6;
+  context.fillStyle = "rgba(24, 32, 48, 0.2)";
   context.beginPath();
   context.roundRect(boxX, boxY, boxWidth, boxHeight, radius);
   context.fill();
   context.restore();
-  */
 
   visibleLines.forEach((lineText, index) => {
     context.fillText(
