@@ -6,6 +6,7 @@ import type { PlaybookItem, PlaybookTooltipData } from "../../data/playbookCatal
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
 const SURFACE_TEXT_BOX_RADIUS = 36;
 const SURFACE_TEXT_FONT_SIZE = 180;
+const SURFACE_TEXT_LAYOUT_HEIGHT = 512;
 
 export function createThumbnailMaterial(texture: THREE.Texture) {
   return new THREE.MeshBasicMaterial({
@@ -68,7 +69,9 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   }
   renderFontSize = Math.min(
     renderFontSize,
-    Math.floor((canvas.height - 96) / Math.max(visibleLines.length, 1) - 12),
+    Math.floor(
+      (SURFACE_TEXT_LAYOUT_HEIGHT - 96) / Math.max(visibleLines.length, 1) - 12,
+    ),
   );
   context.font = `400 ${renderFontSize}px "Pretendard"`;
   visibleLines = wrapText();
