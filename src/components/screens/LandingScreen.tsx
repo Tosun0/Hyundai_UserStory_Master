@@ -5,24 +5,16 @@ import { AnimatedButton } from "../ui/AnimatedButton";
 import { ArrowGlyph } from "../ui/ArrowGlyph";
 import { UserStoryLogo } from "../ui/UserStoryLogo";
 
-const LANDING_ACCESS_CODES: Record<PlaybookAccessGroup, readonly string[]> = {
-  ALL: ["miuserstory", "qwe", "open4mi"],
-  H: [],
-  GN8: ["gn8"],
-};
-
 type LandingScreenProps = {
   onGoToSearch: (group: PlaybookAccessGroup) => void;
 };
 
-function getAccessGroup(accessCode: string) {
-  const normalizedCode = accessCode.trim().toLowerCase();
+type AccessVerificationResponse = {
+  group?: PlaybookAccessGroup;
+};
 
-  return (
-    Object.entries(LANDING_ACCESS_CODES) as [PlaybookAccessGroup, readonly string[]][]
-  ).find(
-    ([, codes]) => codes.includes(normalizedCode),
-  )?.[0] ?? null;
+function isPlaybookAccessGroup(value: unknown): value is PlaybookAccessGroup {
+  return value === "ALL" || value === "H" || value === "GN8";
 }
 
 export function LandingScreen({ onGoToSearch }: LandingScreenProps) {
@@ -30,6 +22,7 @@ export function LandingScreen({ onGoToSearch }: LandingScreenProps) {
   const [accessCode, setAccessCode] = useState("");
   const [hasCodeError, setHasCodeError] = useState(false);
   const [isAccessCodeVisible, setIsAccessCodeVisible] = useState(false);
+  const [isVerifyingAccessCode, setIsVerifyingAccessCode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -43,19 +36,35 @@ export function LandingScreen({ onGoToSearch }: LandingScreenProps) {
     setHasCodeError(false);
   };
 
-  const submitAccessCode = (event: FormEvent<HTMLFormElement>) => {
+  const submitAccessCode = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const accessGroup = getAccessGroup(accessCode);
-
-    if (!accessGroup) {
-      setHasCodeError(true);
-      inputRef.current?.focus();
+    if (!accessCode.trim() || isVerifyingAccessCode) {
       return;
     }
 
-    setHasCodeError(false);
-    onGoToSearch(accessGroup);
+    setIsVerifyingAccessCode(true);
+
+    try {
+      const response = await fetch("/api/verify-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: accessCode }),
+      });
+      const result = (await response.json()) as AccessVerificationResponse;
+
+      if (!response.ok || !isPlaybookAccessGroup(result.group)) {
+        throw new Error("Access code verification failed");
+      }
+
+      setHasCodeError(false);
+      onGoToSearch(result.group);
+    } catch {
+      setHasCodeError(true);
+      inputRef.current?.focus();
+    } finally {
+      setIsVerifyingAccessCode(false);
+    }
   };
 
   return (
@@ -105,6 +114,7 @@ export function LandingScreen({ onGoToSearch }: LandingScreenProps) {
                 autoComplete="off"
                 spellCheck={false}
                 placeholder="Access code"
+                disabled={isVerifyingAccessCode}
                 className={`landing-access-code-input ${
                   isAccessCodeVisible ? "" : "landing-access-code-input--masked"
                 } h-full w-full rounded-full border-0 bg-white/75 pl-[20px] pr-[52px] text-[18px] font-medium leading-[1.5] tracking-[-0.18px] text-[#2c2c2d] outline-none placeholder:text-[#5b5b5b]`}
@@ -127,7 +137,7 @@ export function LandingScreen({ onGoToSearch }: LandingScreenProps) {
             <AnimatedButton
               type="submit"
               className="flex h-[46px] w-[58px] shrink-0 items-center justify-center rounded-full bg-[#2c2c2d] text-white disabled:opacity-45"
-              disabled={!accessCode.trim()}
+              disabled={!accessCode.trim() || isVerifyingAccessCode}
               data-name="landing/access-code-submit"
               aria-label="Submit access code"
               title="Submit access code"
