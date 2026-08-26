@@ -7,7 +7,7 @@ export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMa
 const SURFACE_TEXT_BOX_RADIUS = 36;
 const SURFACE_CODENAME_FONT_SIZE = 180;
 const SURFACE_TITLE_FONT_SIZE = 144;
-const SURFACE_TITLE_MIN_FONT_SIZE = 96;
+const SURFACE_TITLE_MIN_FONT_SIZE = 140;
 const SURFACE_TEXT_LAYOUT_HEIGHT = 512;
 
 export function createThumbnailMaterial(texture: THREE.Texture) {
@@ -42,7 +42,7 @@ function createSurfaceTextTexture(
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillStyle = "rgba(0, 0, 0, 1)";
-  context.font = `500 ${fontSize}px "Pretendard"`;
+  context.font = `600 ${fontSize}px "Pretendard"`;
   context.shadowColor = "rgba(24, 32, 48, 0.18)";
   context.shadowBlur = 18;
   context.shadowOffsetX = 0;
@@ -95,7 +95,7 @@ function createSurfaceTextTexture(
   let visibleLines = wrapText();
   while (visibleLines.length > 4 && renderFontSize - 8 >= minimumFontSize) {
     renderFontSize -= 8;
-    context.font = `500 ${renderFontSize}px "Pretendard"`;
+    context.font = `600 ${renderFontSize}px "Pretendard"`;
     visibleLines = wrapText();
   }
   renderFontSize = Math.max(
@@ -107,9 +107,9 @@ function createSurfaceTextTexture(
       ),
     ),
   );
-  context.font = `500 ${renderFontSize}px "Pretendard"`;
+  context.font = `600 ${renderFontSize}px "Pretendard"`;
   visibleLines = wrapText();
-  context.font = `500 ${renderFontSize}px "Pretendard"`;
+  context.font = `600 ${renderFontSize}px "Pretendard"`;
   const lineHeight = renderFontSize + 12;
   const widestLine = Math.max(
     ...visibleLines.map((lineText) => context.measureText(lineText).width),
