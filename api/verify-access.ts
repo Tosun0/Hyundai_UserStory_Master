@@ -20,7 +20,7 @@ const ACCESS_CODE_ENV_BY_GROUP: Record<AccessGroup, string> = {
 function getConfiguredCodes(group: AccessGroup) {
   return (process.env[ACCESS_CODE_ENV_BY_GROUP[group]] ?? "")
     .split(",")
-    .map((code) => code.trim().toLowerCase())
+    .map((code) => code.trim())
     .filter(Boolean);
 }
 
@@ -52,7 +52,7 @@ export default function handler(request: AccessRequest, response: AccessResponse
   }
 
   const body = parseBody(request.body);
-  const submittedCode = typeof body?.code === "string" ? body.code.trim().toLowerCase() : "";
+  const submittedCode = typeof body?.code === "string" ? body.code.trim() : "";
 
   if (!submittedCode || submittedCode.length > 128) {
     sendJson(response, 400, { error: "Invalid access code" });
