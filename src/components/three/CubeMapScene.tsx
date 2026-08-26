@@ -61,6 +61,15 @@ const GRID_VISIBILITY_VECTOR = new THREE.Vector3();
 const SEARCH_DIMMED_OPACITY = 0.28;
 const EMPTY_SPACE_CLICK_THRESHOLD = 6;
 
+function isPlaybookVisibleForGroup(
+  visibleGroup: PlaybookGroup,
+  playbookGroup: PlaybookGroup,
+) {
+  return visibleGroup === "H"
+    ? playbookGroup === "H" || playbookGroup === "GN8"
+    : playbookGroup === visibleGroup;
+}
+
 type VectorTuple = readonly [number, number, number];
 
 type TargetCandidate = {
@@ -893,7 +902,7 @@ export default function CubeMapScene({
       const playbook = getPlaybookByCubeKey(node.key);
 
       if (playbook) {
-        return playbook.group === playbookGroup;
+        return isPlaybookVisibleForGroup(playbookGroup, playbook.group);
       }
 
       return COMMON_EMPTY_CUBE_KEYS.has(node.key);
@@ -1095,7 +1104,8 @@ export default function CubeMapScene({
     axisDepthScene.add(axisDepthOccludersGroup);
 
     const isVisibleCubeMesh = (mesh: CubeMesh) =>
-      !mesh.playbook || mesh.playbook.group === visiblePlaybookGroup;
+      !mesh.playbook ||
+      isPlaybookVisibleForGroup(visiblePlaybookGroup, mesh.playbook.group);
 
     const isVisiblePlaybookMesh = (mesh: CubeMesh) =>
       Boolean(mesh.playbook) && isVisibleCubeMesh(mesh);
