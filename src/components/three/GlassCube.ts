@@ -7,7 +7,7 @@ export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMa
 const SURFACE_TEXT_BOX_RADIUS = 36;
 const SURFACE_CODENAME_FONT_SIZE = 180;
 const SURFACE_TITLE_FONT_SIZE = 144;
-const SURFACE_TITLE_MIN_FONT_SIZE = 140;
+const SURFACE_TITLE_MIN_FONT_SIZE = 96;
 const SURFACE_TEXT_LAYOUT_HEIGHT = 512;
 
 export function createThumbnailMaterial(texture: THREE.Texture) {
