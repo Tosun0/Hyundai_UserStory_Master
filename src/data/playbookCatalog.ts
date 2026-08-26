@@ -26,7 +26,6 @@ export type PlaybookItem = {
   cubeKey: string;
   thumbnailSrc?: string;
   fallbackThumbnailSrc?: string;
-  thumbnailScale?: number;
 };
 
 export type PlaybookTooltipData = Pick<PlaybookItem, "title" | "description" | "tags">;
@@ -111,7 +110,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     group: "GN8",
     cubeKey: "5,3,0",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Toon.png",
-    thumbnailScale: 0.7,
   },
   {
     id: "GN8-4",
