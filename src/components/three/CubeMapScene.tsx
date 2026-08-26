@@ -1362,7 +1362,7 @@ export default function CubeMapScene({
       // tooltipDescriptionElement,
       tooltipTagsElement,
     );
-    container.appendChild(tooltipElement);
+    // container.appendChild(tooltipElement);
     let tooltipMesh: CubeMesh | null = null;
     const tooltipWorldPosition = new THREE.Vector3();
 
@@ -1397,10 +1397,8 @@ export default function CubeMapScene({
       if (tooltipMesh !== hovered) {
         tooltipMesh = hovered;
         tooltipTitleElement.textContent = tooltipData.title;
-        /*
         tooltipDescriptionElement.textContent = tooltipData.description;
         tooltipDescriptionElement.hidden = tooltipData.description.length === 0;
-        */
         tooltipTagsElement.replaceChildren(
           ...tooltipData.tags.map((tag) => {
             const tagElement = document.createElement("span");
@@ -2991,7 +2989,7 @@ export default function CubeMapScene({
         applyHoverHighlightTarget(null);
       }
 
-      updateHoverTooltip();
+      // updateHoverTooltip();
     };
 
     const resize = () => {
