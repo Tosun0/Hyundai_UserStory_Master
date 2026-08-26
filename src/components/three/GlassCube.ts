@@ -45,20 +45,45 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
 
   const wrapText = () => {
     const lines: string[] = [];
+    const words = text.trim().split(/\s+/);
     let line = "";
-    Array.from(text).forEach((character) => {
-      const candidate = line + character;
-      if (context.measureText(candidate).width > 760 && line) {
-        lines.push(line.trim());
-        line = character;
-      } else {
+
+    words.forEach((word) => {
+      const candidate = line ? `${line} ${word}` : word;
+      if (context.measureText(candidate).width <= 760 || !line) {
         line = candidate;
+        return;
       }
+
+      lines.push(line);
+      line = word;
     });
+
     if (line) {
-      lines.push(line.trim());
+      lines.push(line);
     }
-    return lines.filter(Boolean);
+
+    return lines.flatMap((lineText) => {
+      if (context.measureText(lineText).width <= 760) {
+        return [lineText];
+      }
+
+      const splitLines: string[] = [];
+      let splitLine = "";
+      Array.from(lineText).forEach((character) => {
+        const candidate = splitLine + character;
+        if (context.measureText(candidate).width > 760 && splitLine) {
+          splitLines.push(splitLine.trim());
+          splitLine = character;
+        } else {
+          splitLine = candidate;
+        }
+      });
+      if (splitLine) {
+        splitLines.push(splitLine.trim());
+      }
+      return splitLines;
+    });
   };
 
   let renderFontSize = fontSize;
