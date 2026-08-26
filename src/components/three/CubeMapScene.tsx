@@ -1258,7 +1258,8 @@ export default function CubeMapScene({
         if (thumbnailTexture) {
           mesh.setThumbnailTexture(
             thumbnailTexture,
-            CUBE_MAP_UNIT * cubeSceneTheme.cube.glass.thumbnailScale,
+            CUBE_MAP_UNIT *
+              (playbook?.thumbnailScale ?? cubeSceneTheme.cube.glass.thumbnailScale),
           );
         }
         mesh.setSurfaceText(CUBE_MAP_UNIT);
@@ -2711,7 +2712,8 @@ export default function CubeMapScene({
 
             mesh.setThumbnailTexture(
               thumbnailTexture,
-              CUBE_MAP_UNIT * cubeSceneTheme.cube.glass.thumbnailScale,
+              CUBE_MAP_UNIT *
+                (mesh.playbook?.thumbnailScale ?? cubeSceneTheme.cube.glass.thumbnailScale),
             );
           });
         });

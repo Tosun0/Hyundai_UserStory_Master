@@ -34,34 +34,44 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillStyle = "rgba(0, 0, 0, 0.7)";
+  context.fillStyle = "rgba(0, 0, 0, 0.78)";
   context.font = `400 ${fontSize}px "Pretendard"`;
-  context.shadowColor = "rgba(24, 32, 48, 0.24)";
-  context.shadowBlur = 28;
+  context.shadowColor = "rgba(24, 32, 48, 0.18)";
+  context.shadowBlur = 18;
   context.shadowOffsetX = 0;
-  context.shadowOffsetY = 8;
+  context.shadowOffsetY = 4;
 
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let line = "";
-  words.forEach((word) => {
-    const candidate = line ? `${line} ${word}` : word;
-    if (context.measureText(candidate).width > 760 && line) {
-      lines.push(line);
-      line = word;
-    } else {
-      line = candidate;
+  const wrapText = () => {
+    const lines: string[] = [];
+    let line = "";
+    Array.from(text).forEach((character) => {
+      const candidate = line + character;
+      if (context.measureText(candidate).width > 760 && line) {
+        lines.push(line.trim());
+        line = character;
+      } else {
+        line = candidate;
+      }
+    });
+    if (line) {
+      lines.push(line.trim());
     }
-  });
-  if (line) {
-    lines.push(line);
-  }
+    return lines.filter(Boolean);
+  };
 
-  const visibleLines = lines.slice(0, 3);
-  const renderFontSize = Math.min(
-    fontSize,
-    Math.floor((canvas.height - 96) / visibleLines.length - 12),
+  let renderFontSize = fontSize;
+  let visibleLines = wrapText();
+  while (visibleLines.length > 4 && renderFontSize > 72) {
+    renderFontSize -= 8;
+    context.font = `400 ${renderFontSize}px "Pretendard"`;
+    visibleLines = wrapText();
+  }
+  renderFontSize = Math.min(
+    renderFontSize,
+    Math.floor((canvas.height - 96) / Math.max(visibleLines.length, 1) - 12),
   );
+  context.font = `400 ${renderFontSize}px "Pretendard"`;
+  visibleLines = wrapText();
   context.font = `400 ${renderFontSize}px "Pretendard"`;
   const lineHeight = renderFontSize + 12;
   const widestLine = Math.max(
@@ -73,24 +83,27 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   const boxY = (canvas.height - boxHeight) / 2;
   const radius = SURFACE_TEXT_BOX_RADIUS;
 
-  /*
   context.save();
-  const backdropPaddingX = 30;
-  const backdropPaddingY = 14;
-  const backdropRadius = Math.max(boxWidth, boxHeight) * 0.58;
+  context.shadowColor = "transparent";
+  context.shadowBlur = 0;
+  context.shadowOffsetX = 0;
+  context.shadowOffsetY = 0;
+  const backdropPaddingX = 80;
+  const backdropPaddingY = 42;
+  const backdropRadius = Math.max(boxWidth, boxHeight) * 0.64;
   const backdropGradient = context.createRadialGradient(
     canvas.width / 2,
     canvas.height / 2,
-    Math.min(boxWidth, boxHeight) * 0.08,
+    Math.min(boxWidth, boxHeight) * 0.12,
     canvas.width / 2,
     canvas.height / 2,
     backdropRadius,
   );
-  backdropGradient.addColorStop(0, "rgba(12, 18, 32, 0.42)");
-  backdropGradient.addColorStop(0.38, "rgba(12, 18, 32, 0.26)");
-  backdropGradient.addColorStop(0.76, "rgba(12, 18, 32, 0.06)");
-  backdropGradient.addColorStop(1, "rgba(12, 18, 32, 0)");
-  context.filter = "blur(20px)";
+  backdropGradient.addColorStop(0, "rgba(255, 255, 255, 0.96)");
+  backdropGradient.addColorStop(0.38, "rgba(255, 255, 255, 0.78)");
+  backdropGradient.addColorStop(0.76, "rgba(255, 255, 255, 0.28)");
+  backdropGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+  context.filter = "blur(24px)";
   context.fillStyle = backdropGradient;
   context.beginPath();
   context.roundRect(
@@ -102,7 +115,6 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   );
   context.fill();
   context.restore();
-  */
 
   visibleLines.forEach((lineText, index) => {
     context.fillText(

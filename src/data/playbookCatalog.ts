@@ -26,6 +26,7 @@ export type PlaybookItem = {
   cubeKey: string;
   thumbnailSrc?: string;
   fallbackThumbnailSrc?: string;
+  thumbnailScale?: number;
 };
 
 export type PlaybookTooltipData = Pick<PlaybookItem, "title" | "description" | "tags">;
@@ -103,13 +104,14 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
   },
   {
     id: "GN8-3",
-    title: "GN8 아는 척은 했고, 이제 배워야 한다",
+    title: "아는 척은 했고, 이제 배워야 한다",
     description: "낯선 기능을 내 것으로 만드는 배움의 순간을 담았습니다.",
     tags: ["학습", "기술"],
     url: "https://userstory-gn8-03.vercel.app/",
     group: "GN8",
     cubeKey: "5,3,0",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Toon.png",
+    thumbnailScale: 0.7,
   },
   {
     id: "GN8-4",
