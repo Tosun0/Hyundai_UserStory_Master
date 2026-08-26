@@ -1357,7 +1357,11 @@ export default function CubeMapScene({
     tooltipTitleElement.className = "cube-hover-tooltip__title";
     tooltipDescriptionElement.className = "cube-hover-tooltip__description";
     tooltipTagsElement.className = "cube-hover-tooltip__tags";
-    tooltipElement.append(tooltipTitleElement, tooltipDescriptionElement, tooltipTagsElement);
+    tooltipElement.append(
+      tooltipTitleElement,
+      // tooltipDescriptionElement,
+      tooltipTagsElement,
+    );
     container.appendChild(tooltipElement);
     let tooltipMesh: CubeMesh | null = null;
     const tooltipWorldPosition = new THREE.Vector3();
@@ -1393,8 +1397,10 @@ export default function CubeMapScene({
       if (tooltipMesh !== hovered) {
         tooltipMesh = hovered;
         tooltipTitleElement.textContent = tooltipData.title;
+        /*
         tooltipDescriptionElement.textContent = tooltipData.description;
         tooltipDescriptionElement.hidden = tooltipData.description.length === 0;
+        */
         tooltipTagsElement.replaceChildren(
           ...tooltipData.tags.map((tag) => {
             const tagElement = document.createElement("span");
