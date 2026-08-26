@@ -1344,6 +1344,21 @@ export default function CubeMapScene({
     container.dataset.cubeViewMode = "map";
     container.dataset.visiblePlaybookGroup = visiblePlaybookGroup;
 
+    const tooltipElement = document.createElement("aside");
+    const tooltipTitleElement = document.createElement("h3");
+    const tooltipDescriptionElement = document.createElement("p");
+    const tooltipTagsElement = document.createElement("div");
+    tooltipElement.className = "cube-hover-tooltip";
+    tooltipElement.setAttribute("role", "tooltip");
+    tooltipElement.setAttribute("aria-hidden", "true");
+    tooltipTitleElement.className = "cube-hover-tooltip__title";
+    tooltipDescriptionElement.className = "cube-hover-tooltip__description";
+    tooltipTagsElement.className = "cube-hover-tooltip__tags";
+    tooltipElement.append(tooltipTitleElement, tooltipDescriptionElement, tooltipTagsElement);
+    container.appendChild(tooltipElement);
+    let tooltipMesh: CubeMesh | null = null;
+    const tooltipWorldPosition = new THREE.Vector3();
+
     const isSearchHighlightActive = () => Boolean(selectedMesh && viewMode === "map");
 
     const isChatSortActive = () => chatSortStage !== null && chatSortCandidateMeshes.length > 0;
@@ -1359,6 +1374,58 @@ export default function CubeMapScene({
     const setOutlineSources = (sources: CubeMesh[]) => {
       outlineSources = Array.from(new Set(sources));
       outlineSource = outlineSources[0] ?? null;
+    };
+
+    const updateHoverTooltip = () => {
+      const tooltipData =
+        viewMode === "map" && isPointerInside ? hovered?.tooltipData ?? null : null;
+
+      if (!tooltipData || !hovered) {
+        tooltipMesh = null;
+        tooltipElement.classList.remove("is-visible");
+        tooltipElement.setAttribute("aria-hidden", "true");
+        return;
+      }
+
+      if (tooltipMesh !== hovered) {
+        tooltipMesh = hovered;
+        tooltipTitleElement.textContent = tooltipData.title;
+        tooltipDescriptionElement.textContent = tooltipData.description;
+        tooltipDescriptionElement.hidden = tooltipData.description.length === 0;
+        tooltipTagsElement.replaceChildren(
+          ...tooltipData.tags.map((tag) => {
+            const tagElement = document.createElement("span");
+            tagElement.className = "cube-hover-tooltip__tag";
+            tagElement.textContent = tag;
+            return tagElement;
+          }),
+        );
+        tooltipTagsElement.hidden = tooltipData.tags.length === 0;
+      }
+
+      hovered.updateWorldMatrix(true, false);
+      tooltipWorldPosition.setFromMatrixPosition(hovered.matrixWorld);
+      tooltipWorldPosition.project(camera);
+
+      const containerRect = container.getBoundingClientRect();
+      const tooltipWidth = tooltipElement.offsetWidth || 260;
+      const tooltipHeight = tooltipElement.offsetHeight || 96;
+      const projectedX = (tooltipWorldPosition.x * 0.5 + 0.5) * containerRect.width;
+      const projectedY = (-tooltipWorldPosition.y * 0.5 + 0.5) * containerRect.height;
+      const gap = 20;
+      const isLeftSide = projectedX < containerRect.width * 0.64;
+      const preferredX = isLeftSide
+        ? projectedX + gap
+        : projectedX - tooltipWidth - gap;
+      const minX = 12;
+      const maxX = Math.max(minX, containerRect.width - tooltipWidth - 12);
+      const minY = tooltipHeight / 2 + 12;
+      const maxY = Math.max(minY, containerRect.height - tooltipHeight / 2 - 12);
+
+      tooltipElement.style.left = `${THREE.MathUtils.clamp(preferredX, minX, maxX)}px`;
+      tooltipElement.style.top = `${THREE.MathUtils.clamp(projectedY, minY, maxY)}px`;
+      tooltipElement.classList.add("is-visible");
+      tooltipElement.setAttribute("aria-hidden", "false");
     };
 
     const getCubeMeshByKey = (key: string) =>
@@ -2822,6 +2889,8 @@ export default function CubeMapScene({
         setOutlineSource(null);
         applyHoverHighlightTarget(null);
       }
+
+      updateHoverTooltip();
     };
 
     const resize = () => {
@@ -2896,6 +2965,8 @@ export default function CubeMapScene({
         );
         updateHoveredCube();
       }
+
+      updateHoverTooltip();
 
       const sceneTime = frameTime * 0.001;
       const canRunIdleMotion =
@@ -3130,6 +3201,7 @@ export default function CubeMapScene({
       outlineMaterial.dispose();
       renderer.dispose();
       renderer.domElement.remove();
+      tooltipElement.remove();
     };
   }, [playbookGroup]);
 

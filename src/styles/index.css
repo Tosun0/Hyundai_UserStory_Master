@@ -264,6 +264,65 @@ button {
   touch-action: none;
 }
 
+.cube-hover-tooltip {
+  position: absolute;
+  z-index: 4;
+  width: min(280px, calc(100% - 24px));
+  box-sizing: border-box;
+  padding: 16px 18px;
+  border: 1px solid rgb(255 255 255 / 72%);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgb(255 255 255 / 82%), rgb(236 241 246 / 68%));
+  box-shadow: 0 18px 42px rgb(63 74 91 / 18%), inset 0 1px rgb(255 255 255 / 72%);
+  backdrop-filter: blur(18px) saturate(1.15);
+  color: #1f2937;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) translateX(8px) scale(0.97);
+  transform-origin: center;
+  transition: opacity 180ms ease, transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  visibility: hidden;
+}
+
+.cube-hover-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0) scale(1);
+  visibility: visible;
+}
+
+.cube-hover-tooltip__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.cube-hover-tooltip__description {
+  margin: 9px 0 0;
+  color: rgb(31 41 55 / 76%);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.cube-hover-tooltip__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.cube-hover-tooltip__tag {
+  padding: 4px 9px;
+  border: 1px solid rgb(255 255 255 / 78%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 48%);
+  color: rgb(31 41 55 / 76%);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
 .minimal-cube-loader {
   position: absolute;
   inset: 0;
