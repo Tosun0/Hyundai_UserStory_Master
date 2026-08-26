@@ -5,7 +5,8 @@ import type { PlaybookItem, PlaybookTooltipData } from "../../data/playbookCatal
 
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
 const SURFACE_TEXT_BOX_RADIUS = 36;
-const SURFACE_TEXT_FONT_SIZE = 180;
+const SURFACE_CODENAME_FONT_SIZE = 180;
+const SURFACE_TITLE_FONT_SIZE = 144;
 const SURFACE_TEXT_LAYOUT_HEIGHT = 512;
 
 export function createThumbnailMaterial(texture: THREE.Texture) {
@@ -720,11 +721,11 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
     const codenameTexture = createSurfaceTextTexture(
       this.definition.codename,
-      SURFACE_TEXT_FONT_SIZE,
+      SURFACE_CODENAME_FONT_SIZE,
     );
     const titleTexture = createSurfaceTextTexture(
       this.definition.title,
-      SURFACE_TEXT_FONT_SIZE,
+      SURFACE_TITLE_FONT_SIZE,
     );
     if (!codenameTexture || !titleTexture) {
       return;
