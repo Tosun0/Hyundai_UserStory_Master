@@ -1,8 +1,8 @@
 import type { AiChatSortRequest } from "../../data/aiChatSortConfig";
-import type { PlaybookGroup } from "../../data/playbookCatalog";
+import type { PlaybookAccessGroup } from "../../data/playbookCatalog";
 
 export type CubeSceneCommandPayload =
-  | { type: "set-playbook-group"; group: PlaybookGroup }
+  | { type: "set-playbook-group"; group: PlaybookAccessGroup }
   | { type: "chat-sort"; request: AiChatSortRequest | null }
   | { type: "highlight-random" }
   | { type: "clear-highlight" }

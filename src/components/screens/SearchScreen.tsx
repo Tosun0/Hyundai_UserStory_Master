@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AiChatSortStage } from "../../data/aiChatSortConfig";
-import type { PlaybookFilter, PlaybookGroup, PlaybookItem } from "../../data/playbookCatalog";
+import type {
+  PlaybookAccessGroup,
+  PlaybookFilter,
+  PlaybookItem,
+} from "../../data/playbookCatalog";
 import { prototypeText } from "../../data/prototypeContent";
 import { CubeScenePlaceholder } from "../three/CubeScenePlaceholder";
 import type {
@@ -14,7 +18,7 @@ import { ArrowGlyph } from "../ui/ArrowGlyph";
 
 type SearchScreenProps = {
   isActive?: boolean;
-  playbookGroup: PlaybookGroup;
+  playbookGroup: PlaybookAccessGroup;
   onLogout: () => void;
 };
 

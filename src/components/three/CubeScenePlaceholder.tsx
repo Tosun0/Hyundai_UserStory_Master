@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import type { PlaybookGroup, PlaybookItem } from "../../data/playbookCatalog";
+import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
 import type { ParallaxUnavailableReason } from "./parallaxTracking";
 import type { CubeSceneCommand } from "./cubeSceneCommands";
 import { MinimalCubeLoader } from "../ui/MinimalCubeLoader";
@@ -9,7 +9,7 @@ const CubeMapScene = lazy(() => import("./CubeMapScene"));
 type CubeScenePlaceholderProps = {
   enabled?: boolean;
   sceneActive?: boolean;
-  playbookGroup: PlaybookGroup;
+  playbookGroup: PlaybookAccessGroup;
   command?: CubeSceneCommand | null;
   axisIndexesVisible?: boolean;
   parallaxViewEnabled?: boolean;

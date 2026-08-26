@@ -13,7 +13,7 @@ import { MinimalCubeLoader } from "./components/ui/MinimalCubeLoader";
 import { PrototypeStage } from "./components/ui/PrototypeStage";
 import { prototypeParams } from "./config/prototypeParams";
 import { prototypeAssets, type ScreenId } from "./data/prototypeContent";
-import type { PlaybookGroup } from "./data/playbookCatalog";
+import type { PlaybookAccessGroup } from "./data/playbookCatalog";
 
 const screenBackgrounds: Record<
   ScreenId,
@@ -59,7 +59,7 @@ function preloadImage(src: string | null) {
 
 export default function App() {
   const [screen, setScreen] = useState<ScreenId>("landing");
-  const [playbookGroup, setPlaybookGroup] = useState<PlaybookGroup>("H");
+  const [playbookGroup, setPlaybookGroup] = useState<PlaybookAccessGroup>("H");
   const [loadingOverlay, setLoadingOverlay] = useState<LoadingOverlayState>({
     isMounted: true,
     isVisible: true,

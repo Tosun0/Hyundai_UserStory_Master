@@ -1,23 +1,26 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import type { PlaybookGroup } from "../../data/playbookCatalog";
+import type { PlaybookAccessGroup } from "../../data/playbookCatalog";
 import { prototypeText } from "../../data/prototypeContent";
 import { AnimatedButton } from "../ui/AnimatedButton";
 import { ArrowGlyph } from "../ui/ArrowGlyph";
 import { UserStoryLogo } from "../ui/UserStoryLogo";
 
-const LANDING_ACCESS_CODES: Record<PlaybookGroup, readonly string[]> = {
-  H: ["miuserstory", "qwe", "open4mi"],
+const LANDING_ACCESS_CODES: Record<PlaybookAccessGroup, readonly string[]> = {
+  ALL: ["miuserstory", "qwe", "open4mi"],
+  H: [],
   GN8: ["gn8"],
 };
 
 type LandingScreenProps = {
-  onGoToSearch: (group: PlaybookGroup) => void;
+  onGoToSearch: (group: PlaybookAccessGroup) => void;
 };
 
 function getAccessGroup(accessCode: string) {
   const normalizedCode = accessCode.trim().toLowerCase();
 
-  return (Object.entries(LANDING_ACCESS_CODES) as [PlaybookGroup, readonly string[]][]).find(
+  return (
+    Object.entries(LANDING_ACCESS_CODES) as [PlaybookAccessGroup, readonly string[]][]
+  ).find(
     ([, codes]) => codes.includes(normalizedCode),
   )?.[0] ?? null;
 }

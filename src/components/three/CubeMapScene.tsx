@@ -11,6 +11,7 @@ import {
 import {
   getPlaybooksByFilter,
   getPlaybookByCubeKey,
+  type PlaybookAccessGroup,
   type PlaybookGroup,
   type PlaybookFilter,
   type PlaybookItem,
@@ -62,10 +63,10 @@ const SEARCH_DIMMED_OPACITY = 0.28;
 const EMPTY_SPACE_CLICK_THRESHOLD = 6;
 
 function isPlaybookVisibleForGroup(
-  visibleGroup: PlaybookGroup,
+  visibleGroup: PlaybookAccessGroup,
   playbookGroup: PlaybookGroup,
 ) {
-  return visibleGroup === "H"
+  return visibleGroup === "H" || visibleGroup === "ALL"
     ? playbookGroup === "H" || playbookGroup === "GN8"
     : playbookGroup === visibleGroup;
 }
@@ -789,7 +790,7 @@ function createMaskOutlineMaterial(maskTexture: THREE.Texture) {
 }
 
 type CubeMapSceneProps = {
-  playbookGroup: PlaybookGroup;
+  playbookGroup: PlaybookAccessGroup;
   command?: CubeSceneCommand | null;
   axisIndexesVisible?: boolean;
   sceneActive?: boolean;
@@ -2485,7 +2486,7 @@ export default function CubeMapScene({
       setDefaultCubeTargets();
     };
 
-    const setVisiblePlaybookGroup = (group: PlaybookGroup) => {
+    const setVisiblePlaybookGroup = (group: PlaybookAccessGroup) => {
       if (visiblePlaybookGroup === group) {
         setDefaultCubeTargets();
         container.dataset.visiblePlaybookGroup = group;
@@ -2537,7 +2538,10 @@ export default function CubeMapScene({
       chatSortFilter = request.filter ?? null;
 
       if (chatSortFilter) {
-        if (chatSortFilter !== visiblePlaybookGroup) {
+        if (
+          visiblePlaybookGroup !== "ALL" &&
+          chatSortFilter !== visiblePlaybookGroup
+        ) {
           resetChatSortHighlight();
           return;
         }
