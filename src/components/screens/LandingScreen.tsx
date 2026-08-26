@@ -6,7 +6,7 @@ import { ArrowGlyph } from "../ui/ArrowGlyph";
 import { UserStoryLogo } from "../ui/UserStoryLogo";
 
 const LANDING_ACCESS_CODES: Record<PlaybookGroup, readonly string[]> = {
-  H: ["miuserstory", "qwe"],
+  H: ["miuserstory", "qwe", "open4mi"],
   GN8: ["gn8"],
 };
 
