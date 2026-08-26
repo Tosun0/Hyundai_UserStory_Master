@@ -24,7 +24,7 @@ export function createThumbnailMaterial(texture: THREE.Texture) {
 function createSurfaceTextTexture(text: string, fontSize: number) {
   const canvas = document.createElement("canvas");
   canvas.width = 1024;
-  canvas.height = 512;
+  canvas.height = 1024;
   const context = canvas.getContext("2d");
 
   if (!context) {
@@ -733,8 +733,8 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.surfaceTextLayer.clear();
 
     const createTextMesh = (texture: THREE.Texture, name: string) => {
-      const width = size * 0.82;
-      const height = size * 0.41;
+      const width = size;
+      const height = size;
       const mesh = new THREE.Mesh(
         new THREE.PlaneGeometry(width, height),
         new THREE.MeshBasicMaterial({
