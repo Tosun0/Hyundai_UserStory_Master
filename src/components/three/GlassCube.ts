@@ -7,6 +7,7 @@ export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMa
 const SURFACE_TEXT_BOX_RADIUS = 36;
 const SURFACE_CODENAME_FONT_SIZE = 180;
 const SURFACE_TITLE_FONT_SIZE = 144;
+const SURFACE_TITLE_MIN_FONT_SIZE = 140;
 const SURFACE_TEXT_LAYOUT_HEIGHT = 512;
 
 export function createThumbnailMaterial(texture: THREE.Texture) {
@@ -23,7 +24,11 @@ export function createThumbnailMaterial(texture: THREE.Texture) {
   });
 }
 
-function createSurfaceTextTexture(text: string, fontSize: number) {
+function createSurfaceTextTexture(
+  text: string,
+  fontSize: number,
+  minimumFontSize = 72,
+) {
   const canvas = document.createElement("canvas");
   canvas.width = 1024;
   canvas.height = 1024;
@@ -88,15 +93,18 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
 
   let renderFontSize = fontSize;
   let visibleLines = wrapText();
-  while (visibleLines.length > 4 && renderFontSize > 96) {
+  while (visibleLines.length > 4 && renderFontSize - 8 >= minimumFontSize) {
     renderFontSize -= 8;
     context.font = `400 ${renderFontSize}px "Pretendard"`;
     visibleLines = wrapText();
   }
-  renderFontSize = Math.min(
-    renderFontSize,
-    Math.floor(
-      (SURFACE_TEXT_LAYOUT_HEIGHT - 96) / Math.max(visibleLines.length, 1) - 12,
+  renderFontSize = Math.max(
+    minimumFontSize,
+    Math.min(
+      renderFontSize,
+      Math.floor(
+        (SURFACE_TEXT_LAYOUT_HEIGHT - 96) / Math.max(visibleLines.length, 1) - 12,
+      ),
     ),
   );
   context.font = `400 ${renderFontSize}px "Pretendard"`;
@@ -752,6 +760,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     const titleTexture = createSurfaceTextTexture(
       this.definition.title,
       SURFACE_TITLE_FONT_SIZE,
+      SURFACE_TITLE_MIN_FONT_SIZE,
     );
     if (!codenameTexture || !titleTexture) {
       return;
