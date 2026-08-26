@@ -189,6 +189,7 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
           </div>
         </nav>
 
+        {/* AI 질문탭은 추후 활성화를 위해 렌더링만 임시 보류합니다.
         <AiChatSortPanel
           key={chatPanelResetId}
           playbookGroup={playbookGroup}
@@ -197,6 +198,7 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
             setAreAxisIndexesVisible((isVisible) => !isVisible)
           }
         />
+        */}
       </div>
 
       <div className="screen-fill pointer-events-none z-20" data-name="layout/orbit-ui">
