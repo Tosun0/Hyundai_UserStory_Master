@@ -34,7 +34,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillStyle = "rgba(0, 0, 0, 0.78)";
+  context.fillStyle = "rgba(0, 0, 0, 1)";
   context.font = `400 ${fontSize}px "Pretendard"`;
   context.shadowColor = "rgba(24, 32, 48, 0.18)";
   context.shadowBlur = 18;
@@ -88,9 +88,9 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
   context.shadowBlur = 0;
   context.shadowOffsetX = 0;
   context.shadowOffsetY = 0;
-  const backdropPaddingX = 80;
-  const backdropPaddingY = 42;
-  const backdropRadius = Math.max(boxWidth, boxHeight) * 0.64;
+  const backdropPaddingX = 132;
+  const backdropPaddingY = 72;
+  const backdropRadius = Math.max(boxWidth, boxHeight) * 0.88;
   const backdropGradient = context.createRadialGradient(
     canvas.width / 2,
     canvas.height / 2,
@@ -99,11 +99,11 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
     canvas.height / 2,
     backdropRadius,
   );
-  backdropGradient.addColorStop(0, "rgba(255, 255, 255, 0.96)");
-  backdropGradient.addColorStop(0.38, "rgba(255, 255, 255, 0.78)");
-  backdropGradient.addColorStop(0.76, "rgba(255, 255, 255, 0.28)");
+  backdropGradient.addColorStop(0, "rgba(255, 255, 255, 0.5)");
+  backdropGradient.addColorStop(0.38, "rgba(255, 255, 255, 0.28)");
+  backdropGradient.addColorStop(0.76, "rgba(255, 255, 255, 0.07)");
   backdropGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-  context.filter = "blur(24px)";
+  context.filter = "blur(32px)";
   context.fillStyle = backdropGradient;
   context.beginPath();
   context.roundRect(
