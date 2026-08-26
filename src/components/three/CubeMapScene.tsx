@@ -1139,6 +1139,7 @@ export default function CubeMapScene({
 
       const now = performance.now();
       startCubeEntryCamera(cubeEntryCamera, now);
+      startMapAutoRotate();
 
       groupNodes.forEach((node, index) => {
         const playbook = getPlaybookByCubeKey(node.key);
@@ -1339,6 +1340,8 @@ export default function CubeMapScene({
     } | null = null;
     let orbitAutoRotateResumeAt: number | null = null;
     let isOrbitControlsInteractionActive = false;
+    let mapAutoRotateResumeAt: number | null = null;
+    let isMapControlsInteractionActive = false;
     let previousFrameTime = performance.now();
     let idleMotionBlend = 0;
     container.dataset.cubeViewMode = "map";
@@ -1474,6 +1477,75 @@ export default function CubeMapScene({
 
     const isHeadTrackEnabled = () =>
       isSceneActive() && viewMode === "orbit" && parallaxViewEnabledRef.current;
+
+    const stopMapAutoRotate = () => {
+      mapAutoRotateResumeAt = null;
+      isMapControlsInteractionActive = false;
+      if (viewMode === "map") {
+        controls.autoRotate = false;
+      }
+      delete container.dataset.mapAutoRotate;
+    };
+
+    const startMapAutoRotate = () => {
+      if (
+        viewMode !== "map" ||
+        !isSceneActive() ||
+        !cubeSceneTheme.mapView.autoRotate.enabled
+      ) {
+        stopMapAutoRotate();
+        return;
+      }
+
+      mapAutoRotateResumeAt = null;
+      controls.autoRotateSpeed = cubeSceneTheme.mapView.autoRotate.speed;
+      controls.autoRotate = true;
+      container.dataset.mapAutoRotate = "active";
+    };
+
+    const pauseMapAutoRotate = () => {
+      if (
+        viewMode !== "map" ||
+        !isSceneActive() ||
+        !cubeSceneTheme.mapView.autoRotate.enabled
+      ) {
+        stopMapAutoRotate();
+        return;
+      }
+
+      mapAutoRotateResumeAt = null;
+      controls.autoRotate = false;
+      container.dataset.mapAutoRotate = "paused";
+    };
+
+    const scheduleMapAutoRotateResume = () => {
+      if (
+        viewMode !== "map" ||
+        !isSceneActive() ||
+        !cubeSceneTheme.mapView.autoRotate.enabled
+      ) {
+        stopMapAutoRotate();
+        return;
+      }
+
+      controls.autoRotate = false;
+      mapAutoRotateResumeAt =
+        performance.now() + cubeSceneTheme.mapView.autoRotate.resumeDelayMs;
+      container.dataset.mapAutoRotate = "paused";
+    };
+
+    const updateMapAutoRotate = (frameTime: number) => {
+      if (!isSceneActive() || viewMode !== "map") {
+        return;
+      }
+
+      if (
+        mapAutoRotateResumeAt !== null &&
+        frameTime >= mapAutoRotateResumeAt
+      ) {
+        startMapAutoRotate();
+      }
+    };
 
     const stopOrbitAutoRotate = () => {
       orbitAutoRotateResumeAt = null;
@@ -1783,12 +1855,14 @@ export default function CubeMapScene({
 
     const applyMapControls = () => {
       stopOrbitAutoRotate();
+      stopMapAutoRotate();
       controls.minDistance = cubeSceneTheme.camera.minDistance;
       controls.maxDistance = cubeSceneTheme.camera.maxDistance;
       controls.enablePan = true;
     };
 
     const applyOrbitControls = () => {
+      stopMapAutoRotate();
       stopOrbitAutoRotate();
       controls.minDistance = 0;
       controls.maxDistance = Infinity;
@@ -2355,6 +2429,7 @@ export default function CubeMapScene({
       }
 
       controls.update();
+      scheduleMapAutoRotateResume();
 
       notifyOrbitViewChange();
     };
@@ -2691,6 +2766,11 @@ export default function CubeMapScene({
       updatePointer(event);
       didPointerDownOnFocusedMesh = viewMode === "orbit" && getIntersectedCube() === focusedMesh;
 
+      if (viewMode === "map") {
+        isMapControlsInteractionActive = true;
+        pauseMapAutoRotate();
+      }
+
       if (viewMode === "orbit") {
         container.style.cursor = "grabbing";
       }
@@ -2722,6 +2802,11 @@ export default function CubeMapScene({
         }
 
         return;
+      }
+
+      if (viewMode === "map" && isMapControlsInteractionActive) {
+        scheduleMapAutoRotateResume();
+        isMapControlsInteractionActive = false;
       }
 
       if (!hasPointerDown) {
@@ -2783,6 +2868,11 @@ export default function CubeMapScene({
         return;
       }
 
+      if (viewMode === "map") {
+        isMapControlsInteractionActive = true;
+        pauseMapAutoRotate();
+      }
+
       isOrbitControlsInteractionActive = false;
 
       if (viewMode === "map" && searchHighlightZoom) {
@@ -2799,6 +2889,11 @@ export default function CubeMapScene({
 
         isOrbitControlsInteractionActive = false;
         return;
+      }
+
+      if (viewMode === "map" && isMapControlsInteractionActive) {
+        scheduleMapAutoRotateResume();
+        isMapControlsInteractionActive = false;
       }
 
       if (viewMode !== "map" || !selectedMesh || searchHighlightZoom) {
@@ -2934,6 +3029,7 @@ export default function CubeMapScene({
       previousFrameTime = frameTime;
       syncParallaxInput();
       updateSearchHighlightZoom(frameTime);
+      updateMapAutoRotate(frameTime);
       updateOrbitAutoRotate(frameTime);
       updateOrbitCameraTransition(frameTime);
       if (
