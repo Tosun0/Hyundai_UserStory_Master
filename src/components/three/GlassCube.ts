@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as THREE from "three";
 import type { CubeMapOverviewNode } from "./cubeMapData";
-import type { PlaybookItem } from "../../data/playbookCatalog";
+import type { PlaybookItem, PlaybookTooltipData } from "../../data/playbookCatalog";
 
 export type GlassCubeThumbnail = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial[]>;
 const SURFACE_TEXT_BOX_RADIUS = 36;
@@ -215,6 +215,7 @@ type GlassCubeOptions = {
 
 export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial> {
   readonly definition: GlassCubeDefinition;
+  readonly tooltipData: PlaybookTooltipData | null;
   readonly state: GlassCubeRuntimeState;
   readonly glassShell: THREE.Mesh<THREE.BufferGeometry, THREE.MeshPhysicalMaterial>;
   readonly scatterShell: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
@@ -265,6 +266,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     material.colorWrite = false;
     material.depthWrite = false;
     this.definition = definition;
+    this.tooltipData = definition.playbook;
     this.glassOpacity = glassOpacity;
     this.glassIOR = glassIOR;
     this.glassDispersion = glassDispersion;
@@ -273,6 +275,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
     this.userData.playbook = definition.playbook;
     this.userData.codename = definition.codename;
     this.userData.title = definition.title;
+    this.userData.tooltipData = this.tooltipData;
     this.state = {
       targetPosition: definition.basePosition.clone(),
       targetScale: 1,
