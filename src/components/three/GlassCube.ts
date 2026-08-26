@@ -88,7 +88,7 @@ function createSurfaceTextTexture(text: string, fontSize: number) {
 
   let renderFontSize = fontSize;
   let visibleLines = wrapText();
-  while (visibleLines.length > 4 && renderFontSize > 72) {
+  while (visibleLines.length > 4 && renderFontSize > 96) {
     renderFontSize -= 8;
     context.font = `400 ${renderFontSize}px "Pretendard"`;
     visibleLines = wrapText();
