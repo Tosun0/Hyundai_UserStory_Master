@@ -1,7 +1,6 @@
 export type PlaybookGroup = "H" | "GN8";
 export type PlaybookAccessGroup = PlaybookGroup | "ALL";
 export type PlaybookFilter = PlaybookGroup;
-export type PlaybookSectionId = "cover" | "playbook" | "scenario-canvas" | "data-book";
 
 export type PlaybookId =
   | "H1"
@@ -24,13 +23,12 @@ export type PlaybookItem = {
   tags: readonly string[];
   url: string;
   group: PlaybookGroup;
-  sections: readonly PlaybookSectionId[];
   cubeKey: string;
   thumbnailSrc?: string;
   fallbackThumbnailSrc?: string;
 };
 
-export type PlaybookTooltipData = Pick<PlaybookItem, "title" | "description" | "tags" | "sections">;
+export type PlaybookTooltipData = Pick<PlaybookItem, "title" | "description" | "tags">;
 
 export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
   {
@@ -40,7 +38,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["가족", "일상"],
     url: "https://userstory-h-01.vercel.app/",
     group: "H",
-    sections: ["playbook", "scenario-canvas", "data-book"],
     cubeKey: "0,4,3",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_WorkingMom.png",
   },
@@ -51,7 +48,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["세컨드카", "실용"],
     url: "https://userstory-h-03.vercel.app/",
     group: "H",
-    sections: ["playbook", "scenario-canvas"],
     cubeKey: "2,4,0",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Setlog.png",
   },
@@ -62,7 +58,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["시니어", "안심"],
     url: "https://userstory-h-04.vercel.app/",
     group: "H",
-    sections: ["cover", "playbook", "scenario-canvas"],
     cubeKey: "2,4,2",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Senior.png",
   },
@@ -73,7 +68,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["패밀리카", "육아"],
     url: "https://userstory-h-05.vercel.app/",
     group: "H",
-    sections: ["playbook", "scenario-canvas"],
     cubeKey: "3,4,2",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_NoobDad.png",
   },
@@ -84,7 +78,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["반려견", "편안함"],
     url: "https://userstory-h-06.vercel.app/",
     group: "H",
-    sections: ["playbook", "scenario-canvas"],
     cubeKey: "4,4,2",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Puppy.png",
   },
@@ -95,7 +88,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["신기능", "발견"],
     url: "https://userstory-gn8-01.vercel.app/",
     group: "GN8",
-    sections: ["playbook", "scenario-canvas"],
     cubeKey: "5,3,4",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Tech.png",
   },
@@ -106,7 +98,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["SDV", "철학"],
     url: "https://userstory-gn8-02.vercel.app/",
     group: "GN8",
-    sections: ["playbook", "scenario-canvas"],
     cubeKey: "5,2,1",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Blog.png",
   },
@@ -117,7 +108,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["학습", "기술"],
     url: "https://userstory-gn8-03.vercel.app/",
     group: "GN8",
-    sections: ["playbook", "scenario-canvas"],
     cubeKey: "5,3,0",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Toon.png",
   },
@@ -128,7 +118,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["AI", "개인화"],
     url: "https://userstory-gn8-04.vercel.app/",
     group: "GN8",
-    sections: ["playbook", "scenario-canvas"],
     cubeKey: "4,3,4",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_AIKun.png",
   },
@@ -139,7 +128,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["품격", "취향"],
     url: "https://userstory-gn8-06.vercel.app/",
     group: "GN8",
-    sections: ["playbook", "scenario-canvas"],
     cubeKey: "5,2,0",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Blind.png",
   },
@@ -150,7 +138,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["선택", "가족"],
     url: "https://userstory-gn8-08.vercel.app/",
     group: "GN8",
-    sections: ["playbook", "scenario-canvas", "data-book"],
     cubeKey: "4,2,0",
     fallbackThumbnailSrc: "/assets/models/story%20thumbnail/T_Shorts.png",
   },
@@ -161,7 +148,6 @@ export const PLAYBOOK_CATALOG: readonly PlaybookItem[] = [
     tags: ["사진", "기억"],
     url: "https://userstory-gn8-13.vercel.app/",
     group: "GN8",
-    sections: ["playbook", "scenario-canvas"],
     cubeKey: "4,2,1",
     thumbnailSrc: "/assets/models/story%20thumbnail/T_Photo.png",
   },
@@ -183,11 +169,4 @@ export function getPlaybookByCubeKey(cubeKey: string) {
 
 export function getPlaybooksByFilter(filter: PlaybookFilter) {
   return PLAYBOOK_CATALOG.filter((playbook) => playbook.group === filter);
-}
-
-export function hasPlaybookSection(
-  playbook: Pick<PlaybookItem, "sections">,
-  section: PlaybookSectionId,
-) {
-  return playbook.sections.includes(section);
 }
