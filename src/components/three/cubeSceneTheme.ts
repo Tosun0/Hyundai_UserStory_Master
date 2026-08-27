@@ -213,7 +213,7 @@ export const cubeSceneTheme = {
       opacity: 1,
       envMapIntensity: 0.95,
       specularIntensity: 0.88,
-      clearcoat: 0.25,
+      clearcoat: 0.5,
       clearcoatRoughness: 0.18,
       scatter: {
         color: "#ffffff",
