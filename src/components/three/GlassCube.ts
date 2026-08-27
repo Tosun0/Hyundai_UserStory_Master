@@ -275,7 +275,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
   private readonly glassDispersion: number;
   private readonly glassThickness: number;
   private thumbnailCube: GlassCubeThumbnail | null = null;
-  private surfaceTextMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null = null;
+  private surfaceTextMeshes: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
 
   constructor({
     geometry,
@@ -750,6 +750,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
   setSurfaceText(size: number) {
     if (!this.definition.codename || !this.definition.title) {
+      this.clearSurfaceText();
       return;
     }
 
@@ -763,13 +764,12 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       SURFACE_TITLE_MIN_FONT_SIZE,
     );
     if (!codenameTexture || !titleTexture) {
+      codenameTexture?.dispose();
+      titleTexture?.dispose();
       return;
     }
 
-    this.surfaceTextMesh?.geometry.dispose();
-    this.surfaceTextMesh?.material.map?.dispose();
-    this.surfaceTextMesh?.material.dispose();
-    this.surfaceTextLayer.clear();
+    this.clearSurfaceText();
 
     const createTextMesh = (texture: THREE.Texture, name: string) => {
       const width = size;
@@ -792,13 +792,57 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
       return mesh;
     };
 
-    const codenameMesh = createTextMesh(codenameTexture, "Unscattered Codename");
-    codenameMesh.position.z = size / 2 + 0.04;
-    const titleMesh = createTextMesh(titleTexture, "Unscattered Title");
-    titleMesh.position.x = size / 2 + 0.04;
-    titleMesh.rotation.y = Math.PI / 2;
-    this.surfaceTextMesh = codenameMesh;
-    this.surfaceTextLayer.add(codenameMesh, titleMesh);
+    const faceOffset = size / 2 + 0.04;
+    const faceDefinitions = [
+      {
+        texture: codenameTexture,
+        name: "Unscattered Codename Front",
+        position: [0, 0, faceOffset],
+        rotation: [0, 0, 0],
+      },
+      {
+        texture: codenameTexture,
+        name: "Unscattered Codename Back",
+        position: [0, 0, -faceOffset],
+        rotation: [0, Math.PI, 0],
+      },
+      {
+        texture: titleTexture,
+        name: "Unscattered Title Right",
+        position: [faceOffset, 0, 0],
+        rotation: [0, Math.PI / 2, 0],
+      },
+      {
+        texture: titleTexture,
+        name: "Unscattered Title Left",
+        position: [-faceOffset, 0, 0],
+        rotation: [0, -Math.PI / 2, 0],
+      },
+    ];
+
+    this.surfaceTextMeshes = faceDefinitions.map((face) => {
+      const mesh = createTextMesh(face.texture, face.name);
+      mesh.position.set(...face.position);
+      mesh.rotation.set(...face.rotation);
+      this.surfaceTextLayer.add(mesh);
+      return mesh;
+    });
+  }
+
+  private clearSurfaceText() {
+    this.surfaceTextMeshes.forEach((mesh) => {
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    });
+    const textures = new Set<THREE.Texture>();
+    this.surfaceTextMeshes.forEach((mesh) => {
+      if (mesh.material.map) {
+        textures.add(mesh.material.map);
+      }
+    });
+    textures.forEach((texture) => texture.dispose());
+    this.surfaceTextMeshes = [];
+    this.surfaceTextLayer.clear();
   }
 
   updateVisualOpacity(targetOpacity: number, amount: number) {
@@ -850,6 +894,7 @@ export class GlassCube extends THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMate
 
   disposeGlassCube() {
     this.removeThumbnailCube();
+    this.clearSurfaceText();
     this.scatterShell.material.dispose();
     this.glassShell.material.dispose();
     this.geometry.dispose();
