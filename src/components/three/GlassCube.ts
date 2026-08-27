@@ -9,6 +9,9 @@ const SURFACE_CODENAME_FONT_SIZE = 180;
 const SURFACE_TITLE_FONT_SIZE = 144;
 const SURFACE_TITLE_MIN_FONT_SIZE = 140;
 const SURFACE_TEXT_LAYOUT_HEIGHT = 512;
+const SURFACE_TEXT_BACKDROP_PADDING_X_RATIO = 0.02;
+const SURFACE_TEXT_BACKDROP_PADDING_Y_RATIO = 0.018;
+const SURFACE_TEXT_BACKDROP_FEATHER_RATIO = 0.055;
 
 export function createThumbnailMaterial(texture: THREE.Texture) {
   return new THREE.MeshBasicMaterial({
@@ -125,9 +128,13 @@ function createSurfaceTextTexture(
   context.shadowBlur = 0;
   context.shadowOffsetX = 0;
   context.shadowOffsetY = 0;
-  const backdropPaddingX = 132;
-  const backdropPaddingY = 120;
-  const backdropRadius = Math.max(boxWidth, boxHeight + backdropPaddingY * 2) * 1.08;
+  const backdropPaddingX = canvas.width * SURFACE_TEXT_BACKDROP_PADDING_X_RATIO;
+  const backdropPaddingY = canvas.height * SURFACE_TEXT_BACKDROP_PADDING_Y_RATIO;
+  const backdropWidth = boxWidth + backdropPaddingX * 2;
+  const backdropHeight = boxHeight + backdropPaddingY * 2;
+  const backdropFeather = canvas.width * SURFACE_TEXT_BACKDROP_FEATHER_RATIO;
+  const backdropRadius =
+    Math.hypot(backdropWidth / 2, backdropHeight / 2) + backdropFeather;
   const backdropGradient = context.createRadialGradient(
     canvas.width / 2,
     canvas.height / 2,
@@ -141,14 +148,14 @@ function createSurfaceTextTexture(
   backdropGradient.addColorStop(0.76, "rgba(255, 255, 255, 0.035)");
   backdropGradient.addColorStop(0.9, "rgba(255, 255, 255, 0.008)");
   backdropGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
-  context.filter = "blur(56px)";
+  context.filter = `blur(${backdropFeather}px)`;
   context.fillStyle = backdropGradient;
   context.beginPath();
   context.roundRect(
     boxX - backdropPaddingX,
     boxY - backdropPaddingY,
-    boxWidth + backdropPaddingX * 2,
-    boxHeight + backdropPaddingY * 2,
+    backdropWidth,
+    backdropHeight,
     radius + backdropPaddingY,
   );
   context.fill();
