@@ -1011,6 +1011,9 @@ export default function CubeMapScene({
     controls.target.copy(GRAPH_CENTER);
     controls.update();
 
+    const initialMapCameraPosition = camera.position.clone();
+    const initialMapCameraTarget = controls.target.clone();
+
     const cubeEntryCamera = createCubeEntryCameraState(
       camera.position,
       GRAPH_CENTER,
@@ -1335,6 +1338,12 @@ export default function CubeMapScene({
     } | null = null;
     let searchHighlightZoom: SearchHighlightZoomState | null = null;
     let orbitCameraTransition: OrbitCameraTransitionState | null = null;
+    let initialCameraReset: {
+      startTime: number;
+      durationMs: number;
+      fromPosition: THREE.Vector3;
+      fromTarget: THREE.Vector3;
+    } | null = null;
     let searchHighlightZoomBaseline: {
       position: THREE.Vector3;
       target: THREE.Vector3;
@@ -1490,6 +1499,51 @@ export default function CubeMapScene({
         controls.autoRotate = false;
       }
       delete container.dataset.mapAutoRotate;
+    };
+
+    const resetToInitialCamera = () => {
+      if (viewMode !== "map" || cubeEntryCamera.active) {
+        return;
+      }
+
+      stopMapAutoRotate();
+      resetSearchHighlightZoom();
+      controls.enabled = false;
+      initialCameraReset = {
+        startTime: performance.now(),
+        durationMs: 720,
+        fromPosition: camera.position.clone(),
+        fromTarget: controls.target.clone(),
+      };
+    };
+
+    const updateInitialCameraReset = (frameTime: number) => {
+      if (!initialCameraReset) {
+        return;
+      }
+
+      const progress = THREE.MathUtils.clamp(
+        (frameTime - initialCameraReset.startTime) / initialCameraReset.durationMs,
+        0,
+        1,
+      );
+      camera.position.lerpVectors(
+        initialCameraReset.fromPosition,
+        initialMapCameraPosition,
+        progress,
+      );
+      controls.target.lerpVectors(
+        initialCameraReset.fromTarget,
+        initialMapCameraTarget,
+        progress,
+      );
+
+      if (progress >= 1) {
+        camera.position.copy(initialMapCameraPosition);
+        controls.target.copy(initialMapCameraTarget);
+        initialCameraReset = null;
+        controls.enabled = true;
+      }
     };
 
     const startMapAutoRotate = () => {
@@ -2745,6 +2799,25 @@ export default function CubeMapScene({
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "KeyF" || event.repeat) {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.isContentEditable ||
+        ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target?.tagName ?? "")
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      resetToInitialCamera();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
     const getIntersectedCubes = () => {
       if (!pointerRaycastDirty) {
         return intersectedCubes;
@@ -3040,6 +3113,7 @@ export default function CubeMapScene({
       updateMapAutoRotate(frameTime);
       updateOrbitAutoRotate(frameTime);
       updateOrbitCameraTransition(frameTime);
+      updateInitialCameraReset(frameTime);
       if (
         updateCubeEntryCamera(cubeEntryCamera, frameTime, camera.position, controls.target)
       ) {
@@ -3270,6 +3344,7 @@ export default function CubeMapScene({
       renderer.domElement.removeEventListener("pointerup", handlePointerUp);
       renderer.domElement.removeEventListener("pointerleave", clearHover);
       renderer.domElement.removeEventListener("pointercancel", clearHover);
+      window.removeEventListener("keydown", handleKeyDown);
       controls.removeEventListener("start", handleControlsStart);
       controls.removeEventListener("end", handleControlsEnd);
       controls.removeEventListener("change", handleControlsChange);

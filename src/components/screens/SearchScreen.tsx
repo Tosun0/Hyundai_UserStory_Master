@@ -274,9 +274,9 @@ export function SearchScreen({ isActive = true, playbookGroup, onLogout }: Searc
                 : "pointer-events-none delay-0 scale-[0.92] opacity-0"
             }`}
           >
+            {/* Camera permission request is intentionally disabled for the prototype. */}
             <AnimatedButton
               type="button"
-              onClick={() => setIsParallaxViewEnabled((isEnabled) => !isEnabled)}
               className="gui-scale gui-origin-top-right flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#2c2c2d] text-white backdrop-blur-[18.29px]"
               data-name="button/orbit-parallax-toggle"
               aria-label={isParallaxViewEnabled ? "Disable HeadTrack" : "Enable HeadTrack"}
