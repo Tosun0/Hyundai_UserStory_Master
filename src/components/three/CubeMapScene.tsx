@@ -1527,15 +1527,16 @@ export default function CubeMapScene({
         0,
         1,
       );
+      const easedProgress = easeInOutCubic(progress);
       camera.position.lerpVectors(
         initialCameraReset.fromPosition,
         initialMapCameraPosition,
-        progress,
+        easedProgress,
       );
       controls.target.lerpVectors(
         initialCameraReset.fromTarget,
         initialMapCameraTarget,
-        progress,
+        easedProgress,
       );
 
       if (progress >= 1) {
