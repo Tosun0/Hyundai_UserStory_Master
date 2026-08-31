@@ -38,6 +38,8 @@ type LoadingOverlayState = {
   isVisible: boolean;
 };
 
+const MASTER_CUBE_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+
 function wait(milliseconds: number) {
   return new Promise<void>((resolve) => {
     window.setTimeout(resolve, milliseconds);
@@ -69,6 +71,7 @@ export default function App() {
   const isTransitioningRef = useRef(false);
   const isLoadingOverlayActiveRef = useRef(true);
   const loadingOverlayExitTimerRef = useRef<number | null>(null);
+  const inactivityTimerRef = useRef<number | null>(null);
   const background = screenBackgrounds[screen];
 
   const showLoadingOverlay = useCallback(() => {
@@ -224,6 +227,40 @@ export default function App() {
     setPlaybookGroup("H");
     setScreen("landing");
   }, []);
+
+  useEffect(() => {
+    if (screen !== "search") {
+      return;
+    }
+
+    const resetInactivityTimer = () => {
+      if (inactivityTimerRef.current !== null) {
+        window.clearTimeout(inactivityTimerRef.current);
+      }
+
+      inactivityTimerRef.current = window.setTimeout(
+        logoutToLanding,
+        MASTER_CUBE_INACTIVITY_TIMEOUT_MS,
+      );
+    };
+
+    const activityEvents = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
+    activityEvents.forEach((eventName) => {
+      window.addEventListener(eventName, resetInactivityTimer, { passive: true });
+    });
+    resetInactivityTimer();
+
+    return () => {
+      activityEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, resetInactivityTimer);
+      });
+
+      if (inactivityTimerRef.current !== null) {
+        window.clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+    };
+  }, [logoutToLanding, screen]);
 
   return (
     <PrototypeStage
