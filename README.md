@@ -13,6 +13,8 @@ npm run dev
 
 브라우저에서 `http://127.0.0.1:5173`을 엽니다.
 
+로컬 인증 API 없이 세 가지 배치를 비교하려면 개발 모드에서 `http://127.0.0.1:5173/?layout-preview=1`을 엽니다.
+
 ```bash
 npm run build
 npm run preview
