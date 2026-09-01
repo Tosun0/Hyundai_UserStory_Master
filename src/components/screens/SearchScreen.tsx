@@ -85,6 +85,8 @@ export function SearchScreen({
     () => cubeSceneTheme.orbitView.parallax.defaultEnabled,
   );
   const [layoutMode, setLayoutMode] = useState<PlaybookLayoutMode>("constellation");
+  const [comparisonCubeView, setComparisonCubeView] = useState(false);
+  const isCubeView = !comparisonMode || comparisonCubeView;
 
   useEffect(() => {
     if (!isOrbitView) {
@@ -93,10 +95,13 @@ export function SearchScreen({
   }, [isOrbitView]);
 
   useEffect(() => {
-    if (!comparisonMode) {
-      dispatchCubeCommand({ type: "set-playbook-group", group: playbookGroup });
+    if (isCubeView) {
+      dispatchCubeCommand({
+        type: "set-playbook-group",
+        group: comparisonMode ? "ALL" : playbookGroup,
+      });
     }
-  }, [comparisonMode, playbookGroup]);
+  }, [comparisonMode, isCubeView, playbookGroup]);
 
   const dispatchCubeCommand = useCallback((payload: CubeSceneCommandPayload) => {
     commandIdRef.current += 1;
@@ -122,6 +127,7 @@ export function SearchScreen({
     resetSceneRef.current?.();
     setIsOrbitView(false);
     setFocusedPlaybook(null);
+    setComparisonCubeView(false);
     onLogout();
   }, [onLogout]);
 
@@ -132,22 +138,22 @@ export function SearchScreen({
       data-name="02 Screen - Cube View Search"
       aria-hidden={!isActive}
     >
-      {comparisonMode ? (
-        <PlaybookLayoutView
-          mode={layoutMode}
-          playbookGroup="ALL"
-          onOpenPlaybook={handleOpenPlaybook}
-        />
-      ) : (
+      {isCubeView ? (
         <CubeScenePlaceholder
           sceneActive={isActive}
           command={cubeCommand}
-          playbookGroup={playbookGroup}
+          playbookGroup={comparisonMode ? "ALL" : playbookGroup}
           parallaxViewEnabled={isActive && isOrbitView && isParallaxViewEnabled}
           onOrbitViewChange={handleOrbitViewChange}
           onParallaxViewUnavailable={() => setIsParallaxViewEnabled(false)}
           onOpenPlaybook={handleOpenPlaybook}
           resetSceneRef={resetSceneRef}
+        />
+      ) : (
+        <PlaybookLayoutView
+          mode={layoutMode}
+          playbookGroup="ALL"
+          onOpenPlaybook={handleOpenPlaybook}
         />
       )}
 
@@ -169,7 +175,7 @@ export function SearchScreen({
           <ArrowGlyph className="rotate-180" />
         </AnimatedButton>
 
-        {comparisonMode ? (
+        {comparisonMode && !comparisonCubeView ? (
           <div
             className="layout-mode-switcher gui-scale gui-origin-top-center pointer-events-auto absolute left-[var(--viewport-center-x)] top-[calc(var(--safe-top)+42px)] z-20 -translate-x-1/2"
             role="toolbar"
@@ -177,6 +183,15 @@ export function SearchScreen({
           >
             <span className="layout-mode-switcher__title">배치 방식</span>
             <div className="layout-mode-switcher__buttons">
+              <button
+                type="button"
+                className="layout-mode-switcher__cube-button"
+                onClick={() => setComparisonCubeView(true)}
+                aria-label="3D Cube View 보기"
+              >
+                <span className="material-symbols-outlined" aria-hidden="true">view_in_ar</span>
+                Cube View
+              </button>
               {layoutModes.map((mode) => (
                 <button
                   key={mode.id}
@@ -192,7 +207,7 @@ export function SearchScreen({
               ))}
             </div>
           </div>
-        ) : (
+        ) : isCubeView ? (
           <nav
             className="gui-scale gui-origin-top-center cube-top-bar-scroll pointer-events-auto absolute left-[var(--viewport-center-x)] top-[calc(var(--safe-top)+44px)] z-10 w-max max-w-[calc(var(--viewport-width)-32px)] -translate-x-1/2 overflow-x-auto rounded-full p-[6px] backdrop-blur-[35px] [scrollbar-width:none]"
             data-node-id="1929:1058"
@@ -222,11 +237,25 @@ export function SearchScreen({
               ))}
             </div>
           </nav>
-        )}
+        ) : null}
 
       </div>
 
-      {!comparisonMode ? (
+      {comparisonMode && comparisonCubeView && !isOrbitView ? (
+        <div className="pointer-events-none absolute left-[var(--viewport-center-x)] top-[calc(var(--safe-top)+42px)] z-20 -translate-x-1/2">
+          <button
+            type="button"
+            className="layout-mode-switcher layout-mode-switcher__cube-return pointer-events-auto"
+            onClick={() => setComparisonCubeView(false)}
+            aria-label="비교 배치로 돌아가기"
+          >
+            <span className="material-symbols-outlined" aria-hidden="true">view_quilt</span>
+            비교 배치
+          </button>
+        </div>
+      ) : null}
+
+      {isCubeView ? (
         <div className="screen-fill pointer-events-none z-20" data-name="layout/orbit-ui">
           <header
             className={`gui-origin-top-center pointer-events-none absolute left-[var(--viewport-center-x)] top-[max(calc(var(--safe-top)+96px),calc(var(--viewport-center-y)-720px))] z-20 flex h-[102px] w-max max-w-[calc(var(--viewport-width)-64px)] -translate-x-1/2 flex-col items-center text-white transition-[opacity,filter] duration-[420ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${

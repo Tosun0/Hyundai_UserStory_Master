@@ -37,9 +37,14 @@ function getVisiblePlaybooks(group: PlaybookAccessGroup) {
 function CubeCore({ activeTitle }: { activeTitle?: string }) {
   return (
     <div className={`layout-cube-core ${activeTitle ? "is-active" : ""}`} aria-hidden="true">
-      <div className="layout-cube-core__face layout-cube-core__face--front" />
-      <div className="layout-cube-core__face layout-cube-core__face--top" />
-      <div className="layout-cube-core__face layout-cube-core__face--side" />
+      <div className="layout-cube-core__cube">
+        <div className="layout-cube-core__face layout-cube-core__face--front" />
+        <div className="layout-cube-core__face layout-cube-core__face--back" />
+        <div className="layout-cube-core__face layout-cube-core__face--right" />
+        <div className="layout-cube-core__face layout-cube-core__face--left" />
+        <div className="layout-cube-core__face layout-cube-core__face--top" />
+        <div className="layout-cube-core__face layout-cube-core__face--bottom" />
+      </div>
       <div className="layout-cube-core__caption">CUBE VIEW</div>
       {activeTitle ? <div className="layout-cube-core__active-label">{activeTitle}</div> : null}
     </div>
@@ -71,21 +76,24 @@ function PlaybookCard({
       onBlur={() => onHover(null)}
       aria-label={`${playbook.id} ${playbook.title} 열기`}
     >
-      <img src={playbook.fallbackThumbnailSrc ?? playbook.thumbnailSrc ?? ""} alt="" />
-      <span className="layout-playbook-card__body">
-        <span className="layout-playbook-card__meta">
-          <span>{playbook.id}</span>
-          <span>{playbook.cubeKey}</span>
+      <span className="layout-playbook-card__depth" aria-hidden="true" />
+      <span className="layout-playbook-card__face">
+        <img src={playbook.fallbackThumbnailSrc ?? playbook.thumbnailSrc ?? ""} alt="" />
+        <span className="layout-playbook-card__body">
+          <span className="layout-playbook-card__meta">
+            <span>{playbook.id}</span>
+            <span>{playbook.cubeKey}</span>
+          </span>
+          <strong>{playbook.title}</strong>
+          <span className="layout-playbook-card__tags">
+            {playbook.tags.map((tag) => (
+              <span key={tag}>{tag}</span>
+            ))}
+          </span>
         </span>
-        <strong>{playbook.title}</strong>
-        <span className="layout-playbook-card__tags">
-          {playbook.tags.map((tag) => (
-            <span key={tag}>{tag}</span>
-          ))}
+        <span className="layout-playbook-card__arrow" aria-hidden="true">
+          ↗
         </span>
-      </span>
-      <span className="layout-playbook-card__arrow" aria-hidden="true">
-        ↗
       </span>
     </button>
   );
