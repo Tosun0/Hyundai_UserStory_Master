@@ -26,20 +26,42 @@ function cubePosition(playbook: PlaybookItem, index: number, mode: PlaybookLayou
   const [feature, groupAxis, story] = playbook.cubeKey.split(",").map(Number);
 
   if (mode === "constellation") {
-    const angle = (index / PLAYBOOK_CATALOG.length) * Math.PI * 2 - Math.PI / 2;
-    const radius = 4.4 + (index % 3) * 0.35;
-    return [Math.cos(angle) * radius, Math.sin(angle) * 2.8, (story - 2) * 0.72];
+    const angle = index * 2.399963;
+    const radius = 5.4 + (index % 3) * 0.62;
+    return [
+      Math.cos(angle) * radius,
+      Math.sin(angle) * (3.8 + (index % 2) * 0.35),
+      Math.sin(index * 1.7) * 1.7 + (story - 2) * 0.28,
+    ];
   }
 
   if (mode === "ring") {
     const groupItems = PLAYBOOK_CATALOG.filter((item) => item.group === playbook.group);
     const groupIndex = groupItems.findIndex((item) => item.id === playbook.id);
-    const angle = (groupIndex / groupItems.length) * Math.PI * 2 - Math.PI / 2;
-    const centerX = playbook.group === "H" ? -3.2 : 3.2;
-    return [centerX + Math.cos(angle) * 2.35, Math.sin(angle) * 2.65, (feature - 2.5) * 0.32];
+    const centerX = playbook.group === "H" ? -4.5 : 4.5;
+    const verticalSpacing = groupItems.length > 5 ? 1.2 : 1.55;
+    const verticalIndex = groupIndex - (groupItems.length - 1) / 2;
+    const phase = groupIndex * 0.95 + (playbook.group === "H" ? 0 : Math.PI);
+    return [
+      centerX + Math.cos(phase) * 1.72,
+      -verticalIndex * verticalSpacing,
+      Math.sin(phase) * 1.55,
+    ];
   }
 
-  return [(feature - 2.5) * 1.65, (2 - story) * 1.48, (groupAxis - 3.5) * 0.52];
+  const sameCellItems = PLAYBOOK_CATALOG.filter((item) => {
+    const [, , itemStory] = item.cubeKey.split(",").map(Number);
+    const [itemFeature] = item.cubeKey.split(",").map(Number);
+    return itemFeature === feature && itemStory === story;
+  });
+  const sameCellIndex = sameCellItems.findIndex((item) => item.id === playbook.id);
+  const cellOffset = (sameCellIndex - (sameCellItems.length - 1) / 2) * 0.98;
+
+  return [
+    (feature - 2.5) * 1.75 + cellOffset,
+    (2 - story) * 1.6,
+    (groupAxis - 3.5) * 0.62,
+  ];
 }
 
 function makeInfoTexture(playbook: PlaybookItem) {
@@ -112,7 +134,7 @@ function PlaybookCube({
   const groupRef = useRef<THREE.Group>(null);
   const basePosition = useMemo(() => cubePosition(playbook, index, mode), [index, mode, playbook]);
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
-  const layoutScale = mode === "matrix" ? 0.76 : 1;
+  const layoutScale = mode === "matrix" ? 0.56 : mode === "ring" ? 0.62 : 0.66;
   const baseRotation = useMemo<Vec3>(
     () => [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
     [index],
@@ -215,13 +237,13 @@ function StageGuides({ mode }: { mode: PlaybookLayoutMode }) {
   if (mode === "ring") {
     return (
       <>
-        <mesh position={[-3.2, 0, -1]} rotation={[0.06, 0, 0]}>
-          <torusGeometry args={[2.35, 0.025, 12, 72]} />
-          <meshBasicMaterial color="#5279d8" transparent opacity={0.68} />
+        <mesh position={[-4.5, 0, -1]}>
+          <cylinderGeometry args={[0.035, 0.035, 8.4, 12]} />
+          <meshBasicMaterial color="#5279d8" transparent opacity={0.55} />
         </mesh>
-        <mesh position={[3.2, 0, -1]} rotation={[-0.06, 0, 0]}>
-          <torusGeometry args={[2.35, 0.025, 12, 72]} />
-          <meshBasicMaterial color="#bd7e54" transparent opacity={0.68} />
+        <mesh position={[4.5, 0, -1]}>
+          <cylinderGeometry args={[0.035, 0.035, 8.4, 12]} />
+          <meshBasicMaterial color="#bd7e54" transparent opacity={0.55} />
         </mesh>
       </>
     );
@@ -230,25 +252,17 @@ function StageGuides({ mode }: { mode: PlaybookLayoutMode }) {
   if (mode === "matrix") {
     return (
       <>
-        <gridHelper args={[10, 6, "#6f8fca", "#b9c9dd"]} position={[0, 0, -1.8]} rotation={[Math.PI / 2, 0, 0]} />
-        <gridHelper args={[10, 6, "#bb8764", "#dbc2ae"]} position={[0, 0, 1.8]} rotation={[Math.PI / 2, 0, 0]} />
-        <gridHelper args={[10, 6, "#9aabba", "#d7e0e8"]} position={[0, -4.1, 0]} />
+        <gridHelper args={[10.5, 6, "#6f8fca", "#b9c9dd"]} position={[0, 0, -1.7]} rotation={[Math.PI / 2, 0, 0]} />
+        <gridHelper args={[10.5, 6, "#bb8764", "#dbc2ae"]} position={[0, 0, 1.7]} rotation={[Math.PI / 2, 0, 0]} />
+        <gridHelper args={[10.5, 6, "#9aabba", "#d7e0e8"]} position={[0, -3.5, 0]} />
       </>
     );
   }
 
   return (
     <>
-      <mesh position={[0, 0, -1]} rotation={[0.24, 0.1, 0]}>
-        <torusGeometry args={[4.65, 0.018, 10, 96]} />
-        <meshBasicMaterial color="#6d8ee0" transparent opacity={0.42} />
-      </mesh>
-      <mesh position={[0, 0, -1]} rotation={[Math.PI / 2 - 0.24, 0.1, 0]}>
-        <torusGeometry args={[4.65, 0.018, 10, 96]} />
-        <meshBasicMaterial color="#9fb3d9" transparent opacity={0.34} />
-      </mesh>
       <mesh position={[0, 0, -1]}>
-        <icosahedronGeometry args={[1.12, 1]} />
+        <icosahedronGeometry args={[1.2, 2]} />
         <meshBasicMaterial color="#7397ec" wireframe transparent opacity={0.28} />
       </mesh>
     </>
@@ -311,12 +325,12 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
     <main className={`playbook-layout playbook-layout--${mode}`} data-layout-mode={mode}>
       <div className="playbook-layout__backdrop" aria-hidden="true" />
       <div className="playbook-3d-layout__header">
-        <strong>{mode === "constellation" ? "USER STORY CONSTELLATION" : mode === "ring" ? "STORY GROUP RING" : "FEATURE × USER STORY"}</strong>
+        <strong>{mode === "constellation" ? "RADIAL STORY CONSTELLATION" : mode === "ring" ? "DUAL GROUP HELIX" : "3D COORDINATE MATRIX"}</strong>
         <span>드래그해서 화면을 회전하고, 큐브를 클릭해 이야기를 엽니다</span>
       </div>
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
         <Canvas
-          camera={{ position: [0, 0.35, 18], fov: 38 }}
+          camera={{ position: [0, 0.45, 22], fov: 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false }}
           shadows
