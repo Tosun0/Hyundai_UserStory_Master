@@ -111,17 +111,18 @@ function PlaybookCube({
   const groupRef = useRef<THREE.Group>(null);
   const basePosition = useMemo(() => cubePosition(playbook, index, mode), [index, mode, playbook]);
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
+  const baseRotation = useMemo<Vec3>(
+    () => [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
+    [index],
+  );
 
-  useFrame(({ clock }, delta) => {
+  useFrame((_, delta) => {
     const group = groupRef.current;
 
     if (!group) {
       return;
     }
 
-    group.rotation.y += delta * (hovered ? 0.5 : 0.18);
-    group.rotation.x = Math.sin(clock.elapsedTime * 0.7 + index) * 0.08;
-    group.position.y = basePosition[1] + Math.sin(clock.elapsedTime * 0.9 + index) * 0.1;
     const targetScale = hovered ? 1.18 : 1;
     group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
   });
@@ -130,15 +131,16 @@ function PlaybookCube({
     <group
       ref={groupRef}
       position={basePosition}
+      rotation={baseRotation}
       onClick={(event) => {
         event.stopPropagation();
         onOpenPlaybook(playbook);
       }}
-      onPointerOver={(event) => {
+      onPointerEnter={(event) => {
         event.stopPropagation();
         onHover(playbook);
       }}
-      onPointerOut={(event) => {
+      onPointerLeave={(event) => {
         event.stopPropagation();
         onHover(null);
       }}
@@ -164,19 +166,12 @@ function PlaybookCube({
 function CoreCube({ mode }: { mode: PlaybookLayoutMode }) {
   const ref = useRef<THREE.Mesh>(null);
 
-  useFrame((_, delta) => {
-    if (ref.current) {
-      ref.current.rotation.x += delta * 0.18;
-      ref.current.rotation.y += delta * 0.3;
-    }
-  });
-
   if (mode === "matrix") {
     return null;
   }
 
   return (
-    <mesh ref={ref} position={[0, 0, -0.6]}>
+    <mesh ref={ref} position={[0, 0, -0.6]} rotation={[0.32, -0.42, 0]}>
       <boxGeometry args={[1.3, 1.3, 1.3]} />
       <meshStandardMaterial color="#dce9ff" transparent opacity={0.2} roughness={0.16} metalness={0.55} wireframe />
     </mesh>
@@ -193,6 +188,7 @@ function ComparisonStage({
   onOpenPlaybook: (playbook: PlaybookItem) => void;
 }) {
   const [hoveredId, setHoveredId] = useState<PlaybookItem["id"] | null>(null);
+  const stageRef = useRef<THREE.Group>(null);
   const textureSources = useMemo(
     () => playbooks.map((playbook) => playbook.thumbnailSrc ?? playbook.fallbackThumbnailSrc ?? ""),
     [playbooks],
@@ -205,6 +201,17 @@ function ComparisonStage({
     texture.needsUpdate = true;
   });
 
+  useFrame(({ pointer }, delta) => {
+    const stage = stageRef.current;
+
+    if (!stage) {
+      return;
+    }
+
+    stage.rotation.x = THREE.MathUtils.damp(stage.rotation.x, pointer.y * 0.045, 4, delta);
+    stage.rotation.y = THREE.MathUtils.damp(stage.rotation.y, pointer.x * 0.07, 4, delta);
+  });
+
   return (
     <>
       <color attach="background" args={["#edf2f5"]} />
@@ -212,19 +219,21 @@ function ComparisonStage({
       <directionalLight position={[-5, 8, 8]} intensity={4.2} castShadow />
       <pointLight position={[0, 0, 4]} color="#8ab4ff" intensity={8} distance={14} />
       <gridHelper args={[22, 22, "#a8b8c8", "#d4dde5"]} position={[0, -3.7, -1]} rotation={[0, 0, 0]} />
-      <CoreCube mode={mode} />
-      {playbooks.map((playbook, index) => (
-        <PlaybookCube
-          key={playbook.id}
-          playbook={playbook}
-          index={index}
-          mode={mode}
-          texture={textures[index]}
-          hovered={hoveredId === playbook.id}
-          onHover={(item) => setHoveredId(item?.id ?? null)}
-          onOpenPlaybook={onOpenPlaybook}
-        />
-      ))}
+      <group ref={stageRef}>
+        <CoreCube mode={mode} />
+        {playbooks.map((playbook, index) => (
+          <PlaybookCube
+            key={playbook.id}
+            playbook={playbook}
+            index={index}
+            mode={mode}
+            texture={textures[index]}
+            hovered={hoveredId === playbook.id}
+            onHover={(item) => setHoveredId(item?.id ?? null)}
+            onOpenPlaybook={onOpenPlaybook}
+          />
+        ))}
+      </group>
     </>
   );
 }
