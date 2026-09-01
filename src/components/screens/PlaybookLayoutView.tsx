@@ -16,6 +16,21 @@ type PlaybookLayoutViewProps = {
 
 type Vec3 = [number, number, number];
 
+const constellationSlots: readonly Vec3[] = [
+  [-6.1, 2.6, 0.2],
+  [-3.8, 3.2, -0.4],
+  [-1.1, 2.8, 0.4],
+  [2.1, 3.2, -0.3],
+  [4.9, 2.5, 0.3],
+  [6.1, 0.6, -0.4],
+  [5.0, -1.6, 0.4],
+  [2.8, -3.1, -0.3],
+  [0, -3.5, 0.2],
+  [-2.8, -3.0, -0.4],
+  [-5.1, -1.5, 0.3],
+  [-6.0, 0.5, -0.2],
+];
+
 function getVisiblePlaybooks(group: PlaybookAccessGroup) {
   return group === "ALL"
     ? PLAYBOOK_CATALOG
@@ -26,25 +41,19 @@ function cubePosition(playbook: PlaybookItem, index: number, mode: PlaybookLayou
   const [feature, groupAxis, story] = playbook.cubeKey.split(",").map(Number);
 
   if (mode === "constellation") {
-    const angle = index * 2.399963;
-    const radius = 5.4 + (index % 3) * 0.62;
-    return [
-      Math.cos(angle) * radius,
-      Math.sin(angle) * (3.8 + (index % 2) * 0.35),
-      Math.sin(index * 1.7) * 1.7 + (story - 2) * 0.28,
-    ];
+    return constellationSlots[index % constellationSlots.length];
   }
 
   if (mode === "ring") {
     const groupItems = PLAYBOOK_CATALOG.filter((item) => item.group === playbook.group);
     const groupIndex = groupItems.findIndex((item) => item.id === playbook.id);
     const centerX = playbook.group === "H" ? -4.5 : 4.5;
-    const verticalSpacing = groupItems.length > 5 ? 1.2 : 1.55;
+    const verticalSpacing = groupItems.length > 5 ? 1.35 : 1.75;
     const verticalIndex = groupIndex - (groupItems.length - 1) / 2;
     const phase = groupIndex * 0.95 + (playbook.group === "H" ? 0 : Math.PI);
     return [
       centerX + Math.cos(phase) * 1.72,
-      -verticalIndex * verticalSpacing,
+      -verticalIndex * verticalSpacing - 0.45,
       Math.sin(phase) * 1.55,
     ];
   }
@@ -55,11 +64,11 @@ function cubePosition(playbook: PlaybookItem, index: number, mode: PlaybookLayou
     return itemFeature === feature && itemStory === story;
   });
   const sameCellIndex = sameCellItems.findIndex((item) => item.id === playbook.id);
-  const cellOffset = (sameCellIndex - (sameCellItems.length - 1) / 2) * 0.98;
+  const cellOffset = (sameCellIndex - (sameCellItems.length - 1) / 2) * 1.5;
 
   return [
-    (feature - 2.5) * 1.75 + cellOffset,
-    (2 - story) * 1.6,
+    (feature - 2.5) * 2.35 + cellOffset,
+    (2 - story) * 1.95 - 0.65,
     (groupAxis - 3.5) * 0.62,
   ];
 }
@@ -134,7 +143,7 @@ function PlaybookCube({
   const groupRef = useRef<THREE.Group>(null);
   const basePosition = useMemo(() => cubePosition(playbook, index, mode), [index, mode, playbook]);
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
-  const layoutScale = mode === "matrix" ? 0.56 : mode === "ring" ? 0.62 : 0.66;
+  const layoutScale = mode === "matrix" ? 0.86 : mode === "ring" ? 0.72 : 0.9;
   const baseRotation = useMemo<Vec3>(
     () => [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
     [index],
@@ -211,7 +220,10 @@ function OrbitController() {
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
-    controls.enableZoom = false;
+    controls.enableZoom = true;
+    controls.zoomSpeed = 0.8;
+    controls.minDistance = 10;
+    controls.maxDistance = 28;
     controls.rotateSpeed = 0.55;
     controls.minPolarAngle = Math.PI * 0.32;
     controls.maxPolarAngle = Math.PI * 0.68;
@@ -252,9 +264,9 @@ function StageGuides({ mode }: { mode: PlaybookLayoutMode }) {
   if (mode === "matrix") {
     return (
       <>
-        <gridHelper args={[10.5, 6, "#6f8fca", "#b9c9dd"]} position={[0, 0, -1.7]} rotation={[Math.PI / 2, 0, 0]} />
-        <gridHelper args={[10.5, 6, "#bb8764", "#dbc2ae"]} position={[0, 0, 1.7]} rotation={[Math.PI / 2, 0, 0]} />
-        <gridHelper args={[10.5, 6, "#9aabba", "#d7e0e8"]} position={[0, -3.5, 0]} />
+        <gridHelper args={[14, 6, "#6f8fca", "#b9c9dd"]} position={[0, 0, -1.7]} rotation={[Math.PI / 2, 0, 0]} />
+        <gridHelper args={[14, 6, "#bb8764", "#dbc2ae"]} position={[0, 0, 1.7]} rotation={[Math.PI / 2, 0, 0]} />
+        <gridHelper args={[14, 6, "#9aabba", "#d7e0e8"]} position={[0, -4.5, 0]} />
       </>
     );
   }
@@ -330,7 +342,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       </div>
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
         <Canvas
-          camera={{ position: [0, 0.45, 22], fov: 38 }}
+          camera={{ position: [0, 0.45, 17.5], fov: 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false }}
           shadows
