@@ -1,7 +1,8 @@
 // @ts-nocheck
-import { Canvas, useFrame, useLoader } from "@react-three/fiber";
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { PLAYBOOK_CATALOG } from "../../data/playbookCatalog";
 
@@ -178,6 +179,81 @@ function CoreCube({ mode }: { mode: PlaybookLayoutMode }) {
   );
 }
 
+function OrbitController() {
+  const { camera, gl } = useThree();
+  const controlsRef = useRef<OrbitControls | null>(null);
+
+  useEffect(() => {
+    const controls = new OrbitControls(camera, gl.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = false;
+    controls.enableZoom = false;
+    controls.rotateSpeed = 0.55;
+    controls.minPolarAngle = Math.PI * 0.32;
+    controls.maxPolarAngle = Math.PI * 0.68;
+    controls.target.set(0, 0, 0);
+    controls.update();
+    controlsRef.current = controls;
+
+    return () => {
+      controls.dispose();
+      controlsRef.current = null;
+    };
+  }, [camera, gl]);
+
+  useFrame((_, delta) => {
+    // OrbitControls owns mouse drag rotation; damping keeps the release motion smooth.
+    controlsRef.current?.update(delta);
+  });
+
+  return null;
+}
+
+function StageGuides({ mode }: { mode: PlaybookLayoutMode }) {
+  if (mode === "ring") {
+    return (
+      <>
+        <mesh position={[-3.2, 0, -1]} rotation={[0.06, 0, 0]}>
+          <torusGeometry args={[2.35, 0.025, 12, 72]} />
+          <meshBasicMaterial color="#5279d8" transparent opacity={0.68} />
+        </mesh>
+        <mesh position={[3.2, 0, -1]} rotation={[-0.06, 0, 0]}>
+          <torusGeometry args={[2.35, 0.025, 12, 72]} />
+          <meshBasicMaterial color="#bd7e54" transparent opacity={0.68} />
+        </mesh>
+      </>
+    );
+  }
+
+  if (mode === "matrix") {
+    return (
+      <>
+        <gridHelper args={[8.4, 6, "#6f8fca", "#b9c9dd"]} position={[0, 0, -1.8]} rotation={[Math.PI / 2, 0, 0]} />
+        <gridHelper args={[8.4, 6, "#bb8764", "#dbc2ae"]} position={[0, 0, 1.8]} rotation={[Math.PI / 2, 0, 0]} />
+        <gridHelper args={[8.4, 6, "#9aabba", "#d7e0e8"]} position={[0, -3.2, 0]} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <mesh position={[0, 0, -1]} rotation={[0.24, 0.1, 0]}>
+        <torusGeometry args={[4.65, 0.018, 10, 96]} />
+        <meshBasicMaterial color="#6d8ee0" transparent opacity={0.42} />
+      </mesh>
+      <mesh position={[0, 0, -1]} rotation={[Math.PI / 2 - 0.24, 0.1, 0]}>
+        <torusGeometry args={[4.65, 0.018, 10, 96]} />
+        <meshBasicMaterial color="#9fb3d9" transparent opacity={0.34} />
+      </mesh>
+      <mesh position={[0, 0, -1]}>
+        <icosahedronGeometry args={[1.12, 1]} />
+        <meshBasicMaterial color="#7397ec" wireframe transparent opacity={0.28} />
+      </mesh>
+    </>
+  );
+}
+
 function ComparisonStage({
   mode,
   playbooks,
@@ -188,7 +264,6 @@ function ComparisonStage({
   onOpenPlaybook: (playbook: PlaybookItem) => void;
 }) {
   const [hoveredId, setHoveredId] = useState<PlaybookItem["id"] | null>(null);
-  const stageRef = useRef<THREE.Group>(null);
   const textureSources = useMemo(
     () => playbooks.map((playbook) => playbook.thumbnailSrc ?? playbook.fallbackThumbnailSrc ?? ""),
     [playbooks],
@@ -201,25 +276,14 @@ function ComparisonStage({
     texture.needsUpdate = true;
   });
 
-  useFrame(({ pointer }, delta) => {
-    const stage = stageRef.current;
-
-    if (!stage) {
-      return;
-    }
-
-    stage.rotation.x = THREE.MathUtils.damp(stage.rotation.x, pointer.y * 0.045, 4, delta);
-    stage.rotation.y = THREE.MathUtils.damp(stage.rotation.y, pointer.x * 0.07, 4, delta);
-  });
-
   return (
     <>
       <color attach="background" args={["#edf2f5"]} />
       <ambientLight intensity={1.8} />
       <directionalLight position={[-5, 8, 8]} intensity={4.2} castShadow />
       <pointLight position={[0, 0, 4]} color="#8ab4ff" intensity={8} distance={14} />
-      <gridHelper args={[22, 22, "#a8b8c8", "#d4dde5"]} position={[0, -3.7, -1]} rotation={[0, 0, 0]} />
-      <group ref={stageRef}>
+      <StageGuides mode={mode} />
+      <group>
         <CoreCube mode={mode} />
         {playbooks.map((playbook, index) => (
           <PlaybookCube
@@ -234,6 +298,7 @@ function ComparisonStage({
           />
         ))}
       </group>
+      <OrbitController />
     </>
   );
 }
@@ -246,7 +311,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-layout__backdrop" aria-hidden="true" />
       <div className="playbook-3d-layout__header">
         <strong>{mode === "constellation" ? "USER STORY CONSTELLATION" : mode === "ring" ? "STORY GROUP RING" : "FEATURE × USER STORY"}</strong>
-        <span>실제 3D 큐브에 마우스를 올리고 클릭해 이야기를 엽니다</span>
+        <span>드래그해서 화면을 회전하고, 큐브를 클릭해 이야기를 엽니다</span>
       </div>
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
         <Canvas
