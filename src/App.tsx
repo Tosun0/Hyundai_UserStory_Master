@@ -39,8 +39,6 @@ type LoadingOverlayState = {
 };
 
 const MASTER_CUBE_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
-const isLayoutPreview =
-  import.meta.env.DEV && new URLSearchParams(window.location.search).has("layout-preview");
 
 function wait(milliseconds: number) {
   return new Promise<void>((resolve) => {
@@ -62,10 +60,9 @@ function preloadImage(src: string | null) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<ScreenId>(isLayoutPreview ? "search" : "landing");
-  const [playbookGroup, setPlaybookGroup] = useState<PlaybookAccessGroup>(
-    isLayoutPreview ? "ALL" : "H",
-  );
+  const [screen, setScreen] = useState<ScreenId>("landing");
+  const [playbookGroup, setPlaybookGroup] = useState<PlaybookAccessGroup>("H");
+  const [isPasswordTosun, setIsPasswordTosun] = useState(false);
   const [loadingOverlay, setLoadingOverlay] = useState<LoadingOverlayState>({
     isMounted: true,
     isVisible: true,
@@ -229,6 +226,7 @@ export default function App() {
     isTransitioningRef.current = false;
     activeScreenRef.current = "landing";
     setPlaybookGroup("H");
+    setIsPasswordTosun(false);
     setScreen("landing");
   }, []);
 
@@ -275,8 +273,9 @@ export default function App() {
       <div ref={screenRef} className="screen-fill">
         {screen === "landing" ? (
           <LandingScreen
-            onGoToSearch={(group) => {
+            onGoToSearch={(group, isTosunPassword) => {
               setPlaybookGroup(group);
+              setIsPasswordTosun(isTosunPassword);
               goToScreen("search");
             }}
           />
@@ -285,6 +284,7 @@ export default function App() {
           <SearchScreen
             isActive
             playbookGroup={playbookGroup}
+            comparisonMode={isPasswordTosun}
             onLogout={logoutToLanding}
           />
         ) : null}

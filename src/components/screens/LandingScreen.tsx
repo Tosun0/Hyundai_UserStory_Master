@@ -6,11 +6,12 @@ import { ArrowGlyph } from "../ui/ArrowGlyph";
 import { UserStoryLogo } from "../ui/UserStoryLogo";
 
 type LandingScreenProps = {
-  onGoToSearch: (group: PlaybookAccessGroup) => void;
+  onGoToSearch: (group: PlaybookAccessGroup, isPasswordTosun: boolean) => void;
 };
 
 type AccessVerificationResponse = {
   group?: PlaybookAccessGroup;
+  isPasswordTosun?: boolean;
 };
 
 function isPlaybookAccessGroup(value: unknown): value is PlaybookAccessGroup {
@@ -58,7 +59,7 @@ export function LandingScreen({ onGoToSearch }: LandingScreenProps) {
       }
 
       setHasCodeError(false);
-      onGoToSearch(result.group);
+      onGoToSearch(result.group, result.isPasswordTosun === true);
     } catch {
       setHasCodeError(true);
       inputRef.current?.focus();

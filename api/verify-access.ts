@@ -16,6 +16,7 @@ const ACCESS_CODE_ENV_BY_GROUP: Record<AccessGroup, string> = {
   H: "ACCESS_CODES_H",
   GN8: "ACCESS_CODES_GN8",
 };
+const COMPARISON_ACCESS_CODE = "tosun";
 
 function getConfiguredCodes(group: AccessGroup) {
   return (process.env[ACCESS_CODE_ENV_BY_GROUP[group]] ?? "")
@@ -60,6 +61,11 @@ export default function handler(request: AccessRequest, response: AccessResponse
     return;
   }
 
+  if (submittedCode === COMPARISON_ACCESS_CODE) {
+    sendJson(response, 200, { group: "ALL", isPasswordTosun: true });
+    return;
+  }
+
   const group = (["ALL", "H", "GN8"] as const).find((candidate) =>
     getConfiguredCodes(candidate).includes(submittedCode),
   );
@@ -69,5 +75,5 @@ export default function handler(request: AccessRequest, response: AccessResponse
     return;
   }
 
-  sendJson(response, 200, { group });
+  sendJson(response, 200, { group, isPasswordTosun: false });
 }
