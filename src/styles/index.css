@@ -976,6 +976,78 @@ button {
   display: none;
 }
 
+.playbook-3d-layout__canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.playbook-3d-layout__canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  cursor: grab;
+}
+
+.playbook-3d-layout__canvas canvas:active {
+  cursor: grabbing;
+}
+
+.playbook-3d-layout__header {
+  position: absolute;
+  top: clamp(112px, 15vh, 148px);
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  pointer-events: none;
+  color: rgb(31 41 55 / 62%);
+  font-size: 11px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.playbook-3d-layout__header strong {
+  color: #31518d;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.playbook-3d-layout__header span {
+  padding-left: 14px;
+  border-left: 1px solid rgb(49 81 141 / 22%);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.playbook-3d-layout__fallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  color: #31518d;
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .playbook-3d-layout__header {
+    top: 106px;
+    display: block;
+    width: calc(100% - 32px);
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+  }
+
+  .playbook-3d-layout__header span {
+    display: none;
+  }
+}
+
 .minimal-cube-loader--scene {
   z-index: 2;
   pointer-events: none;
