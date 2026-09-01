@@ -39,7 +39,7 @@ function cubePosition(playbook: PlaybookItem, index: number, mode: PlaybookLayou
     return [centerX + Math.cos(angle) * 2.35, Math.sin(angle) * 2.65, (feature - 2.5) * 0.32];
   }
 
-  return [(feature - 2.5) * 1.25, (2.5 - story) * 1.05, (groupAxis - 3.5) * 0.6];
+  return [(feature - 2.5) * 1.65, (2 - story) * 1.48, (groupAxis - 3.5) * 0.52];
 }
 
 function makeInfoTexture(playbook: PlaybookItem) {
@@ -75,12 +75,12 @@ function makeInfoTexture(playbook: PlaybookItem) {
   return texture;
 }
 
-function InfoPanel({ playbook }: { playbook: PlaybookItem }) {
+function InfoPanel({ playbook, visible }: { playbook: PlaybookItem; visible: boolean }) {
   const texture = useMemo(() => makeInfoTexture(playbook), [playbook]);
 
   useEffect(() => () => texture?.dispose(), [texture]);
 
-  if (!texture) {
+  if (!texture || !visible) {
     return null;
   }
 
@@ -112,6 +112,7 @@ function PlaybookCube({
   const groupRef = useRef<THREE.Group>(null);
   const basePosition = useMemo(() => cubePosition(playbook, index, mode), [index, mode, playbook]);
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
+  const layoutScale = mode === "matrix" ? 0.76 : 1;
   const baseRotation = useMemo<Vec3>(
     () => [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
     [index],
@@ -124,7 +125,7 @@ function PlaybookCube({
       return;
     }
 
-    const targetScale = hovered ? 1.18 : 1;
+    const targetScale = layoutScale * (hovered ? 1.18 : 1);
     group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
   });
 
@@ -159,7 +160,7 @@ function PlaybookCube({
         <planeGeometry args={[1.55, 1.55]} />
         <meshBasicMaterial map={texture} toneMapped={false} />
       </mesh>
-      <InfoPanel playbook={playbook} />
+      <InfoPanel playbook={playbook} visible={hovered} />
     </group>
   );
 }
@@ -229,9 +230,9 @@ function StageGuides({ mode }: { mode: PlaybookLayoutMode }) {
   if (mode === "matrix") {
     return (
       <>
-        <gridHelper args={[8.4, 6, "#6f8fca", "#b9c9dd"]} position={[0, 0, -1.8]} rotation={[Math.PI / 2, 0, 0]} />
-        <gridHelper args={[8.4, 6, "#bb8764", "#dbc2ae"]} position={[0, 0, 1.8]} rotation={[Math.PI / 2, 0, 0]} />
-        <gridHelper args={[8.4, 6, "#9aabba", "#d7e0e8"]} position={[0, -3.2, 0]} />
+        <gridHelper args={[10, 6, "#6f8fca", "#b9c9dd"]} position={[0, 0, -1.8]} rotation={[Math.PI / 2, 0, 0]} />
+        <gridHelper args={[10, 6, "#bb8764", "#dbc2ae"]} position={[0, 0, 1.8]} rotation={[Math.PI / 2, 0, 0]} />
+        <gridHelper args={[10, 6, "#9aabba", "#d7e0e8"]} position={[0, -4.1, 0]} />
       </>
     );
   }
@@ -315,7 +316,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       </div>
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
         <Canvas
-          camera={{ position: [0, 0.15, 15], fov: 38 }}
+          camera={{ position: [0, 0.35, 18], fov: 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false }}
           shadows
