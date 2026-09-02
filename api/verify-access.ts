@@ -17,6 +17,7 @@ const ACCESS_CODE_ENV_BY_GROUP: Record<AccessGroup, string> = {
   GN8: "ACCESS_CODES_GN8",
 };
 const COMPARISON_ACCESS_CODE = "tosun";
+const REVOKED_ACCESS_CODES = new Set(["open4mi"]);
 
 function getConfiguredCodes(group: AccessGroup) {
   return (process.env[ACCESS_CODE_ENV_BY_GROUP[group]] ?? "")
@@ -58,6 +59,11 @@ export default function handler(request: AccessRequest, response: AccessResponse
 
   if (!submittedCode || submittedCode.length > 128) {
     sendJson(response, 400, { error: "Invalid access code" });
+    return;
+  }
+
+  if (REVOKED_ACCESS_CODES.has(submittedCode)) {
+    sendJson(response, 401, { error: "Invalid access code" });
     return;
   }
 
