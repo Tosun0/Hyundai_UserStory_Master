@@ -95,18 +95,18 @@ function getHelixPosition(index: number, playbookCount: number): Vec3 {
 }
 
 function getSpherePosition(index: number, playbookCount: number): Vec3 {
-  const sphereRadius = 4.2;
+  const sphereRadius = 3.8;
   const trackCount = Math.min(3, Math.max(2, Math.ceil(playbookCount / 5)));
   const itemsPerTrack = Math.ceil(playbookCount / trackCount);
   const track = index % trackCount;
   const step = Math.floor(index / trackCount);
-  const y = (track - (trackCount - 1) / 2) * 1.48;
-  const radius = Math.sqrt(Math.max(0.5, sphereRadius * sphereRadius - y * y));
-  const angle = -Math.PI + (step / Math.max(1, itemsPerTrack - 1)) * Math.PI + (track % 2 ? 0.08 : -0.08);
+  const latitude = -Math.PI * 0.62
+    + (step / Math.max(1, itemsPerTrack - 1)) * Math.PI * 1.24;
+  const trackOffset = (track - (trackCount - 1) / 2) * 0.92;
   return [
-    Math.cos(angle) * radius * 0.18,
-    y,
-    Math.sin(angle) * radius,
+    trackOffset + Math.sin(latitude) * 0.52,
+    Math.sin(latitude) * sphereRadius * 0.52,
+    -3.45 - Math.cos(latitude) * 0.36 + 0.18,
   ];
 }
 
@@ -141,7 +141,7 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
   return 18.5 + Math.min(6, Math.max(0, Math.ceil(playbooks.length / 6) - 2) * 0.65);
 }
 
-const SPHERE_CAMERA_DISTANCE = 4.15;
+const SPHERE_CAMERA_DISTANCE = 1.1;
 
 function cubePosition(
   playbook: PlaybookItem,
@@ -436,6 +436,7 @@ function PlaybookObject({
   onFocusPlaybook: (playbook: PlaybookItem) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
+  const { camera } = useThree();
   const basePosition = useMemo(
     () => cubePosition(playbook, index, mode, visiblePlaybooks),
     [index, mode, playbook, visiblePlaybooks],
@@ -449,9 +450,9 @@ function PlaybookObject({
   const isPrism = mode === "prism";
   const isHelix = mode === "helix";
   const isSphere = mode === "sphere";
-  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.72 : 0.9;
+  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.52 : 0.9;
   const curvedCardGeometry = useMemo(
-    () => makeCurvedCardGeometry(isSphere ? 1.55 : 2.5, isSphere ? 0.92 : 1.5),
+    () => makeCurvedCardGeometry(isSphere ? 1.4 : 2.5, isSphere ? 0.72 : 1.5),
     [isSphere],
   );
   const baseRotation = useMemo<Vec3>(
@@ -474,6 +475,12 @@ function PlaybookObject({
 
     if (!group) {
       return;
+    }
+
+    if (isHelix) {
+      const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
+      group.lookAt(cameraPosition);
+      group.rotateY(Math.PI);
     }
 
     const interactionPosition = new THREE.Vector3(basePosition[0], basePosition[1], basePosition[2]);
@@ -982,7 +989,7 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
   }
 
   if (mode === "sphere") {
-    const sphereRadius = 4.2;
+    const sphereRadius = 3.8;
     const trackCount = Math.min(3, Math.max(2, Math.ceil(playbooks.length / 5)));
     return (
       <>
@@ -991,29 +998,20 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
           <meshBasicMaterial color="#8ab4ff" transparent opacity={0.035} wireframe toneMapped={false} />
         </mesh>
         {Array.from({ length: trackCount }, (_, index) => {
-          const y = (index - (trackCount - 1) / 2) * 1.48;
-          const radius = Math.sqrt(Math.max(0.5, sphereRadius * sphereRadius - y * y));
-          return (
-            <mesh key={index} position={[0, y, 0]} rotation={[Math.PI * 0.5, 0, 0]}>
-              <torusGeometry args={[radius, 0.035, 8, 96]} />
-              <meshBasicMaterial color={index % 2 ? "#65d6ff" : "#ff9fcf"} transparent opacity={0.54} toneMapped={false} />
-            </mesh>
-          );
-        })}
-        {[-1, 1].map((direction) => {
-          const curve = new THREE.CatmullRomCurve3(Array.from({ length: 64 }, (_, index) => {
-            const progress = index / 63;
-            const angle = -Math.PI * 0.82 + progress * Math.PI * 1.64;
+          const trackOffset = (index - (trackCount - 1) / 2) * 0.92;
+          const curve = new THREE.CatmullRomCurve3(Array.from({ length: 96 }, (_, pointIndex) => {
+            const progress = pointIndex / 95;
+            const latitude = -Math.PI * 0.62 + progress * Math.PI * 1.24;
             return new THREE.Vector3(
-              Math.cos(angle) * 4.1,
-              Math.sin(angle * 1.25) * 3.6 * direction,
-              Math.sin(angle) * 4.1,
+              trackOffset + Math.sin(latitude) * 0.52,
+              Math.sin(latitude) * sphereRadius * 0.52,
+              -3.45 - Math.cos(latitude) * 0.36,
             );
           }));
           return (
-            <mesh key={direction}>
-              <tubeGeometry args={[curve, 96, 0.028, 6, false]} />
-              <meshBasicMaterial color={direction > 0 ? "#ffd166" : "#a78bfa"} transparent opacity={0.58} toneMapped={false} />
+            <mesh key={index}>
+              <tubeGeometry args={[curve, 128, 0.022, 8, false]} />
+              <meshBasicMaterial color={index % 2 ? "#65d6ff" : "#ff9fcf"} transparent opacity={0.62} toneMapped={false} />
             </mesh>
           );
         })}
