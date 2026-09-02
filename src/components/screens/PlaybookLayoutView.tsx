@@ -324,6 +324,8 @@ function PlaybookObject({
     map,
     transparent,
     opacity,
+    emissive: playbook.group === "H" ? "#294f9a" : "#7d3f20",
+    emissiveIntensity: selected ? 0.62 : mode === "tunnel" || mode === "solar" || mode === "orbit" ? 0.2 : 0.06,
     roughness: 0.42,
     metalness: 0.35,
   });
@@ -510,6 +512,85 @@ function OrbitController() {
   return null;
 }
 
+function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
+  const particlesRef = useRef<THREE.Points>(null);
+  const positions = useMemo(() => {
+    const count = mode === "tunnel" ? 180 : mode === "index" || mode === "timeline" ? 42 : 96;
+    const spreadX = mode === "tunnel" ? 14 : 12;
+    const spreadY = mode === "tunnel" ? 9 : 7;
+    const spreadZ = mode === "tunnel" ? 34 : 12;
+    const values = new Float32Array(count * 3);
+
+    for (let index = 0; index < count; index += 1) {
+      const seed = index * 17.371;
+      values[index * 3] = (Math.sin(seed) * 0.5 + 0.5) * spreadX - spreadX * 0.5;
+      values[index * 3 + 1] = (Math.cos(seed * 0.73) * 0.5 + 0.5) * spreadY - spreadY * 0.5;
+      values[index * 3 + 2] = (Math.sin(seed * 0.41) * 0.5 + 0.5) * spreadZ - spreadZ * 0.72;
+    }
+
+    return values;
+  }, [mode]);
+
+  useFrame((state, delta) => {
+    if (!particlesRef.current) {
+      return;
+    }
+
+    particlesRef.current.rotation.y += delta * (mode === "tunnel" ? 0.025 : 0.06);
+    if (mode === "tunnel") {
+      particlesRef.current.position.z = (state.clock.elapsedTime * 0.55) % 4;
+    }
+  });
+
+  const color = mode === "timeline" ? "#bd7e54" : mode === "index" ? "#7196d6" : "#8bb9ff";
+  const size = mode === "tunnel" ? 0.055 : 0.075;
+  const opacity = mode === "index" || mode === "timeline" ? 0.28 : 0.62;
+
+  return (
+    <points ref={particlesRef}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+      </bufferGeometry>
+      <pointsMaterial color={color} size={size} transparent opacity={opacity} sizeAttenuation depthWrite={false} />
+    </points>
+  );
+}
+
+function StageEffects({ mode }: { mode: PlaybookLayoutMode }) {
+  const ref = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    if (ref.current && (mode === "solar" || mode === "orbit")) {
+      ref.current.rotation.z += delta * (mode === "solar" ? 0.035 : -0.022);
+    }
+  });
+
+  return (
+    <>
+      <StageParticles mode={mode} />
+      {mode === "solar" ? (
+        <group ref={ref} position={[0, 0, -0.8]}>
+          {[2.7, 4.65, 6.55].map((radius, index) => (
+            <mesh key={radius} rotation={[Math.PI * 0.5, 0, index * 0.18]}>
+              <torusGeometry args={[radius, index === 1 ? 0.035 : 0.018, 8, 96]} />
+              <meshBasicMaterial color={index % 2 ? "#8ab4ff" : "#f0a47b"} transparent opacity={0.24 - index * 0.045} />
+            </mesh>
+          ))}
+        </group>
+      ) : null}
+      {mode === "orbit" ? (
+        <group ref={ref} position={[0, 0, -0.5]}>
+          <mesh>
+            <sphereGeometry args={[0.82, 24, 16]} />
+            <meshBasicMaterial color="#7ea9ff" transparent opacity={0.13} />
+          </mesh>
+          <pointLight color="#7ea9ff" intensity={16} distance={11} />
+        </group>
+      ) : null}
+    </>
+  );
+}
+
 function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks: readonly PlaybookItem[] }) {
   if (mode === "solar") {
     return (
@@ -633,12 +714,16 @@ function ComparisonStage({
     texture.needsUpdate = true;
   });
 
+  const stageBackground = mode === "tunnel" ? "#050d1c" : mode === "orbit" || mode === "solar" ? "#0b1426" : "#edf2f5";
+  const keyLightColor = mode === "timeline" ? "#fff0dc" : mode === "index" ? "#e8f0ff" : "#c6dbff";
+
   return (
     <>
-      <color attach="background" args={["#edf2f5"]} />
-      <ambientLight intensity={1.8} />
-      <directionalLight position={[-5, 8, 8]} intensity={4.2} castShadow={shadowsEnabled} />
-      <pointLight position={[0, 0, 4]} color="#8ab4ff" intensity={8} distance={14} />
+      <color attach="background" args={[stageBackground]} />
+      <ambientLight intensity={mode === "tunnel" ? 0.72 : mode === "orbit" || mode === "solar" ? 1.05 : 1.8} />
+      <directionalLight position={[-5, 8, 8]} color={keyLightColor} intensity={mode === "tunnel" ? 2.8 : 4.2} castShadow={shadowsEnabled} />
+      <pointLight position={[0, 0, 4]} color={mode === "timeline" ? "#f0a47b" : "#8ab4ff"} intensity={mode === "tunnel" ? 5 : 8} distance={14} />
+      <StageEffects mode={mode} />
       <StageGuides mode={mode} playbooks={playbooks} />
       <group>
         <CoreCube mode={mode} />
