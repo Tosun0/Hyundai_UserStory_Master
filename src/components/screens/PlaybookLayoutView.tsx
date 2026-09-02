@@ -6,7 +6,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { PLAYBOOK_CATALOG } from "../../data/playbookCatalog";
 
-export type PlaybookLayoutMode = "solar" | "index" | "prism" | "timeline" | "orbit";
+export type PlaybookLayoutMode = "solar" | "index" | "prism" | "timeline" | "orbit" | "helix" | "sphere";
 
 type PlaybookLayoutViewProps = {
   mode: PlaybookLayoutMode;
@@ -81,6 +81,32 @@ function getOrbitPosition(index: number): Vec3 {
   ];
 }
 
+function getHelixPosition(index: number, playbookCount: number): Vec3 {
+  const turns = 2.35;
+  const midpoint = Math.floor(playbookCount / 2);
+  const angle = (index - midpoint) * (Math.PI * 2 * turns / Math.max(1, playbookCount - 1)) + Math.PI * 0.5;
+  const radius = 3.65 + (index % 3) * 0.2;
+  const vertical = (index - (playbookCount - 1) / 2) * 1.2;
+  return [
+    Math.cos(angle) * radius,
+    vertical,
+    Math.sin(angle) * radius - 0.4,
+  ];
+}
+
+function getSpherePosition(index: number, playbookCount: number): Vec3 {
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  const y = 1 - ((index + 0.5) / Math.max(1, playbookCount)) * 2;
+  const radius = Math.sqrt(1 - y * y);
+  const angle = index * goldenAngle;
+  const sphereRadius = 5.35;
+  return [
+    Math.cos(angle) * radius * sphereRadius,
+    y * sphereRadius,
+    Math.sin(angle) * radius * sphereRadius,
+  ];
+}
+
 function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly PlaybookItem[]) {
   const playbookCount = playbooks.length;
 
@@ -99,6 +125,14 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
 
   if (mode === "timeline") {
     return 18.5 + Math.min(10, Math.max(0, Math.ceil(playbooks.length / 5) - 2) * 1.2);
+  }
+
+  if (mode === "helix") {
+    return 17.5;
+  }
+
+  if (mode === "sphere") {
+    return 18.5;
   }
 
   return 18.5 + Math.min(6, Math.max(0, Math.ceil(playbooks.length / 6) - 2) * 0.65);
@@ -126,6 +160,14 @@ function cubePosition(
 
   if (mode === "orbit") {
     return getOrbitPosition(index);
+  }
+
+  if (mode === "helix") {
+    return getHelixPosition(index, visiblePlaybooks.length);
+  }
+
+  if (mode === "sphere") {
+    return getSpherePosition(index, visiblePlaybooks.length);
   }
 
   const columns = Math.min(5, Math.max(4, visiblePlaybooks.length));
@@ -380,7 +422,9 @@ function PlaybookObject({
     : ["#b8a8ff", "#ffc47f", "#91ddff", "#ff9fcf", "#b9efcf"];
   const isIndex = mode === "index";
   const isPrism = mode === "prism";
-  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : 0.9;
+  const isHelix = mode === "helix";
+  const isSphere = mode === "sphere";
+  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.86 : 0.9;
   const baseRotation = useMemo<Vec3>(
     () => isIndex
       ? [0.025 + (index % 2) * 0.018, -0.05 + (index % 3) * 0.025, 0]
@@ -410,6 +454,12 @@ function PlaybookObject({
       } else if (isPrism) {
         interactionPosition.z += 1.4;
         interactionPosition.y += 0.24;
+      } else if (isHelix) {
+        interactionPosition.z += 1.1;
+        interactionPosition.x *= 0.88;
+      } else if (isSphere) {
+        interactionPosition.z += 1.35;
+        interactionPosition.multiplyScalar(0.94);
       } else if (mode === "orbit") {
         interactionPosition.y += 0.55;
         interactionPosition.z += 1.25;
@@ -498,7 +548,7 @@ function PlaybookObject({
       );
     }
 
-    if (mode === "orbit") {
+    if (mode === "orbit" || mode === "sphere") {
       return (
         <>
           <mesh castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
@@ -611,22 +661,24 @@ function CoreCube({ mode }: { mode: PlaybookLayoutMode }) {
   );
 }
 
-function OrbitController() {
+function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
   const { camera, gl } = useThree();
   const controlsRef = useRef<OrbitControls | null>(null);
+  const sphereIntro = useRef(mode === "sphere" ? 0 : 1);
 
   useEffect(() => {
     const controls = new OrbitControls(camera, gl.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
-    controls.enableZoom = true;
+    controls.enableZoom = mode !== "helix";
     controls.zoomSpeed = 0.8;
     controls.minDistance = 10;
     controls.maxDistance = 28;
     controls.rotateSpeed = 0.55;
     controls.minPolarAngle = Math.PI * 0.32;
     controls.maxPolarAngle = Math.PI * 0.68;
+    controls.enabled = mode !== "sphere";
     controls.target.set(0, 0, 0);
     controls.update();
     controlsRef.current = controls;
@@ -635,14 +687,54 @@ function OrbitController() {
       controls.dispose();
       controlsRef.current = null;
     };
-  }, [camera, gl]);
+  }, [camera, gl, mode]);
 
   useFrame((_, delta) => {
+    if (mode === "sphere" && sphereIntro.current < 1) {
+      sphereIntro.current = Math.min(1, sphereIntro.current + delta / 1.35);
+      const eased = 1 - Math.pow(1 - sphereIntro.current, 3);
+      camera.position.set(0, 0.45 * eased, 0.2 + (18.5 - 0.2) * eased);
+      camera.lookAt(0, 0, 0);
+      if (sphereIntro.current >= 1 && controlsRef.current) {
+        controlsRef.current.enabled = true;
+        controlsRef.current.update();
+      }
+      return;
+    }
+
     // OrbitControls owns mouse drag rotation; damping keeps the release motion smooth.
     controlsRef.current?.update(delta);
   });
 
   return null;
+}
+
+function HelixMotionGroup({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
+  const { gl } = useThree();
+  const ref = useRef<THREE.Group>(null);
+  const scrollTarget = useRef(0);
+
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      scrollTarget.current = THREE.MathUtils.clamp(scrollTarget.current - event.deltaY * 0.006, -5.5, 5.5);
+    };
+
+    gl.domElement.addEventListener("wheel", handleWheel, { passive: false });
+    return () => gl.domElement.removeEventListener("wheel", handleWheel);
+  }, [enabled, gl]);
+
+  useFrame((_, delta) => {
+    if (ref.current) {
+      ref.current.position.y = THREE.MathUtils.damp(ref.current.position.y, scrollTarget.current, 5, delta);
+    }
+  });
+
+  return <group ref={ref}>{children}</group>;
 }
 
 function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
@@ -810,6 +902,49 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
     );
   }
 
+  if (mode === "helix") {
+    const curves = [0, Math.PI].map((phase) => new THREE.CatmullRomCurve3(Array.from({ length: 96 }, (_, index) => {
+      const progress = index / 95;
+      const angle = progress * Math.PI * 2 * 2.35 + phase;
+      return new THREE.Vector3(
+        Math.cos(angle) * 3.75,
+        (progress - 0.5) * 15.5,
+        Math.sin(angle) * 3.75 - 0.4,
+      );
+    })));
+    return (
+      <>
+        <mesh position={[0, 0, -0.4]}>
+          <cylinderGeometry args={[0.035, 0.035, 15.8, 12]} />
+          <meshBasicMaterial color="#d9ecff" transparent opacity={0.34} toneMapped={false} />
+        </mesh>
+        <mesh>
+          <tubeGeometry args={[curves[0], 160, 0.055, 8, false]} />
+          <meshBasicMaterial color="#65d6ff" transparent opacity={0.72} toneMapped={false} />
+        </mesh>
+        <mesh>
+          <tubeGeometry args={[curves[1], 160, 0.055, 8, false]} />
+          <meshBasicMaterial color="#ff6b9d" transparent opacity={0.72} toneMapped={false} />
+        </mesh>
+      </>
+    );
+  }
+
+  if (mode === "sphere") {
+    return (
+      <>
+        <mesh>
+          <sphereGeometry args={[5.55, 32, 24]} />
+          <meshBasicMaterial color="#8ab4ff" transparent opacity={0.2} wireframe toneMapped={false} />
+        </mesh>
+        <mesh rotation={[Math.PI * 0.5, 0, 0]}>
+          <torusGeometry args={[5.58, 0.035, 8, 96]} />
+          <meshBasicMaterial color="#ff9fcf" transparent opacity={0.56} toneMapped={false} />
+        </mesh>
+      </>
+    );
+  }
+
   if (mode === "index") {
     const columns = getIndexColumns(playbooks.length);
     const rows = Math.ceil(playbooks.length / columns);
@@ -930,6 +1065,8 @@ function ComparisonStage({
         ? "#fff8f2"
         : mode === "orbit"
           ? "#080612"
+          : mode === "helix"
+            ? "#071526"
           : "#0e1324";
   const keyLightColor = mode === "solar"
     ? "#ffd0e5"
@@ -939,41 +1076,45 @@ function ComparisonStage({
         ? "#fff5e7"
         : mode === "orbit"
           ? "#d4c4ff"
-          : "#d6e4ff";
+          : mode === "helix"
+            ? "#c6f4ff"
+            : "#d6e4ff";
   const lightStage = mode === "index" || mode === "timeline";
 
   return (
     <>
       {!lightStage ? <color attach="background" args={[stageBackground]} /> : null}
-      <ambientLight intensity={lightStage ? 1.45 : mode === "prism" ? 0.72 : mode === "orbit" ? 0.8 : 0.7} />
+      <ambientLight intensity={lightStage ? 1.45 : mode === "prism" ? 0.72 : mode === "helix" ? 0.82 : mode === "sphere" ? 0.68 : mode === "orbit" ? 0.8 : 0.7} />
       <directionalLight position={[-5, 8, 8]} color={keyLightColor} intensity={mode === "prism" ? 3.5 : 3.7} castShadow={shadowsEnabled} />
-      <pointLight position={[0, 0, 4]} color={mode === "solar" ? "#ff83bd" : mode === "orbit" ? "#a881ff" : mode === "timeline" ? "#ff9edc" : mode === "index" ? "#8bdcff" : "#65d6ff"} intensity={lightStage ? 9 : mode === "solar" || mode === "orbit" ? 10 : 7} distance={14} />
+      <pointLight position={[0, 0, 4]} color={mode === "solar" ? "#ff83bd" : mode === "orbit" ? "#a881ff" : mode === "timeline" ? "#ff9edc" : mode === "index" ? "#8bdcff" : mode === "helix" ? "#65d6ff" : "#9f87ff"} intensity={lightStage ? 9 : mode === "solar" || mode === "orbit" ? 10 : 7} distance={14} />
       {mode === "index" ? <pointLight position={[-5, 2, 2]} color="#ff9fcf" intensity={8} distance={12} /> : null}
       {mode === "timeline" ? <pointLight position={[5, -2, 1]} color="#9e8cff" intensity={8} distance={12} /> : null}
       <StageEffects mode={mode} />
-      <StageGuides mode={mode} playbooks={playbooks} />
-      <group>
-        <CoreCube mode={mode} />
-        {playbooks.map((playbook, index) => (
-          <PlaybookObject
-            key={playbook.id}
-            playbook={playbook}
-            index={index}
-            mode={mode}
-            visiblePlaybooks={playbooks}
-            shadowsEnabled={shadowsEnabled}
-            texture={textures[index]}
-            hovered={hoveredId === playbook.id}
-            focused={focusedIds.has(playbook.id)}
-            hasQuery={hasQuery}
-            selected={hoveredId === playbook.id}
-            hasSelection={hoveredId !== null}
-            onHover={(item) => setHoveredId(item?.id ?? null)}
-            onOpenPlaybook={onOpenPlaybook}
-          />
-        ))}
-      </group>
-      <OrbitController />
+      <HelixMotionGroup enabled={mode === "helix"}>
+        <StageGuides mode={mode} playbooks={playbooks} />
+        <group>
+          <CoreCube mode={mode} />
+          {playbooks.map((playbook, index) => (
+            <PlaybookObject
+              key={playbook.id}
+              playbook={playbook}
+              index={index}
+              mode={mode}
+              visiblePlaybooks={playbooks}
+              shadowsEnabled={shadowsEnabled}
+              texture={textures[index]}
+              hovered={hoveredId === playbook.id}
+              focused={focusedIds.has(playbook.id)}
+              hasQuery={hasQuery}
+              selected={hoveredId === playbook.id}
+              hasSelection={hoveredId !== null}
+              onHover={(item) => setHoveredId(item?.id ?? null)}
+              onOpenPlaybook={onOpenPlaybook}
+            />
+          ))}
+        </group>
+      </HelixMotionGroup>
+      <OrbitController mode={mode} />
     </>
   );
 }
@@ -994,6 +1135,10 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       ? "STORY INDEX"
       : mode === "prism"
         ? "PRISM CASCADE"
+        : mode === "helix"
+          ? "HELIX"
+          : mode === "sphere"
+            ? "SPHERE"
         : mode === "timeline"
           ? "TIMELINE RAIL"
           : "ORBIT RINGS";
@@ -1003,6 +1148,10 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       ? "전체를 훑고 검색 결과를 앞으로 당겨 바로 들어갑니다"
       : mode === "prism"
         ? "반투명 프리즘 카드가 계단형 캐스케이드로 이어집니다"
+        : mode === "helix"
+          ? "스크롤로 세로 소용돌이를 오르내리며 플레이북을 만납니다"
+          : mode === "sphere"
+            ? "원점에서 이동한 카메라가 구체 표면의 플레이북을 펼칩니다"
         : mode === "timeline"
           ? "스토리를 순서와 레일 단위로 빠르게 훑습니다"
           : "그룹과 스토리가 동심 궤도로 분리됩니다";
@@ -1029,7 +1178,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 스테이지">
         <Canvas
           key={mode}
-          camera={{ position: [0, 0.45, getCameraDistance(mode, playbooks)], fov: 38 }}
+          camera={{ position: mode === "sphere" ? [0, 0.1, 0.2] : [0, 0.45, getCameraDistance(mode, playbooks)], fov: 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false }}
           shadows={playbooks.length <= 24}
