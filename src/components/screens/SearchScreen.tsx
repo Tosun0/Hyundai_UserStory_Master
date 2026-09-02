@@ -191,11 +191,10 @@ export function SearchScreen({
                 onClick={() => setComparisonCubeView(true)}
                 aria-label="3D Cube View 보기"
               >
-                <span className="material-symbols-outlined" aria-hidden="true">view_in_ar</span>
                 Cube View
               </button>
+              <span className="layout-mode-switcher__title">배치 방식</span>
               <label className="layout-mode-switcher__select-wrap">
-                <span className="layout-mode-switcher__title">배치 방식</span>
                 <select
                   className="layout-mode-switcher__select"
                   value={layoutMode}
@@ -204,7 +203,6 @@ export function SearchScreen({
                 >
                   {layoutModes.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
                 </select>
-                <span className="material-symbols-outlined layout-mode-switcher__select-icon" aria-hidden="true">expand_more</span>
               </label>
             </div>
           </div>

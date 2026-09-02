@@ -894,18 +894,18 @@ button {
 .layout-mode-switcher {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px;
-  border: 1px solid rgb(255 255 255 / 65%);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 70%);
-  box-shadow: 0 12px 30px rgb(38 52 64 / 13%), inset 0 1px rgb(255 255 255 / 85%);
-  backdrop-filter: blur(24px) saturate(1.2);
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid #d8e0e8;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(30 41 59 / 14%);
 }
 
 .layout-mode-switcher__title {
-  padding-left: 11px;
-  color: rgb(255 255 255 / 62%);
+  padding: 0 4px 0 8px;
+  color: #64748b;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
@@ -913,34 +913,25 @@ button {
 
 .layout-mode-switcher__buttons {
   display: flex;
+  align-items: center;
   gap: 4px;
+  min-width: 0;
 }
 
 .layout-mode-switcher__select-wrap {
-  position: relative;
   display: flex;
   align-items: center;
-  min-height: 40px;
-  border-radius: 999px;
-  background: #2c2c2d;
-  color: #fff;
-  box-shadow: 0 5px 14px rgb(44 44 45 / 20%);
-}
-
-.layout-mode-switcher__select-wrap:focus-within {
-  outline: 2px solid rgb(82 121 216 / 55%);
-  outline-offset: 2px;
+  min-width: 0;
 }
 
 .layout-mode-switcher__select {
-  min-height: 40px;
-  min-width: 168px;
-  padding: 8px 34px 8px 13px;
-  border: 0;
-  border-radius: 999px;
-  appearance: none;
-  background: transparent;
-  color: #fff;
+  height: 40px;
+  min-width: 190px;
+  padding: 0 32px 0 12px;
+  border: 1px solid #d8e0e8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1f2937;
   cursor: pointer;
   font-size: 13px;
   font-weight: 800;
@@ -951,31 +942,23 @@ button {
   color: #1f2937;
 }
 
-.layout-mode-switcher__select-icon {
-  position: absolute;
-  right: 9px;
-  pointer-events: none;
-  font-size: 19px;
-}
-
 .layout-mode-switcher button {
-  min-height: 40px;
-  padding: 8px 13px;
+  height: 40px;
+  padding: 0 14px;
   border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: #334155;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #1f2937;
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 800;
   white-space: nowrap;
-  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+  transition: background 140ms ease, color 140ms ease;
 }
 
 .layout-mode-switcher button:hover,
 .layout-mode-switcher button:focus-visible {
   outline: none;
-  background: rgb(255 255 255 / 86%);
-  transform: translateY(-1px);
+  background: #e2e8f0;
 }
 
 .layout-mode-switcher button.is-active {
@@ -992,7 +975,8 @@ button {
 }
 
 .layout-mode-switcher__cube-button {
-  color: #31518d !important;
+  background: #2c2c2d !important;
+  color: #fff !important;
 }
 
 .layout-mode-switcher__cube-return {
@@ -1016,6 +1000,33 @@ button {
 
 .layout-mode-switcher__short-label {
   display: none;
+}
+
+@media (max-width: 720px) {
+  .layout-mode-switcher {
+    left: 16px !important;
+    right: 16px;
+    width: auto;
+    max-width: none;
+    transform: none !important;
+  }
+
+  .layout-mode-switcher__buttons {
+    width: 100%;
+  }
+
+  .layout-mode-switcher__title {
+    display: none;
+  }
+
+  .layout-mode-switcher__select-wrap {
+    flex: 1;
+  }
+
+  .layout-mode-switcher__select {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .playbook-3d-layout__canvas {
