@@ -205,7 +205,7 @@ function InfoPanel({ playbook, visible }: { playbook: PlaybookItem; visible: boo
   );
 }
 
-function PlaybookCube({
+function PlaybookObject({
   playbook,
   index,
   mode,
@@ -261,11 +261,114 @@ function PlaybookCube({
   });
 
   const opacity = isIndex && hasQuery && !focused ? 0.16 : 1;
-  const depth = isIndex ? 0.72 : 0.42;
-  const width = isIndex ? 2.12 : 1.72;
-  const height = isIndex ? 1.3 : 1.72;
-  const frontWidth = isIndex ? 1.86 : 1.55;
-  const frontHeight = isIndex ? 0.96 : 1.55;
+  const transparent = isIndex && hasQuery;
+
+  const material = (map?: THREE.Texture) => ({
+    color: sideColor,
+    map,
+    transparent,
+    opacity,
+    roughness: 0.42,
+    metalness: 0.35,
+  });
+
+  const renderShape = () => {
+    if (mode === "solar") {
+      return (
+        <>
+          <mesh castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <icosahedronGeometry args={[0.92, 1]} />
+            <meshStandardMaterial {...material(texture)} roughness={0.28} metalness={0.28} />
+          </mesh>
+          <mesh scale={1.1}>
+            <icosahedronGeometry args={[0.92, 1]} />
+            <meshBasicMaterial color={sideColor} transparent opacity={0.2 * opacity} wireframe />
+          </mesh>
+        </>
+      );
+    }
+
+    if (mode === "timeline") {
+      return (
+        <>
+          <mesh rotation={[Math.PI * 0.5, 0, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <cylinderGeometry args={[0.76, 0.76, 0.46, 10]} />
+            <meshStandardMaterial {...material()} roughness={0.32} metalness={0.52} />
+          </mesh>
+          <mesh position={[0, 0, 0.245]}>
+            <circleGeometry args={[0.6, 32]} />
+            <meshBasicMaterial map={texture} transparent={transparent} opacity={opacity} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 0, 0.26]}>
+            <ringGeometry args={[0.62, 0.7, 32]} />
+            <meshBasicMaterial color={playbook.group === "H" ? "#5279d8" : "#bd7e54"} transparent opacity={0.9 * opacity} />
+          </mesh>
+        </>
+      );
+    }
+
+    if (mode === "orbit") {
+      return (
+        <>
+          <mesh castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <sphereGeometry args={[0.9, 24, 18]} />
+            <meshStandardMaterial {...material(texture)} roughness={0.22} metalness={0.38} />
+          </mesh>
+          <mesh scale={1.12}>
+            <sphereGeometry args={[0.9, 16, 12]} />
+            <meshBasicMaterial color={sideColor} transparent opacity={0.23 * opacity} wireframe />
+          </mesh>
+        </>
+      );
+    }
+
+    if (mode === "focus") {
+      return (
+        <>
+          <mesh rotation={[0.18, -0.22, 0.08]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <octahedronGeometry args={[1.02, 0]} />
+            <meshStandardMaterial {...material()} roughness={0.3} metalness={0.5} />
+          </mesh>
+          <mesh position={[0, 0, 0.58]} rotation={[0.08, -0.12, 0.08]}>
+            <planeGeometry args={[1.18, 0.8]} />
+            <meshBasicMaterial map={texture} transparent={transparent} opacity={opacity} toneMapped={false} />
+          </mesh>
+        </>
+      );
+    }
+
+    if (mode === "tunnel") {
+      return (
+        <>
+          <mesh rotation={[0.15, 0.28, 0.08]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <coneGeometry args={[0.86, 1.48, 4]} />
+            <meshStandardMaterial {...material()} roughness={0.34} metalness={0.44} />
+          </mesh>
+          <mesh position={[0, 0, 0.52]} rotation={[0.02, -0.12, 0.08]}>
+            <planeGeometry args={[1.08, 0.72]} />
+            <meshBasicMaterial map={texture} transparent={transparent} opacity={opacity} toneMapped={false} />
+          </mesh>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <mesh castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <boxGeometry args={[2.12, 1.3, 0.72]} />
+          <meshStandardMaterial {...material()} roughness={0.36} metalness={0.28} />
+        </mesh>
+        <mesh position={[0, 0, 0.365]}>
+          <planeGeometry args={[1.86, 0.96]} />
+          <meshBasicMaterial map={texture} transparent={transparent} opacity={opacity} toneMapped={false} />
+        </mesh>
+        <mesh position={[-0.98, 0, 0.39]}>
+          <boxGeometry args={[0.08, 1.08, 0.08]} />
+          <meshBasicMaterial color={playbook.group === "H" ? "#5279d8" : "#bd7e54"} transparent opacity={opacity} />
+        </mesh>
+      </>
+    );
+  };
 
   return (
     <group
@@ -285,20 +388,8 @@ function PlaybookCube({
         onHover(null);
       }}
     >
-      <mesh castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[width, height, depth]} />
-        <meshStandardMaterial attach="material-0" color={sideColor} transparent={isIndex && hasQuery} opacity={opacity} roughness={0.42} metalness={0.35} />
-        <meshStandardMaterial attach="material-1" color={sideColor} transparent={isIndex && hasQuery} opacity={opacity} roughness={0.42} metalness={0.35} />
-        <meshStandardMaterial attach="material-2" color="#d9e6f7" transparent={isIndex && hasQuery} opacity={opacity} roughness={0.28} metalness={0.2} />
-        <meshStandardMaterial attach="material-3" color="#273647" transparent={isIndex && hasQuery} opacity={opacity} roughness={0.62} metalness={0.22} />
-        <meshStandardMaterial attach="material-4" map={texture} transparent={isIndex && hasQuery} opacity={opacity} roughness={0.55} metalness={0.08} />
-        <meshStandardMaterial attach="material-5" color="#18232d" transparent={isIndex && hasQuery} opacity={opacity} roughness={0.6} metalness={0.2} />
-      </mesh>
-      <mesh position={[0, 0, depth / 2 + 0.006]}>
-        <planeGeometry args={[frontWidth, frontHeight]} />
-        <meshBasicMaterial map={texture} transparent={isIndex && hasQuery} opacity={opacity} toneMapped={false} />
-      </mesh>
-      {isIndex ? <mesh position={[0, -0.57, depth / 2 + 0.02]}>
+      {renderShape()}
+      {isIndex ? <mesh position={[0, -0.57, 0.4]}>
         <boxGeometry args={[1.84, 0.055, 0.035]} />
         <meshBasicMaterial color={focused || !hasQuery ? (playbook.group === "H" ? "#5279d8" : "#bd7e54") : "#9aa8b8"} transparent opacity={opacity} />
       </mesh> : null}
@@ -507,7 +598,7 @@ function ComparisonStage({
       <group>
         <CoreCube mode={mode} />
         {playbooks.map((playbook, index) => (
-          <PlaybookCube
+            <PlaybookObject
             key={playbook.id}
             playbook={playbook}
             index={index}
@@ -566,7 +657,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-layout__backdrop" aria-hidden="true" />
       <div className="playbook-3d-layout__header">
         <strong>{title}</strong>
-        <span>{description} · {mode === "index" && normalizedQuery ? `${focusedIds.size}/${allPlaybooks.length}개` : `${allPlaybooks.length}개`} 스토리 · 드래그 회전 / 스크롤 줌 / 큐브 클릭</span>
+        <span>{description} · {mode === "index" && normalizedQuery ? `${focusedIds.size}/${allPlaybooks.length}개` : `${allPlaybooks.length}개`} 스토리 · 드래그 회전 / 스크롤 줌 / 오브젝트 클릭</span>
       </div>
       {mode === "index" ? (
         <label className="playbook-3d-layout__finder">
@@ -580,7 +671,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
           />
         </label>
       ) : null}
-      <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
+      <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 스테이지">
         <Canvas
           key={mode}
           camera={{ position: [0, 0.45, getCameraDistance(mode, playbooks)], fov: 38 }}
