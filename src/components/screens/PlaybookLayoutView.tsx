@@ -189,16 +189,16 @@ function makeStoryLabelTexture(playbook: PlaybookItem, index: number) {
   }
 
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "rgba(15, 23, 42, 0.92)";
+  context.fillStyle = "rgba(255, 255, 255, 0.78)";
   context.roundRect(4, 4, canvas.width - 8, canvas.height - 8, 18);
   context.fill();
-  context.fillStyle = playbook.group === "H" ? "#8ab4ff" : "#f0aa7d";
+  context.fillStyle = playbook.group === "H" ? "#4f6fc9" : "#c75d7d";
   context.font = "800 21px Arial";
   context.fillText(`${String(index + 1).padStart(2, "0")}  ·  ${playbook.id}`, 24, 36);
-  context.fillStyle = "#ffffff";
+  context.fillStyle = "#24324f";
   context.font = "800 27px Arial";
   context.fillText(playbook.title.slice(0, 30), 24, 79);
-  context.fillStyle = "rgba(255,255,255,0.58)";
+  context.fillStyle = "rgba(36,50,79,0.62)";
   context.font = "500 17px Arial";
   context.fillText(playbook.tags.slice(0, 3).join("  /  "), 24, 106);
 
@@ -206,6 +206,98 @@ function makeStoryLabelTexture(playbook: PlaybookItem, index: number) {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
   return texture;
+}
+
+function makeWatercolorTexture(mode: PlaybookLayoutMode) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 1024;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return null;
+  }
+
+  const isIndex = mode === "index";
+  const washes = isIndex
+    ? [
+        ["#ffd1e1", 180, 190, 360],
+        ["#b8eaff", 820, 200, 420],
+        ["#d5c5ff", 280, 820, 440],
+        ["#c8f4d8", 820, 820, 380],
+        ["#ffe3a9", 520, 510, 300],
+      ]
+    : [
+        ["#ffd1b8", 150, 180, 390],
+        ["#b9ddff", 840, 220, 420],
+        ["#e0c9ff", 250, 820, 430],
+        ["#c6f2dd", 820, 820, 360],
+        ["#ffb8d8", 560, 470, 340],
+      ];
+
+  context.fillStyle = isIndex ? "#f5f8ff" : "#fff8f2";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.globalCompositeOperation = "multiply";
+
+  washes.forEach(([color, centerX, centerY, radius], washIndex) => {
+    const gradient = context.createRadialGradient(centerX, centerY, radius * 0.08, centerX, centerY, radius);
+    gradient.addColorStop(0, `${color}cc`);
+    gradient.addColorStop(0.52, `${color}72`);
+    gradient.addColorStop(1, `${color}00`);
+    context.fillStyle = gradient;
+    context.globalAlpha = 0.62;
+
+    for (let brush = 0; brush < 8; brush += 1) {
+      const angle = (brush / 8) * Math.PI * 2 + washIndex * 0.7;
+      const offset = radius * 0.15 * Math.sin(brush * 2.7 + washIndex);
+      context.beginPath();
+      context.ellipse(
+        centerX + Math.cos(angle) * offset,
+        centerY + Math.sin(angle) * offset,
+        radius * (0.72 + (brush % 3) * 0.08),
+        radius * (0.52 + (brush % 2) * 0.11),
+        angle * 0.35,
+        0,
+        Math.PI * 2,
+      );
+      context.fill();
+    }
+  });
+
+  context.globalCompositeOperation = "source-over";
+  context.globalAlpha = 0.13;
+  for (let grain = 0; grain < 4200; grain += 1) {
+    const x = (grain * 73) % canvas.width;
+    const y = (grain * 151) % canvas.height;
+    const size = grain % 5 === 0 ? 2 : 1;
+    context.fillStyle = grain % 2 ? "#ffffff" : "#8f83aa";
+    context.fillRect(x, y, size, size);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function WatercolorBackdrop({ mode }: { mode: PlaybookLayoutMode }) {
+  const texture = useMemo(
+    () => (mode === "index" || mode === "timeline" ? makeWatercolorTexture(mode) : null),
+    [mode],
+  );
+
+  useEffect(() => () => texture?.dispose(), [texture]);
+
+  if (!texture) {
+    return null;
+  }
+
+  return (
+    <mesh position={[0, 0, -8.5]}>
+      <planeGeometry args={[28, 22]} />
+      <meshBasicMaterial map={texture} toneMapped={false} />
+    </mesh>
+  );
 }
 
 function InfoPanel({ playbook, visible }: { playbook: PlaybookItem; visible: boolean }) {
@@ -260,6 +352,9 @@ function PlaybookObject({
     [index, mode, playbook, visiblePlaybooks],
   );
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
+  const lightPalette = mode === "index"
+    ? ["#8cc8ff", "#ffb6d2", "#b8efcf", "#ffd28d", "#c9b7ff"]
+    : ["#b8a8ff", "#ffc47f", "#91ddff", "#ff9fcf", "#b9efcf"];
   const isIndex = mode === "index";
   const layoutScale = isIndex ? 0.86 : mode === "tunnel" ? 0.74 : 0.9;
   const baseRotation = useMemo<Vec3>(
@@ -314,9 +409,9 @@ function PlaybookObject({
   const lightStage = isIndex || mode === "timeline";
   const transparent = lightStage || (isIndex && hasQuery) || interactiveDim;
   const surfaceColor = isIndex
-    ? playbook.group === "H" ? "#8cc8ff" : "#ffb6a6"
+    ? lightPalette[index % lightPalette.length]
     : mode === "timeline"
-      ? playbook.group === "H" ? "#b8a8ff" : "#ffc47f"
+      ? lightPalette[index % lightPalette.length]
       : sideColor;
   const surfaceOpacity = isIndex ? 0.7 * opacity : mode === "timeline" ? 0.86 * opacity : opacity;
   const timelineLabelTexture = useMemo(
@@ -370,7 +465,7 @@ function PlaybookObject({
           </mesh>
           <mesh position={[0, -0.78, 0]}>
             <boxGeometry args={[0.05, 0.3, 0.05]} />
-            <meshBasicMaterial color={playbook.group === "H" ? "#7fa8ff" : "#ff9d83"} transparent opacity={opacity} />
+            <meshBasicMaterial color={lightPalette[index % lightPalette.length]} transparent opacity={opacity} />
           </mesh>
         </>
       );
@@ -449,7 +544,7 @@ function PlaybookObject({
       {renderShape()}
       {isIndex ? <mesh position={[0, -0.57, 0.4]}>
         <boxGeometry args={[1.84, 0.055, 0.035]} />
-        <meshBasicMaterial color={focused || !hasQuery ? (playbook.group === "H" ? "#5279d8" : "#bd7e54") : "#9aa8b8"} transparent opacity={opacity} />
+        <meshBasicMaterial color={focused || !hasQuery ? lightPalette[index % lightPalette.length] : "#b4b9c8"} transparent opacity={opacity} />
       </mesh> : null}
       <InfoPanel playbook={playbook} visible={hovered} />
     </group>
@@ -522,25 +617,17 @@ function OrbitController() {
 function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
   const particlesRef = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
-    const count = mode === "tunnel" ? 260 : mode === "orbit" ? 160 : mode === "solar" ? 120 : 0;
-    const spreadX = mode === "tunnel" ? 14 : 18;
-    const spreadY = mode === "tunnel" ? 9 : 10;
-    const spreadZ = mode === "tunnel" ? 34 : 22;
+    const count = mode === "orbit" ? 160 : mode === "solar" ? 120 : 0;
+    const spreadX = 18;
+    const spreadY = 10;
+    const spreadZ = 22;
     const values = new Float32Array(count * 3);
 
     for (let index = 0; index < count; index += 1) {
       const seed = index * 17.371;
-      if (mode === "tunnel") {
-        const angle = index * 2.399963;
-        const radius = 1.8 + (Math.sin(seed * 0.41) * 0.5 + 0.5) * 6.4;
-        values[index * 3] = Math.cos(angle) * radius;
-        values[index * 3 + 1] = Math.sin(angle) * radius * 0.56;
-        values[index * 3 + 2] = (Math.cos(seed * 0.19) * 0.5 + 0.5) * spreadZ - spreadZ * 0.78;
-      } else {
-        values[index * 3] = (Math.sin(seed) * 0.5 + 0.5) * spreadX - spreadX * 0.5;
-        values[index * 3 + 1] = (Math.cos(seed * 0.73) * 0.5 + 0.5) * spreadY - spreadY * 0.5;
-        values[index * 3 + 2] = (Math.sin(seed * 0.41) * 0.5 + 0.5) * spreadZ - spreadZ * 0.72;
-      }
+      values[index * 3] = (Math.sin(seed) * 0.5 + 0.5) * spreadX - spreadX * 0.5;
+      values[index * 3 + 1] = (Math.cos(seed * 0.73) * 0.5 + 0.5) * spreadY - spreadY * 0.5;
+      values[index * 3 + 2] = (Math.sin(seed * 0.41) * 0.5 + 0.5) * spreadZ - spreadZ * 0.72;
     }
 
     return values;
@@ -551,20 +638,17 @@ function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
       return;
     }
 
-    particlesRef.current.rotation.y += delta * (mode === "tunnel" ? 0.025 : 0.045);
-    if (mode === "tunnel") {
-      particlesRef.current.rotation.z -= delta * 0.07;
-    }
+    particlesRef.current.rotation.y += delta * 0.045;
     if (mode === "tunnel") {
       particlesRef.current.position.z = (state.clock.elapsedTime * 0.55) % 4;
     }
   });
 
-  const color = mode === "orbit" ? "#c5a9ff" : mode === "solar" ? "#ffd5a3" : "#b7c8ff";
-  const size = mode === "orbit" ? 0.065 : mode === "solar" ? 0.06 : 0.055;
-  const opacity = mode === "tunnel" ? 0.5 : 0.68;
+  const color = mode === "orbit" ? "#c5a9ff" : "#ffd5a3";
+  const size = mode === "orbit" ? 0.065 : 0.06;
+  const opacity = 0.68;
 
-  if (mode !== "tunnel" && mode !== "orbit" && mode !== "solar") {
+  if (mode !== "orbit" && mode !== "solar") {
     return null;
   }
 
@@ -580,6 +664,24 @@ function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
 
 function WormholeEffect() {
   const ref = useRef<THREE.Group>(null);
+  const spiralCurves = useMemo(() => [
+    { color: "#ff4f9a", opacity: 0.78, points: 58 },
+    { color: "#8b5cff", opacity: 0.64, points: 58 },
+    { color: "#28d7ff", opacity: 0.54, points: 58 },
+  ].map(({ color, opacity, points }, spiralIndex) => ({
+    color,
+    opacity,
+    curve: new THREE.CatmullRomCurve3(Array.from({ length: points }, (_, pointIndex) => {
+      const progress = pointIndex / (points - 1);
+      const angle = progress * Math.PI * 5.2 + spiralIndex * 2.1;
+      const radius = 0.32 + progress * 4.9;
+      return new THREE.Vector3(
+        Math.cos(angle) * radius,
+        Math.sin(angle) * radius * 0.58,
+        Math.sin(progress * Math.PI * 3 + spiralIndex) * 0.24,
+      );
+    })),
+  })), []);
 
   useFrame((state, delta) => {
     if (!ref.current) {
@@ -609,6 +711,12 @@ function WormholeEffect() {
           <meshBasicMaterial color={ring.color} transparent opacity={ring.opacity} toneMapped={false} />
         </mesh>
       ))}
+      {spiralCurves.map((spiral) => (
+        <mesh key={spiral.color}>
+          <tubeGeometry args={[spiral.curve, 96, 0.075, 8, false]} />
+          <meshBasicMaterial color={spiral.color} transparent opacity={spiral.opacity} toneMapped={false} />
+        </mesh>
+      ))}
       <pointLight position={[-2.6, 1.4, 1.2]} color="#ff4f9a" intensity={32} distance={13} />
       <pointLight position={[2.8, -0.8, 0.8]} color="#28d7ff" intensity={28} distance={13} />
       <pointLight position={[0, 2.8, 0.4]} color="#ffb14d" intensity={24} distance={11} />
@@ -628,6 +736,7 @@ function StageEffects({ mode }: { mode: PlaybookLayoutMode }) {
   return (
     <>
       <StageParticles mode={mode} />
+      <WatercolorBackdrop mode={mode} />
       {mode === "tunnel" ? <WormholeEffect /> : null}
       {mode === "solar" ? (
         <group ref={ref} position={[0, 0, -0.8]}>
@@ -730,6 +839,10 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
         </mesh>
       </>
     );
+  }
+
+  if (mode === "tunnel") {
+    return null;
   }
 
   return (
