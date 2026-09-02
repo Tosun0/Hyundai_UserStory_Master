@@ -515,10 +515,10 @@ function OrbitController() {
 function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
   const particlesRef = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
-    const count = mode === "tunnel" ? 180 : mode === "index" || mode === "timeline" ? 42 : 96;
-    const spreadX = mode === "tunnel" ? 14 : 12;
-    const spreadY = mode === "tunnel" ? 9 : 7;
-    const spreadZ = mode === "tunnel" ? 34 : 12;
+    const count = mode === "tunnel" ? 180 : 0;
+    const spreadX = 14;
+    const spreadY = 9;
+    const spreadZ = 34;
     const values = new Float32Array(count * 3);
 
     for (let index = 0; index < count; index += 1) {
@@ -542,9 +542,13 @@ function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
     }
   });
 
-  const color = mode === "timeline" ? "#bd7e54" : mode === "index" ? "#7196d6" : "#8bb9ff";
-  const size = mode === "tunnel" ? 0.055 : 0.075;
-  const opacity = mode === "index" || mode === "timeline" ? 0.28 : 0.62;
+  const color = "#8bb9ff";
+  const size = 0.055;
+  const opacity = 0.62;
+
+  if (mode !== "tunnel") {
+    return null;
+  }
 
   return (
     <points ref={particlesRef}>
@@ -714,7 +718,15 @@ function ComparisonStage({
     texture.needsUpdate = true;
   });
 
-  const stageBackground = mode === "tunnel" ? "#050d1c" : mode === "orbit" || mode === "solar" ? "#0b1426" : "#edf2f5";
+  const stageBackground = mode === "tunnel"
+    ? "#050d1c"
+    : mode === "solar"
+      ? "#f2e5d9"
+      : mode === "orbit"
+        ? "#e7eef4"
+        : mode === "timeline"
+          ? "#f3f1ed"
+          : "#edf2f5";
   const keyLightColor = mode === "timeline" ? "#fff0dc" : mode === "index" ? "#e8f0ff" : "#c6dbff";
 
   return (

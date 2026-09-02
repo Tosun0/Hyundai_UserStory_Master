@@ -1118,21 +1118,15 @@ button {
   text-transform: none;
 }
 
-.playbook-layout--solar .playbook-3d-layout__header,
-.playbook-layout--tunnel .playbook-3d-layout__header,
-.playbook-layout--orbit .playbook-3d-layout__header {
+.playbook-layout--tunnel .playbook-3d-layout__header {
   color: rgb(255 255 255 / 68%);
 }
 
-.playbook-layout--solar .playbook-3d-layout__header strong,
-.playbook-layout--tunnel .playbook-3d-layout__header strong,
-.playbook-layout--orbit .playbook-3d-layout__header strong {
+.playbook-layout--tunnel .playbook-3d-layout__header strong {
   color: #d7e6ff;
 }
 
-.playbook-layout--solar .playbook-3d-layout__header span,
-.playbook-layout--tunnel .playbook-3d-layout__header span,
-.playbook-layout--orbit .playbook-3d-layout__header span {
+.playbook-layout--tunnel .playbook-3d-layout__header span {
   border-left-color: rgb(215 230 255 / 24%);
 }
 
