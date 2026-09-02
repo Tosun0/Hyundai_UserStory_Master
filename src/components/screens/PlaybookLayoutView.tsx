@@ -16,19 +16,11 @@ type PlaybookLayoutViewProps = {
 
 type Vec3 = [number, number, number];
 
-const solarSlots: readonly Vec3[] = [
-  [-6.1, 2.6, 0.2],
-  [-3.8, 3.2, -0.4],
-  [-1.1, 2.8, 0.4],
-  [2.1, 3.2, -0.3],
-  [4.9, 2.5, 0.3],
-  [6.1, 0.6, -0.4],
-  [5.0, -1.6, 0.4],
-  [2.8, -3.1, -0.3],
-  [0, -3.5, 0.2],
-  [-2.8, -3.0, -0.4],
-  [-5.1, -1.5, 0.3],
-  [-6.0, 0.5, -0.2],
+const TUNNEL_PATTERNS: readonly (readonly Vec3[])[] = [
+  [[-5.2, 2.55, 0], [-1.75, -2.45, 0], [1.75, 2.45, 0], [5.2, -2.55, 0]],
+  [[-4.25, -1.9, 0], [-1.05, 1.9, 0], [1.05, -1.9, 0], [4.25, 1.9, 0]],
+  [[-3.25, 1.25, 0], [-0.78, -1.25, 0], [0.78, 1.25, 0], [3.25, -1.25, 0]],
+  [[-4.8, -2.35, 0], [-1.65, 2.35, 0], [1.65, -2.35, 0], [4.8, 2.35, 0]],
 ];
 
 function getVisiblePlaybooks(group: PlaybookAccessGroup) {
@@ -37,34 +29,64 @@ function getVisiblePlaybooks(group: PlaybookAccessGroup) {
     : PLAYBOOK_CATALOG.filter((playbook) => playbook.group === group);
 }
 
-function cubePosition(playbook: PlaybookItem, index: number, mode: PlaybookLayoutMode): Vec3 {
+function getSolarPosition(index: number): Vec3 {
+  const ringIndex = Math.floor(index / 8);
+  const ringSlot = index % 8;
+  const radius = 5.45 + ringIndex * 1.65;
+  const angle = (ringSlot / 8) * Math.PI * 2 + ringIndex * 0.38;
+  return [
+    Math.cos(angle) * radius,
+    Math.sin(angle) * radius * 0.62 - 0.4 - ringIndex * 0.12,
+    ((ringSlot % 3) - 1) * 0.55 - ringIndex * 0.16,
+  ];
+}
+
+function getFeatureCenter(playbooks: readonly PlaybookItem[]) {
+  const features = playbooks.map((item) => Number(item.cubeKey.split(",")[0]));
+  return features.length ? (Math.min(...features) + Math.max(...features)) / 2 : 2.5;
+}
+
+function getCameraDistance(mode: PlaybookLayoutMode, playbookCount: number) {
+  if (mode === "solar") {
+    return 17.5 + Math.max(0, Math.ceil(playbookCount / 8) - 1) * 1.65;
+  }
+
+  if (mode === "tunnel") {
+    return 17.5 + Math.min(14, Math.max(0, Math.ceil(playbookCount / 4) - 3) * 0.6);
+  }
+
+  const featureCount = new Set(PLAYBOOK_CATALOG.map((item) => item.cubeKey.split(",")[0])).size;
+  return 17.5 + Math.min(12, Math.max(0, featureCount - 6) * 1.3);
+}
+
+function cubePosition(
+  playbook: PlaybookItem,
+  index: number,
+  mode: PlaybookLayoutMode,
+  visiblePlaybooks: readonly PlaybookItem[],
+): Vec3 {
   const [feature, groupAxis, story] = playbook.cubeKey.split(",").map(Number);
 
   if (mode === "solar") {
-    return solarSlots[index % solarSlots.length];
+    return getSolarPosition(index);
   }
 
   if (mode === "city") {
-    const sameCellItems = PLAYBOOK_CATALOG.filter((item) => {
+    const sameCellItems = visiblePlaybooks.filter((item) => {
       const [itemFeature, , itemStory] = item.cubeKey.split(",").map(Number);
       return itemFeature === feature && itemStory === story;
     });
     const sameCellIndex = sameCellItems.findIndex((item) => item.id === playbook.id);
     const laneOffset = (sameCellIndex - (sameCellItems.length - 1) / 2) * 1.55;
     return [
-      (feature - 2.5) * 2.5 + laneOffset,
+      (feature - getFeatureCenter(visiblePlaybooks)) * 2.5 + laneOffset,
       (2 - story) * 1.75 - 0.7,
       (groupAxis - 3.5) * 0.5,
     ];
   }
 
-  const tunnelLayers: readonly (readonly Vec3[])[] = [
-    [[-5.2, 2.55, 0], [-1.75, -2.45, 0], [1.75, 2.45, 0], [5.2, -2.55, 0]],
-    [[-4.25, -1.9, 0], [-1.05, 1.9, 0], [1.05, -1.9, 0], [4.25, 1.9, 0]],
-    [[-3.25, 1.25, 0], [-0.78, -1.25, 0], [0.78, 1.25, 0], [3.25, -1.25, 0]],
-  ];
   const layer = Math.floor(index / 4);
-  const lane = tunnelLayers[Math.min(layer, tunnelLayers.length - 1)][index % 4];
+  const lane = TUNNEL_PATTERNS[layer % TUNNEL_PATTERNS.length][index % 4];
   const depth = -1.5 - layer * 4.15;
   return [
     lane[0],
@@ -107,7 +129,7 @@ function makeInfoTexture(playbook: PlaybookItem) {
 }
 
 function InfoPanel({ playbook, visible }: { playbook: PlaybookItem; visible: boolean }) {
-  const texture = useMemo(() => makeInfoTexture(playbook), [playbook]);
+  const texture = useMemo(() => (visible ? makeInfoTexture(playbook) : null), [playbook, visible]);
 
   useEffect(() => () => texture?.dispose(), [texture]);
 
@@ -127,6 +149,8 @@ function PlaybookCube({
   playbook,
   index,
   mode,
+  visiblePlaybooks,
+  shadowsEnabled,
   texture,
   onOpenPlaybook,
   onHover,
@@ -135,13 +159,18 @@ function PlaybookCube({
   playbook: PlaybookItem;
   index: number;
   mode: PlaybookLayoutMode;
+  visiblePlaybooks: readonly PlaybookItem[];
+  shadowsEnabled: boolean;
   texture: THREE.Texture;
   onOpenPlaybook: (playbook: PlaybookItem) => void;
   onHover: (playbook: PlaybookItem | null) => void;
   hovered: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  const basePosition = useMemo(() => cubePosition(playbook, index, mode), [index, mode, playbook]);
+  const basePosition = useMemo(
+    () => cubePosition(playbook, index, mode, visiblePlaybooks),
+    [index, mode, playbook, visiblePlaybooks],
+  );
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
   const layoutScale = mode === "city" ? 0.76 : mode === "tunnel" ? 0.74 : 0.9;
   const baseRotation = useMemo<Vec3>(
@@ -178,7 +207,7 @@ function PlaybookCube({
         onHover(null);
       }}
     >
-      <mesh castShadow receiveShadow>
+      <mesh castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
         <boxGeometry args={[1.72, 1.72, 0.42]} />
         <meshStandardMaterial attach="material-0" color={sideColor} roughness={0.42} metalness={0.35} />
         <meshStandardMaterial attach="material-1" color={sideColor} roughness={0.42} metalness={0.35} />
@@ -252,16 +281,17 @@ function OrbitController() {
   return null;
 }
 
-function StageGuides({ mode }: { mode: PlaybookLayoutMode }) {
+function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks: readonly PlaybookItem[] }) {
   if (mode === "solar") {
     return (
       <>
-        {solarSlots.map(([x, y, z], slotIndex) => (
-          <mesh key={slotIndex} position={[x * 0.68, y * 0.68, z - 0.2]} rotation={[0, 0, Math.atan2(y, x)]}>
+        {playbooks.slice(0, 16).map((_, slotIndex) => {
+          const [x, y, z] = getSolarPosition(slotIndex);
+          return <mesh key={slotIndex} position={[x * 0.68, y * 0.68, z - 0.2]} rotation={[0, 0, Math.atan2(y, x)]}>
             <boxGeometry args={[Math.hypot(x, y) * 0.44, 0.018, 0.018]} />
             <meshBasicMaterial color={slotIndex % 2 ? "#bd7e54" : "#5279d8"} transparent opacity={0.32} />
-          </mesh>
-        ))}
+          </mesh>;
+        })}
       </>
     );
   }
@@ -270,8 +300,8 @@ function StageGuides({ mode }: { mode: PlaybookLayoutMode }) {
     return (
       <>
         <gridHelper args={[16, 8, "#7d9bd2", "#c5d1e2"]} position={[0, -4.05, 0]} />
-        {[-6.25, -3.75, -1.25, 1.25, 3.75, 6.25].map((x) => (
-          <mesh key={x} position={[x, -3.98, 0]}>
+        {Array.from(new Set(playbooks.map((item) => Number(item.cubeKey.split(",")[0])))).map((feature) => (
+          <mesh key={feature} position={[(feature - getFeatureCenter(playbooks)) * 2.5, -3.98, 0]}>
             <boxGeometry args={[1.72, 0.12, 2.8]} />
             <meshStandardMaterial color="#c6d6ee" transparent opacity={0.48} roughness={0.36} metalness={0.18} />
           </mesh>
@@ -286,7 +316,7 @@ function StageGuides({ mode }: { mode: PlaybookLayoutMode }) {
 
   return (
     <>
-      {[-1.8, -5.05, -8.3, -11.55].map((z, index) => (
+      {Array.from({ length: Math.min(10, Math.max(4, Math.ceil(playbooks.length / 4))) }, (_, index) => -1.8 - index * 4.15).map((z, index) => (
         <mesh key={z} position={[0, 0, z]}>
           <boxGeometry args={[13.2 - index * 1.2, 8.4 - index * 0.72, 0.035]} />
           <meshBasicMaterial color={index % 2 ? "#bd7e54" : "#7397ec"} wireframe transparent opacity={0.34} />
@@ -315,6 +345,7 @@ function ComparisonStage({
     [playbooks],
   );
   const textures = useLoader(THREE.TextureLoader, textureSources);
+  const shadowsEnabled = playbooks.length <= 24;
 
   textures.forEach((texture) => {
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -326,9 +357,9 @@ function ComparisonStage({
     <>
       <color attach="background" args={["#edf2f5"]} />
       <ambientLight intensity={1.8} />
-      <directionalLight position={[-5, 8, 8]} intensity={4.2} castShadow />
+      <directionalLight position={[-5, 8, 8]} intensity={4.2} castShadow={shadowsEnabled} />
       <pointLight position={[0, 0, 4]} color="#8ab4ff" intensity={8} distance={14} />
-      <StageGuides mode={mode} />
+      <StageGuides mode={mode} playbooks={playbooks} />
       <group>
         <CoreCube mode={mode} />
         {playbooks.map((playbook, index) => (
@@ -337,6 +368,8 @@ function ComparisonStage({
             playbook={playbook}
             index={index}
             mode={mode}
+            visiblePlaybooks={playbooks}
+            shadowsEnabled={shadowsEnabled}
             texture={textures[index]}
             hovered={hoveredId === playbook.id}
             onHover={(item) => setHoveredId(item?.id ?? null)}
@@ -363,14 +396,15 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-layout__backdrop" aria-hidden="true" />
       <div className="playbook-3d-layout__header">
         <strong>{title}</strong>
-        <span>{description} · 드래그 회전 / 스크롤 줌 / 큐브 클릭</span>
+        <span>{description} · {playbooks.length}개 스토리 · 드래그 회전 / 스크롤 줌 / 큐브 클릭</span>
       </div>
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
         <Canvas
-          camera={{ position: [0, 0.45, 17.5], fov: 38 }}
+          key={`${mode}-${playbooks.length}`}
+          camera={{ position: [0, 0.45, getCameraDistance(mode, playbooks.length)], fov: 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false }}
-          shadows
+          shadows={playbooks.length <= 24}
           fallback={<div className="playbook-3d-layout__fallback">3D 화면을 불러오는 중입니다.</div>}
         >
           <ComparisonStage mode={mode} playbooks={playbooks} onOpenPlaybook={onOpenPlaybook} />
