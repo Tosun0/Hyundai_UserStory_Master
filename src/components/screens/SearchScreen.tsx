@@ -37,9 +37,9 @@ function getOrbitStatWidthClass(id: string) {
 }
 
 const layoutModes: readonly { id: PlaybookLayoutMode; label: string; shortLabel: string }[] = [
-  { id: "constellation", label: "2.5D 콘스텔레이션", shortLabel: "콘스텔레이션" },
-  { id: "ring", label: "그룹 오빗 링", shortLabel: "오빗 링" },
-  { id: "matrix", label: "축 매트릭스", shortLabel: "매트릭스" },
+  { id: "solar", label: "Solar Burst", shortLabel: "Solar" },
+  { id: "city", label: "Cube City", shortLabel: "City" },
+  { id: "tunnel", label: "Deep Space Tunnel", shortLabel: "Tunnel" },
 ];
 
 const cubeMapTopNavItems = [
@@ -84,7 +84,7 @@ export function SearchScreen({
   const [isParallaxViewEnabled, setIsParallaxViewEnabled] = useState<boolean>(
     () => cubeSceneTheme.orbitView.parallax.defaultEnabled,
   );
-  const [layoutMode, setLayoutMode] = useState<PlaybookLayoutMode>("constellation");
+  const [layoutMode, setLayoutMode] = useState<PlaybookLayoutMode>("solar");
   const [comparisonCubeView, setComparisonCubeView] = useState(false);
   const isCubeView = !comparisonMode || comparisonCubeView;
 

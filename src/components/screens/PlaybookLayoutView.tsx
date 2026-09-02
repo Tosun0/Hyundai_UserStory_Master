@@ -6,7 +6,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { PLAYBOOK_CATALOG } from "../../data/playbookCatalog";
 
-export type PlaybookLayoutMode = "constellation" | "ring" | "matrix";
+export type PlaybookLayoutMode = "solar" | "city" | "tunnel";
 
 type PlaybookLayoutViewProps = {
   mode: PlaybookLayoutMode;
@@ -16,7 +16,7 @@ type PlaybookLayoutViewProps = {
 
 type Vec3 = [number, number, number];
 
-const constellationSlots: readonly Vec3[] = [
+const solarSlots: readonly Vec3[] = [
   [-6.1, 2.6, 0.2],
   [-3.8, 3.2, -0.4],
   [-1.1, 2.8, 0.4],
@@ -40,36 +40,36 @@ function getVisiblePlaybooks(group: PlaybookAccessGroup) {
 function cubePosition(playbook: PlaybookItem, index: number, mode: PlaybookLayoutMode): Vec3 {
   const [feature, groupAxis, story] = playbook.cubeKey.split(",").map(Number);
 
-  if (mode === "constellation") {
-    return constellationSlots[index % constellationSlots.length];
+  if (mode === "solar") {
+    return solarSlots[index % solarSlots.length];
   }
 
-  if (mode === "ring") {
-    const groupItems = PLAYBOOK_CATALOG.filter((item) => item.group === playbook.group);
-    const groupIndex = groupItems.findIndex((item) => item.id === playbook.id);
-    const centerX = playbook.group === "H" ? -4.5 : 4.5;
-    const verticalSpacing = groupItems.length > 5 ? 1.35 : 1.75;
-    const verticalIndex = groupIndex - (groupItems.length - 1) / 2;
-    const phase = groupIndex * 0.95 + (playbook.group === "H" ? 0 : Math.PI);
+  if (mode === "city") {
+    const sameCellItems = PLAYBOOK_CATALOG.filter((item) => {
+      const [itemFeature, , itemStory] = item.cubeKey.split(",").map(Number);
+      return itemFeature === feature && itemStory === story;
+    });
+    const sameCellIndex = sameCellItems.findIndex((item) => item.id === playbook.id);
+    const laneOffset = (sameCellIndex - (sameCellItems.length - 1) / 2) * 1.55;
     return [
-      centerX + Math.cos(phase) * 1.72,
-      -verticalIndex * verticalSpacing - 0.45,
-      Math.sin(phase) * 1.55,
+      (feature - 2.5) * 2.5 + laneOffset,
+      (2 - story) * 1.75 - 0.7,
+      (groupAxis - 3.5) * 0.5,
     ];
   }
 
-  const sameCellItems = PLAYBOOK_CATALOG.filter((item) => {
-    const [, , itemStory] = item.cubeKey.split(",").map(Number);
-    const [itemFeature] = item.cubeKey.split(",").map(Number);
-    return itemFeature === feature && itemStory === story;
-  });
-  const sameCellIndex = sameCellItems.findIndex((item) => item.id === playbook.id);
-  const cellOffset = (sameCellIndex - (sameCellItems.length - 1) / 2) * 1.5;
-
+  const tunnelLayers: readonly (readonly Vec3[])[] = [
+    [[-5.2, 2.55, 0], [-1.75, -2.45, 0], [1.75, 2.45, 0], [5.2, -2.55, 0]],
+    [[-4.25, -1.9, 0], [-1.05, 1.9, 0], [1.05, -1.9, 0], [4.25, 1.9, 0]],
+    [[-3.25, 1.25, 0], [-0.78, -1.25, 0], [0.78, 1.25, 0], [3.25, -1.25, 0]],
+  ];
+  const layer = Math.floor(index / 4);
+  const lane = tunnelLayers[Math.min(layer, tunnelLayers.length - 1)][index % 4];
+  const depth = -1.5 - layer * 4.15;
   return [
-    (feature - 2.5) * 2.35 + cellOffset,
-    (2 - story) * 1.95 - 0.65,
-    (groupAxis - 3.5) * 0.62,
+    lane[0],
+    lane[1],
+    depth + (groupAxis - 3.5) * 0.28,
   ];
 }
 
@@ -143,7 +143,7 @@ function PlaybookCube({
   const groupRef = useRef<THREE.Group>(null);
   const basePosition = useMemo(() => cubePosition(playbook, index, mode), [index, mode, playbook]);
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
-  const layoutScale = mode === "matrix" ? 0.86 : mode === "ring" ? 0.72 : 0.9;
+  const layoutScale = mode === "city" ? 0.76 : mode === "tunnel" ? 0.74 : 0.9;
   const baseRotation = useMemo<Vec3>(
     () => [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
     [index],
@@ -199,15 +199,22 @@ function PlaybookCube({
 function CoreCube({ mode }: { mode: PlaybookLayoutMode }) {
   const ref = useRef<THREE.Mesh>(null);
 
-  if (mode === "matrix") {
+  if (mode !== "solar") {
     return null;
   }
 
   return (
-    <mesh ref={ref} position={[0, 0, -0.6]} rotation={[0.32, -0.42, 0]}>
-      <boxGeometry args={[1.3, 1.3, 1.3]} />
-      <meshStandardMaterial color="#dce9ff" transparent opacity={0.2} roughness={0.16} metalness={0.55} wireframe />
-    </mesh>
+    <group position={[0, 0, -0.7]}>
+      <mesh ref={ref} rotation={[0.32, -0.42, 0]}>
+        <icosahedronGeometry args={[1.28, 2]} />
+        <meshStandardMaterial color="#79a4ff" transparent opacity={0.18} roughness={0.16} metalness={0.55} wireframe />
+      </mesh>
+      <mesh rotation={[-0.1, 0.5, 0.2]}>
+        <boxGeometry args={[2.8, 2.8, 0.035]} />
+        <meshBasicMaterial color="#78a6ff" transparent opacity={0.22} wireframe />
+      </mesh>
+      <pointLight color="#7ea9ff" intensity={13} distance={9} />
+    </group>
   );
 }
 
@@ -246,36 +253,48 @@ function OrbitController() {
 }
 
 function StageGuides({ mode }: { mode: PlaybookLayoutMode }) {
-  if (mode === "ring") {
+  if (mode === "solar") {
     return (
       <>
-        <mesh position={[-4.5, 0, -1]}>
-          <cylinderGeometry args={[0.035, 0.035, 8.4, 12]} />
-          <meshBasicMaterial color="#5279d8" transparent opacity={0.55} />
-        </mesh>
-        <mesh position={[4.5, 0, -1]}>
-          <cylinderGeometry args={[0.035, 0.035, 8.4, 12]} />
-          <meshBasicMaterial color="#bd7e54" transparent opacity={0.55} />
-        </mesh>
+        {solarSlots.map(([x, y, z], slotIndex) => (
+          <mesh key={slotIndex} position={[x * 0.68, y * 0.68, z - 0.2]} rotation={[0, 0, Math.atan2(y, x)]}>
+            <boxGeometry args={[Math.hypot(x, y) * 0.44, 0.018, 0.018]} />
+            <meshBasicMaterial color={slotIndex % 2 ? "#bd7e54" : "#5279d8"} transparent opacity={0.32} />
+          </mesh>
+        ))}
       </>
     );
   }
 
-  if (mode === "matrix") {
+  if (mode === "city") {
     return (
       <>
-        <gridHelper args={[14, 6, "#6f8fca", "#b9c9dd"]} position={[0, 0, -1.7]} rotation={[Math.PI / 2, 0, 0]} />
-        <gridHelper args={[14, 6, "#bb8764", "#dbc2ae"]} position={[0, 0, 1.7]} rotation={[Math.PI / 2, 0, 0]} />
-        <gridHelper args={[14, 6, "#9aabba", "#d7e0e8"]} position={[0, -4.5, 0]} />
+        <gridHelper args={[16, 8, "#7d9bd2", "#c5d1e2"]} position={[0, -4.05, 0]} />
+        {[-6.25, -3.75, -1.25, 1.25, 3.75, 6.25].map((x) => (
+          <mesh key={x} position={[x, -3.98, 0]}>
+            <boxGeometry args={[1.72, 0.12, 2.8]} />
+            <meshStandardMaterial color="#c6d6ee" transparent opacity={0.48} roughness={0.36} metalness={0.18} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0, -1.2]}>
+          <boxGeometry args={[15.8, 0.035, 0.035]} />
+          <meshBasicMaterial color="#8ea6c4" transparent opacity={0.55} />
+        </mesh>
       </>
     );
   }
 
   return (
     <>
-      <mesh position={[0, 0, -1]}>
-        <icosahedronGeometry args={[1.2, 2]} />
-        <meshBasicMaterial color="#7397ec" wireframe transparent opacity={0.28} />
+      {[-1.8, -5.05, -8.3, -11.55].map((z, index) => (
+        <mesh key={z} position={[0, 0, z]}>
+          <boxGeometry args={[13.2 - index * 1.2, 8.4 - index * 0.72, 0.035]} />
+          <meshBasicMaterial color={index % 2 ? "#bd7e54" : "#7397ec"} wireframe transparent opacity={0.34} />
+        </mesh>
+      ))}
+      <mesh position={[0, 0, -6.7]}>
+        <boxGeometry args={[0.035, 8.4, 0.035]} />
+        <meshBasicMaterial color="#8ea6c4" transparent opacity={0.38} />
       </mesh>
     </>
   );
@@ -332,13 +351,19 @@ function ComparisonStage({
 
 export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: PlaybookLayoutViewProps) {
   const playbooks = getVisiblePlaybooks(playbookGroup);
+  const title = mode === "solar" ? "SOLAR BURST" : mode === "city" ? "CUBE CITY" : "DEEP SPACE TUNNEL";
+  const description = mode === "solar"
+    ? "중앙 코어를 중심으로 스토리가 방사됩니다"
+    : mode === "city"
+      ? "기능과 스토리를 타워처럼 쌓아 비교합니다"
+      : "스토리 큐브가 깊이 방향으로 이어지는 탐색 공간입니다";
 
   return (
     <main className={`playbook-layout playbook-layout--${mode}`} data-layout-mode={mode}>
       <div className="playbook-layout__backdrop" aria-hidden="true" />
       <div className="playbook-3d-layout__header">
-        <strong>{mode === "constellation" ? "RADIAL STORY CONSTELLATION" : mode === "ring" ? "DUAL GROUP HELIX" : "3D COORDINATE MATRIX"}</strong>
-        <span>드래그해서 화면을 회전하고, 큐브를 클릭해 이야기를 엽니다</span>
+        <strong>{title}</strong>
+        <span>{description} · 드래그 회전 / 스크롤 줌 / 큐브 클릭</span>
       </div>
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
         <Canvas
