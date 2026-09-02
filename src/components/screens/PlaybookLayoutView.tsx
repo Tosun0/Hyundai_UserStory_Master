@@ -6,7 +6,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { PLAYBOOK_CATALOG } from "../../data/playbookCatalog";
 
-export type PlaybookLayoutMode = "solar" | "city" | "tunnel";
+export type PlaybookLayoutMode = "solar" | "gallery" | "tunnel";
 
 type PlaybookLayoutViewProps = {
   mode: PlaybookLayoutMode;
@@ -41,31 +41,20 @@ function getSolarPosition(index: number): Vec3 {
   ];
 }
 
-function getCityFeatures(playbooks: readonly PlaybookItem[]) {
-  return Array.from(new Set(playbooks.map((item) => Number(item.cubeKey.split(",")[0])))).sort((a, b) => a - b);
+function getGalleryColumns(playbookCount: number) {
+  return Math.min(8, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, playbookCount) * 1.35))));
 }
 
-function getCityBlockOrigin(featureIndex: number, featureCount: number): [number, number] {
-  const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(featureCount))));
-  const rows = Math.ceil(featureCount / columns);
+function getGalleryPosition(index: number, playbookCount: number): Vec3 {
+  const columns = getGalleryColumns(playbookCount);
+  const rows = Math.ceil(playbookCount / columns);
+  const column = index % columns;
+  const row = Math.floor(index / columns);
   return [
-    (featureIndex % columns - (columns - 1) / 2) * 3.8,
-    (Math.floor(featureIndex / columns) - (rows - 1) / 2) * 3,
+    (column - (columns - 1) / 2) * 2.2,
+    ((rows - 1) / 2 - row) * 1.95 - 0.2,
+    (column % 2 ? 0.42 : -0.42) + (row % 3 - 1) * 0.12,
   ];
-}
-
-function getCityPosition(playbook: PlaybookItem, visiblePlaybooks: readonly PlaybookItem[]): Vec3 {
-  const [feature] = playbook.cubeKey.split(",").map(Number);
-  const features = getCityFeatures(visiblePlaybooks);
-  const featureIndex = features.indexOf(feature);
-  const towerItems = visiblePlaybooks
-    .filter((item) => Number(item.cubeKey.split(",")[0]) === feature)
-    .slice()
-    .sort((a, b) => a.cubeKey.localeCompare(b.cubeKey));
-  const towerIndex = towerItems.findIndex((item) => item.id === playbook.id);
-  const [x, z] = getCityBlockOrigin(featureIndex, features.length);
-  const groupOffset = playbook.group === "H" ? -0.72 : 0.72;
-  return [x + groupOffset, -3.05 + towerIndex * 1.55, z + (playbook.group === "H" ? 0.45 : -0.45)];
 }
 
 function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly PlaybookItem[]) {
@@ -79,8 +68,8 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
     return 17.5 + Math.min(14, Math.max(0, Math.ceil(playbookCount / 4) - 3) * 0.6);
   }
 
-  const featureCount = getCityFeatures(playbooks).length;
-  return 17.5 + Math.min(12, Math.max(0, featureCount - 6) * 1.3);
+  const rows = Math.ceil(playbooks.length / getGalleryColumns(playbooks.length));
+  return 17.5 + Math.min(14, Math.max(0, rows - 3) * 1.45);
 }
 
 function cubePosition(
@@ -89,14 +78,14 @@ function cubePosition(
   mode: PlaybookLayoutMode,
   visiblePlaybooks: readonly PlaybookItem[],
 ): Vec3 {
-  const [feature, groupAxis, story] = playbook.cubeKey.split(",").map(Number);
+  const [, groupAxis] = playbook.cubeKey.split(",").map(Number);
 
   if (mode === "solar") {
     return getSolarPosition(index);
   }
 
-  if (mode === "city") {
-    return getCityPosition(playbook, visiblePlaybooks);
+  if (mode === "gallery") {
+    return getGalleryPosition(index, visiblePlaybooks.length);
   }
 
   const layer = Math.floor(index / 4);
@@ -186,10 +175,10 @@ function PlaybookCube({
     [index, mode, playbook, visiblePlaybooks],
   );
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
-  const layoutScale = mode === "city" ? 0.76 : mode === "tunnel" ? 0.74 : 0.9;
+  const layoutScale = mode === "gallery" ? 0.82 : mode === "tunnel" ? 0.74 : 0.9;
   const baseRotation = useMemo<Vec3>(
-    () => mode === "city"
-      ? [0.035 + (index % 2) * 0.02, -0.08 + (index % 3) * 0.04, 0]
+    () => mode === "gallery"
+      ? [0.025 + (index % 2) * 0.018, -0.05 + (index % 3) * 0.025, 0]
       : [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
     [index, mode],
   );
@@ -312,37 +301,25 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
     );
   }
 
-  if (mode === "city") {
-    const features = getCityFeatures(playbooks);
-    const highestTower = Math.max(1, ...features.map((feature) => playbooks.filter((item) => Number(item.cubeKey.split(",")[0]) === feature).length));
+  if (mode === "gallery") {
+    const columns = getGalleryColumns(playbooks.length);
+    const rows = Math.ceil(playbooks.length / columns);
+    const width = Math.max(8, (columns - 1) * 2.2 + 2.8);
     return (
       <>
-        <gridHelper args={[16, 8, "#7d9bd2", "#c5d1e2"]} position={[0, -4.05, 0]} />
-        {features.map((feature, featureIndex) => {
-          const [x, z] = getCityBlockOrigin(featureIndex, features.length);
-          return <mesh key={feature} position={[x, -3.98, z]}>
-            <boxGeometry args={[1.72, 0.12, 2.8]} />
-            <meshStandardMaterial color="#c6d6ee" transparent opacity={0.48} roughness={0.36} metalness={0.18} />
-          </mesh>;
-        })}
-        {features.map((feature, featureIndex) => {
-          const [x, z] = getCityBlockOrigin(featureIndex, features.length);
-          return <mesh key={`tower-${feature}`} position={[x, -3.05 + (highestTower - 1) * 0.775, z - 0.45]}>
-            <boxGeometry args={[0.045, Math.max(1.2, highestTower * 1.55), 0.045]} />
-            <meshBasicMaterial color="#86a7d9" transparent opacity={0.42} />
-          </mesh>;
-        })}
-        <mesh position={[0, -3.86, 0]}>
-          <boxGeometry args={[15.8, 0.07, 0.42]} />
-          <meshStandardMaterial color="#8aa1bf" transparent opacity={0.46} roughness={0.46} metalness={0.1} />
+        <mesh position={[0, 0, -1.35]}>
+          <boxGeometry args={[width, Math.max(5.2, rows * 1.95 + 0.8), 0.05]} />
+          <meshBasicMaterial color="#9bb2d1" transparent opacity={0.2} wireframe />
         </mesh>
-        <mesh position={[0, -3.86, 0]}>
-          <boxGeometry args={[0.42, 0.07, 8.2]} />
-          <meshStandardMaterial color="#8aa1bf" transparent opacity={0.46} roughness={0.46} metalness={0.1} />
-        </mesh>
-        <mesh position={[0, -3.78, 0]}>
-          <boxGeometry args={[1.7, 0.16, 1.7]} />
-          <meshStandardMaterial color="#7599d2" transparent opacity={0.7} roughness={0.28} metalness={0.22} />
+        {Array.from({ length: rows + 1 }, (_, row) => ((rows - 1) / 2 - row + 0.5) * 1.95 - 0.2).map((y) => (
+          <mesh key={y} position={[0, y, -1.08]}>
+            <boxGeometry args={[width, 0.025, 0.025]} />
+            <meshBasicMaterial color="#7599d2" transparent opacity={0.46} />
+          </mesh>
+        ))}
+        <mesh position={[0, -3.85, 0]}>
+          <boxGeometry args={[width + 1.2, 0.08, 2.2]} />
+          <meshStandardMaterial color="#d2deef" transparent opacity={0.58} roughness={0.34} metalness={0.18} />
         </mesh>
       </>
     );
@@ -417,12 +394,17 @@ function ComparisonStage({
 }
 
 export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: PlaybookLayoutViewProps) {
-  const playbooks = getVisiblePlaybooks(playbookGroup);
-  const title = mode === "solar" ? "SOLAR BURST" : mode === "city" ? "URBAN DISTRICT" : "DEEP SPACE TUNNEL";
+  const allPlaybooks = getVisiblePlaybooks(playbookGroup);
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const playbooks = mode === "gallery" && normalizedQuery
+    ? allPlaybooks.filter((playbook) => [playbook.id, playbook.title, ...playbook.tags].join(" ").toLowerCase().includes(normalizedQuery))
+    : allPlaybooks;
+  const title = mode === "solar" ? "SOLAR BURST" : mode === "gallery" ? "STORY GALLERY" : "DEEP SPACE TUNNEL";
   const description = mode === "solar"
     ? "중앙 코어를 중심으로 스토리가 방사됩니다"
-    : mode === "city"
-      ? "중앙 광장 주변의 입체 블록으로 비교합니다"
+    : mode === "gallery"
+      ? "한눈에 훑고 검색해서 들어가는 3D 인덱스입니다"
       : "스토리 큐브가 깊이 방향으로 이어지는 탐색 공간입니다";
 
   return (
@@ -430,8 +412,20 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-layout__backdrop" aria-hidden="true" />
       <div className="playbook-3d-layout__header">
         <strong>{title}</strong>
-        <span>{description} · {playbooks.length}개 스토리 · 드래그 회전 / 스크롤 줌 / 큐브 클릭</span>
+        <span>{description} · {normalizedQuery ? `${playbooks.length}/${allPlaybooks.length}개` : `${allPlaybooks.length}개`} 스토리 · 드래그 회전 / 스크롤 줌 / 큐브 클릭</span>
       </div>
+      {mode === "gallery" ? (
+        <label className="playbook-3d-layout__finder">
+          <span>STORY INDEX</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="ID, 제목, 태그 검색"
+            aria-label="스토리 검색"
+          />
+        </label>
+      ) : null}
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
         <Canvas
           key={`${mode}-${playbooks.length}`}

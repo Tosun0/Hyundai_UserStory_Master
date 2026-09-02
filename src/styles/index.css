@@ -982,6 +982,47 @@ button {
   z-index: 1;
 }
 
+.playbook-3d-layout__finder {
+  position: absolute;
+  top: clamp(146px, 20vh, 176px);
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(330px, calc(100vw - 32px));
+  padding: 6px 8px 6px 14px;
+  border: 1px solid rgb(255 255 255 / 75%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 68%);
+  box-shadow: 0 12px 30px rgb(38 52 64 / 11%), inset 0 1px rgb(255 255 255 / 88%);
+  backdrop-filter: blur(24px) saturate(1.2);
+  transform: translateX(-50%);
+}
+
+.playbook-3d-layout__finder span {
+  color: rgb(49 81 141 / 72%);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.playbook-3d-layout__finder input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.playbook-3d-layout__finder input::placeholder {
+  color: rgb(31 41 55 / 42%);
+}
+
 .playbook-3d-layout__canvas canvas {
   display: block;
   width: 100% !important;
