@@ -45,6 +45,15 @@ function getCityFeatures(playbooks: readonly PlaybookItem[]) {
   return Array.from(new Set(playbooks.map((item) => Number(item.cubeKey.split(",")[0])))).sort((a, b) => a - b);
 }
 
+function getCityBlockOrigin(featureIndex: number, featureCount: number): [number, number] {
+  const columns = Math.min(3, Math.max(1, Math.ceil(Math.sqrt(featureCount))));
+  const rows = Math.ceil(featureCount / columns);
+  return [
+    (featureIndex % columns - (columns - 1) / 2) * 3.8,
+    (Math.floor(featureIndex / columns) - (rows - 1) / 2) * 3,
+  ];
+}
+
 function getCityPosition(playbook: PlaybookItem, visiblePlaybooks: readonly PlaybookItem[]): Vec3 {
   const [feature] = playbook.cubeKey.split(",").map(Number);
   const features = getCityFeatures(visiblePlaybooks);
@@ -54,9 +63,9 @@ function getCityPosition(playbook: PlaybookItem, visiblePlaybooks: readonly Play
     .slice()
     .sort((a, b) => a.cubeKey.localeCompare(b.cubeKey));
   const towerIndex = towerItems.findIndex((item) => item.id === playbook.id);
-  const x = (featureIndex - (features.length - 1) / 2) * 3.1;
+  const [x, z] = getCityBlockOrigin(featureIndex, features.length);
   const groupOffset = playbook.group === "H" ? -0.72 : 0.72;
-  return [x + groupOffset, -3.05 + towerIndex * 1.55, playbook.group === "H" ? 0.45 : -0.45];
+  return [x + groupOffset, -3.05 + towerIndex * 1.55, z + (playbook.group === "H" ? 0.45 : -0.45)];
 }
 
 function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly PlaybookItem[]) {
@@ -179,8 +188,10 @@ function PlaybookCube({
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
   const layoutScale = mode === "city" ? 0.76 : mode === "tunnel" ? 0.74 : 0.9;
   const baseRotation = useMemo<Vec3>(
-    () => [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
-    [index],
+    () => mode === "city"
+      ? [0.035 + (index % 2) * 0.02, -0.08 + (index % 3) * 0.04, 0]
+      : [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
+    [index, mode],
   );
 
   useFrame((_, delta) => {
@@ -307,25 +318,31 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
     return (
       <>
         <gridHelper args={[16, 8, "#7d9bd2", "#c5d1e2"]} position={[0, -4.05, 0]} />
-        {features.map((feature, featureIndex) => (
-          <mesh key={feature} position={[(featureIndex - (features.length - 1) / 2) * 3.1, -3.98, 0]}>
+        {features.map((feature, featureIndex) => {
+          const [x, z] = getCityBlockOrigin(featureIndex, features.length);
+          return <mesh key={feature} position={[x, -3.98, z]}>
             <boxGeometry args={[1.72, 0.12, 2.8]} />
             <meshStandardMaterial color="#c6d6ee" transparent opacity={0.48} roughness={0.36} metalness={0.18} />
-          </mesh>
-        ))}
-        {features.map((feature, featureIndex) => (
-          <mesh key={`tower-${feature}`} position={[(featureIndex - (features.length - 1) / 2) * 3.1, -3.05 + (highestTower - 1) * 0.775, -0.45]}>
+          </mesh>;
+        })}
+        {features.map((feature, featureIndex) => {
+          const [x, z] = getCityBlockOrigin(featureIndex, features.length);
+          return <mesh key={`tower-${feature}`} position={[x, -3.05 + (highestTower - 1) * 0.775, z - 0.45]}>
             <boxGeometry args={[0.045, Math.max(1.2, highestTower * 1.55), 0.045]} />
             <meshBasicMaterial color="#86a7d9" transparent opacity={0.42} />
-          </mesh>
-        ))}
+          </mesh>;
+        })}
         <mesh position={[0, -3.86, 0]}>
-          <boxGeometry args={[16.8, 0.07, 0.42]} />
+          <boxGeometry args={[15.8, 0.07, 0.42]} />
           <meshStandardMaterial color="#8aa1bf" transparent opacity={0.46} roughness={0.46} metalness={0.1} />
         </mesh>
-        <mesh position={[0, 0, -1.2]}>
-          <boxGeometry args={[15.8, 0.035, 0.035]} />
-          <meshBasicMaterial color="#8ea6c4" transparent opacity={0.55} />
+        <mesh position={[0, -3.86, 0]}>
+          <boxGeometry args={[0.42, 0.07, 8.2]} />
+          <meshStandardMaterial color="#8aa1bf" transparent opacity={0.46} roughness={0.46} metalness={0.1} />
+        </mesh>
+        <mesh position={[0, -3.78, 0]}>
+          <boxGeometry args={[1.7, 0.16, 1.7]} />
+          <meshStandardMaterial color="#7599d2" transparent opacity={0.7} roughness={0.28} metalness={0.22} />
         </mesh>
       </>
     );
@@ -401,11 +418,11 @@ function ComparisonStage({
 
 export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: PlaybookLayoutViewProps) {
   const playbooks = getVisiblePlaybooks(playbookGroup);
-  const title = mode === "solar" ? "SOLAR BURST" : mode === "city" ? "CUBE CITY" : "DEEP SPACE TUNNEL";
+  const title = mode === "solar" ? "SOLAR BURST" : mode === "city" ? "URBAN DISTRICT" : "DEEP SPACE TUNNEL";
   const description = mode === "solar"
     ? "중앙 코어를 중심으로 스토리가 방사됩니다"
     : mode === "city"
-      ? "기능과 스토리를 타워처럼 쌓아 비교합니다"
+      ? "중앙 광장 주변의 입체 블록으로 비교합니다"
       : "스토리 큐브가 깊이 방향으로 이어지는 탐색 공간입니다";
 
   return (

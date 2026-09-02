@@ -38,7 +38,7 @@ function getOrbitStatWidthClass(id: string) {
 
 const layoutModes: readonly { id: PlaybookLayoutMode; label: string; shortLabel: string }[] = [
   { id: "solar", label: "Solar Burst", shortLabel: "Solar" },
-  { id: "city", label: "Cube City", shortLabel: "City" },
+  { id: "city", label: "Urban District", shortLabel: "District" },
   { id: "tunnel", label: "Deep Space Tunnel", shortLabel: "Tunnel" },
 ];
 
@@ -177,7 +177,7 @@ export function SearchScreen({
 
         {comparisonMode && !comparisonCubeView ? (
           <div
-            className="layout-mode-switcher gui-scale gui-origin-top-center pointer-events-auto absolute left-[var(--viewport-center-x)] top-[calc(var(--safe-top)+42px)] z-20 -translate-x-1/2"
+            className="layout-mode-switcher gui-scale gui-origin-bottom-center pointer-events-auto absolute bottom-[calc(var(--viewport-height)-var(--safe-bottom)+24px)] left-[var(--viewport-center-x)] top-auto z-20 max-w-[calc(var(--viewport-width)-32px)] -translate-x-1/2 overflow-x-auto [scrollbar-width:none]"
             role="toolbar"
             aria-label="배치 방식 선택"
           >
