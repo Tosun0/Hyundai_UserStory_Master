@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
@@ -445,32 +445,16 @@ function PlaybookObject({
     const modeFocus = mode !== "timeline" && selected;
 
     if (modeFocus) {
-      if (mode === "solar") {
-        interactionPosition.multiplyScalar(0.82);
-        interactionPosition.z += 1.2;
-      } else if (mode === "index") {
-        interactionPosition.y += 0.35;
-        interactionPosition.z += 1.35;
-      } else if (isPrism) {
-        interactionPosition.z += 1.4;
-        interactionPosition.y += 0.24;
-      } else if (isHelix) {
-        interactionPosition.z += 1.1;
-        interactionPosition.x *= 0.88;
-      } else if (isSphere) {
-        interactionPosition.z += 1.35;
-        interactionPosition.multiplyScalar(0.94);
-      } else if (mode === "orbit") {
-        interactionPosition.y += 0.55;
-        interactionPosition.z += 1.25;
-      }
+      // Keep the hover cue in a shallow, shared depth band so it never jumps
+      // across neighbouring cards or drops out from under the pointer.
+      interactionPosition.y += mode === "sphere" ? 0.12 : 0.1;
+      interactionPosition.z += mode === "helix" ? 0.34 : 0.28;
     }
 
     const targetScale = layoutScale
-      * (hovered ? 1.18 : 1)
-      * (modeFocus ? 1.16 : 1)
+      * (hovered ? 1.08 : 1)
       * (isIndex && hasQuery && !focused ? 0.82 : 1)
-      * (hasSelection && !selected && mode !== "timeline" ? 0.76 : 1);
+      * (hasSelection && !selected && mode !== "timeline" ? 0.88 : 1);
     group.position.lerp(interactionPosition, 1 - Math.pow(0.001, delta));
     group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
   });
@@ -478,7 +462,7 @@ function PlaybookObject({
   const opacity = isIndex && hasQuery && !focused
     ? 0.16
     : hasSelection && !selected && mode !== "timeline"
-      ? 0.28
+      ? 0.62
       : 1;
   const interactiveDim = hasSelection && !selected && mode !== "timeline";
   const lightStage = isIndex || mode === "timeline";
@@ -1044,6 +1028,29 @@ function ComparisonStage({
   hasQuery: boolean;
 }) {
   const [hoveredId, setHoveredId] = useState<PlaybookItem["id"] | null>(null);
+  const hoverClearTimer = useRef<number | null>(null);
+  const handleHover = useCallback((playbook: PlaybookItem | null) => {
+    if (hoverClearTimer.current !== null) {
+      window.clearTimeout(hoverClearTimer.current);
+      hoverClearTimer.current = null;
+    }
+
+    if (playbook) {
+      setHoveredId(playbook.id);
+      return;
+    }
+
+    hoverClearTimer.current = window.setTimeout(() => {
+      setHoveredId(null);
+      hoverClearTimer.current = null;
+    }, 90);
+  }, []);
+
+  useEffect(() => () => {
+    if (hoverClearTimer.current !== null) {
+      window.clearTimeout(hoverClearTimer.current);
+    }
+  }, []);
   const textureSources = useMemo(
     () => playbooks.map((playbook) => playbook.thumbnailSrc ?? playbook.fallbackThumbnailSrc ?? ""),
     [playbooks],
@@ -1108,7 +1115,7 @@ function ComparisonStage({
               hasQuery={hasQuery}
               selected={hoveredId === playbook.id}
               hasSelection={hoveredId !== null}
-              onHover={(item) => setHoveredId(item?.id ?? null)}
+              onHover={handleHover}
               onOpenPlaybook={onOpenPlaybook}
             />
           ))}
