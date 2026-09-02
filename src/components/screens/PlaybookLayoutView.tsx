@@ -219,53 +219,78 @@ function makeWatercolorTexture(mode: PlaybookLayoutMode) {
   }
 
   const isIndex = mode === "index";
-  const washes = isIndex
-    ? [
-        ["#ffd1e1", 180, 190, 360],
-        ["#b8eaff", 820, 200, 420],
-        ["#d5c5ff", 280, 820, 440],
-        ["#c8f4d8", 820, 820, 380],
-        ["#ffe3a9", 520, 510, 300],
-      ]
-    : [
-        ["#ffd1b8", 150, 180, 390],
-        ["#b9ddff", 840, 220, 420],
-        ["#e0c9ff", 250, 820, 430],
-        ["#c6f2dd", 820, 820, 360],
-        ["#ffb8d8", 560, 470, 340],
-      ];
-
-  context.fillStyle = isIndex ? "#f5f8ff" : "#fff8f2";
+  context.fillStyle = isIndex ? "#f7faff" : "#fff9f2";
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.globalCompositeOperation = "multiply";
 
-  washes.forEach(([color, centerX, centerY, radius], washIndex) => {
-    const gradient = context.createRadialGradient(centerX, centerY, radius * 0.08, centerX, centerY, radius);
-    gradient.addColorStop(0, `${color}cc`);
-    gradient.addColorStop(0.52, `${color}72`);
-    gradient.addColorStop(1, `${color}00`);
-    context.fillStyle = gradient;
-    context.globalAlpha = 0.62;
-
-    for (let brush = 0; brush < 8; brush += 1) {
-      const angle = (brush / 8) * Math.PI * 2 + washIndex * 0.7;
-      const offset = radius * 0.15 * Math.sin(brush * 2.7 + washIndex);
-      context.beginPath();
-      context.ellipse(
-        centerX + Math.cos(angle) * offset,
-        centerY + Math.sin(angle) * offset,
-        radius * (0.72 + (brush % 3) * 0.08),
-        radius * (0.52 + (brush % 2) * 0.11),
-        angle * 0.35,
-        0,
-        Math.PI * 2,
-      );
+  if (isIndex) {
+    const colors = ["#ffb7d1", "#9ddcff", "#c9b7ff", "#b9efd0", "#ffd28e"];
+    context.globalCompositeOperation = "multiply";
+    for (let tile = 0; tile < 18; tile += 1) {
+      const color = colors[tile % colors.length];
+      const x = 34 + ((tile * 181) % 930);
+      const y = 64 + ((tile * 263) % 900);
+      const width = 170 + (tile % 3) * 48;
+      const height = 82 + (tile % 4) * 22;
+      context.save();
+      context.translate(x, y);
+      context.rotate((tile % 5 - 2) * 0.045);
+      context.fillStyle = color;
+      context.globalAlpha = 0.23;
+      context.roundRect(-width / 2, -height / 2, width, height, 28);
       context.fill();
+      context.strokeStyle = "#ffffff";
+      context.globalAlpha = 0.46;
+      context.lineWidth = 8;
+      context.stroke();
+      context.restore();
     }
-  });
+
+    context.globalCompositeOperation = "source-over";
+    [["#f4a6c7", 170, 740], ["#83cfff", 820, 170], ["#c1a8ff", 820, 820]].forEach(([color, x, y], index) => {
+      const gradient = context.createRadialGradient(x, y, 10, x, y, 260 + index * 40);
+      gradient.addColorStop(0, `${color}66`);
+      gradient.addColorStop(1, `${color}00`);
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    });
+  } else {
+    const colors = ["#ff9fc8", "#a9ccff", "#bca8ff", "#9de5cf", "#ffc995"];
+    context.globalCompositeOperation = "multiply";
+    for (let band = 0; band < 8; band += 1) {
+      const color = colors[band % colors.length];
+      const y = 92 + band * 132;
+      context.save();
+      context.translate(0, y);
+      context.rotate((band % 2 ? -1 : 1) * 0.025);
+      context.fillStyle = color;
+      context.globalAlpha = 0.2;
+      context.beginPath();
+      context.moveTo(-30, -38 + (band % 3) * 8);
+      context.quadraticCurveTo(230, -86, 520, -18);
+      context.quadraticCurveTo(820, 48, 1060, -22);
+      context.lineTo(1060, 48);
+      context.quadraticCurveTo(790, 106, 500, 40);
+      context.quadraticCurveTo(220, -20, -30, 38);
+      context.closePath();
+      context.fill();
+      context.restore();
+    }
+
+    context.globalCompositeOperation = "source-over";
+    context.lineCap = "round";
+    colors.forEach((color, index) => {
+      context.strokeStyle = color;
+      context.globalAlpha = 0.22;
+      context.lineWidth = 16 + (index % 3) * 8;
+      context.beginPath();
+      context.moveTo(-60, 150 + index * 190);
+      context.bezierCurveTo(260, 40 + index * 190, 700, 280 + index * 150, 1080, 110 + index * 160);
+      context.stroke();
+    });
+  }
 
   context.globalCompositeOperation = "source-over";
-  context.globalAlpha = 0.13;
+  context.globalAlpha = 0.1;
   for (let grain = 0; grain < 4200; grain += 1) {
     const x = (grain * 73) % canvas.width;
     const y = (grain * 151) % canvas.height;
@@ -281,23 +306,27 @@ function makeWatercolorTexture(mode: PlaybookLayoutMode) {
 }
 
 function WatercolorBackdrop({ mode }: { mode: PlaybookLayoutMode }) {
+  const { scene } = useThree();
   const texture = useMemo(
     () => (mode === "index" || mode === "timeline" ? makeWatercolorTexture(mode) : null),
     [mode],
   );
 
-  useEffect(() => () => texture?.dispose(), [texture]);
+  useEffect(() => {
+    if (!texture) {
+      return undefined;
+    }
 
-  if (!texture) {
-    return null;
-  }
+    scene.background = texture;
+    return () => {
+      if (scene.background === texture) {
+        scene.background = null;
+      }
+      texture.dispose();
+    };
+  }, [scene, texture]);
 
-  return (
-    <mesh position={[0, 0, -8.5]}>
-      <planeGeometry args={[28, 22]} />
-      <meshBasicMaterial map={texture} toneMapped={false} />
-    </mesh>
-  );
+  return null;
 }
 
 function InfoPanel({ playbook, visible }: { playbook: PlaybookItem; visible: boolean }) {
@@ -910,7 +939,7 @@ function ComparisonStage({
 
   return (
     <>
-      <color attach="background" args={[stageBackground]} />
+      {!lightStage ? <color attach="background" args={[stageBackground]} /> : null}
       <ambientLight intensity={lightStage ? 1.45 : mode === "tunnel" ? 0.48 : mode === "orbit" ? 0.8 : 0.7} />
       <directionalLight position={[-5, 8, 8]} color={keyLightColor} intensity={mode === "tunnel" ? 2.8 : 3.7} castShadow={shadowsEnabled} />
       <pointLight position={[0, 0, 4]} color={mode === "solar" ? "#6db7ff" : mode === "orbit" ? "#a881ff" : mode === "timeline" ? "#ff9edc" : mode === "index" ? "#8bdcff" : "#ff4f9a"} intensity={mode === "tunnel" ? 7 : lightStage ? 9 : mode === "solar" || mode === "orbit" ? 10 : 7} distance={14} />
