@@ -6,7 +6,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { PLAYBOOK_CATALOG } from "../../data/playbookCatalog";
 
-export type PlaybookLayoutMode = "solar" | "index" | "tunnel" | "timeline" | "orbit";
+export type PlaybookLayoutMode = "solar" | "index" | "prism" | "timeline" | "orbit";
 
 type PlaybookLayoutViewProps = {
   mode: PlaybookLayoutMode;
@@ -15,13 +15,6 @@ type PlaybookLayoutViewProps = {
 };
 
 type Vec3 = [number, number, number];
-
-const TUNNEL_PATTERNS: readonly (readonly Vec3[])[] = [
-  [[-5.2, 2.55, 0], [-1.75, -2.45, 0], [1.75, 2.45, 0], [5.2, -2.55, 0]],
-  [[-4.25, -1.9, 0], [-1.05, 1.9, 0], [1.05, -1.9, 0], [4.25, 1.9, 0]],
-  [[-3.25, 1.25, 0], [-0.78, -1.25, 0], [0.78, 1.25, 0], [3.25, -1.25, 0]],
-  [[-4.8, -2.35, 0], [-1.65, 2.35, 0], [1.65, -2.35, 0], [4.8, 2.35, 0]],
-];
 
 function getVisiblePlaybooks(group: PlaybookAccessGroup) {
   return group === "ALL"
@@ -95,7 +88,7 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
     return 17.5 + Math.max(0, Math.ceil(playbookCount / 8) - 1) * 1.65;
   }
 
-  if (mode === "tunnel") {
+  if (mode === "prism") {
     return 17.5 + Math.min(14, Math.max(0, Math.ceil(playbookCount / 4) - 3) * 0.6);
   }
 
@@ -135,13 +128,13 @@ function cubePosition(
     return getOrbitPosition(index);
   }
 
-  const layer = Math.floor(index / 4);
-  const lane = TUNNEL_PATTERNS[layer % TUNNEL_PATTERNS.length][index % 4];
-  const depth = -1.5 - layer * 4.15;
+  const columns = Math.min(5, Math.max(4, visiblePlaybooks.length));
+  const column = index % columns;
+  const row = Math.floor(index / columns);
   return [
-    lane[0],
-    lane[1],
-    depth + (groupAxis - 3.5) * 0.28,
+    (column - (columns - 1) / 2) * 2.7 + (row % 2 ? 0.34 : -0.34),
+    ((Math.ceil(visiblePlaybooks.length / columns) - 1) / 2 - row) * 1.7,
+    -0.5 - row * 0.7 + (groupAxis - 3.5) * 0.16,
   ];
 }
 
@@ -381,11 +374,13 @@ function PlaybookObject({
     [index, mode, playbook, visiblePlaybooks],
   );
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
+  const prismPalette = ["#ff6b9d", "#65d6ff", "#ffd166", "#a78bfa", "#7ee7bd"];
   const lightPalette = mode === "index"
     ? ["#8cc8ff", "#ffb6d2", "#b8efcf", "#ffd28d", "#c9b7ff"]
     : ["#b8a8ff", "#ffc47f", "#91ddff", "#ff9fcf", "#b9efcf"];
   const isIndex = mode === "index";
-  const layoutScale = isIndex ? 0.86 : mode === "tunnel" ? 0.74 : 0.9;
+  const isPrism = mode === "prism";
+  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : 0.9;
   const baseRotation = useMemo<Vec3>(
     () => isIndex
       ? [0.025 + (index % 2) * 0.018, -0.05 + (index % 3) * 0.025, 0]
@@ -412,8 +407,9 @@ function PlaybookObject({
       } else if (mode === "index") {
         interactionPosition.y += 0.35;
         interactionPosition.z += 1.35;
-      } else if (mode === "tunnel") {
-        interactionPosition.z += 3.2;
+      } else if (isPrism) {
+        interactionPosition.z += 1.4;
+        interactionPosition.y += 0.24;
       } else if (mode === "orbit") {
         interactionPosition.y += 0.55;
         interactionPosition.z += 1.25;
@@ -436,13 +432,15 @@ function PlaybookObject({
       : 1;
   const interactiveDim = hasSelection && !selected && mode !== "timeline";
   const lightStage = isIndex || mode === "timeline";
-  const transparent = lightStage || (isIndex && hasQuery) || interactiveDim;
+  const transparent = lightStage || isPrism || (isIndex && hasQuery) || interactiveDim;
   const surfaceColor = isIndex
     ? lightPalette[index % lightPalette.length]
     : mode === "timeline"
       ? lightPalette[index % lightPalette.length]
+      : isPrism
+        ? prismPalette[index % prismPalette.length]
       : sideColor;
-  const surfaceOpacity = isIndex ? 0.7 * opacity : mode === "timeline" ? 0.86 * opacity : opacity;
+  const surfaceOpacity = isIndex ? 0.7 * opacity : mode === "timeline" ? 0.86 * opacity : isPrism ? 0.78 * opacity : opacity;
   const timelineLabelTexture = useMemo(
     () => (mode === "timeline" ? makeStoryLabelTexture(playbook, index) : null),
     [index, mode, playbook],
@@ -456,9 +454,9 @@ function PlaybookObject({
     transparent,
     opacity: surfaceOpacity,
     emissive: playbook.group === "H" ? "#294f9a" : "#7d3f20",
-    emissiveIntensity: selected ? 0.72 : lightStage ? 0.2 : mode === "tunnel" || mode === "solar" || mode === "orbit" ? 0.2 : 0.06,
-    roughness: lightStage ? 0.16 : 0.42,
-    metalness: lightStage ? 0.22 : 0.35,
+    emissiveIntensity: selected ? 0.72 : lightStage ? 0.2 : isPrism || mode === "solar" || mode === "orbit" ? 0.2 : 0.06,
+    roughness: lightStage || isPrism ? 0.16 : 0.42,
+    metalness: lightStage || isPrism ? 0.22 : 0.35,
   });
 
   const renderShape = () => {
@@ -515,20 +513,24 @@ function PlaybookObject({
       );
     }
 
-    if (mode === "tunnel") {
+    if (isPrism) {
       return (
         <>
-          <mesh rotation={[Math.PI * 0.5, 0, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-            <capsuleGeometry args={[0.68, 0.8, 8, 18]} />
-            <meshStandardMaterial {...material()} roughness={0.28} metalness={0.42} />
+          <mesh castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <boxGeometry args={[2.2, 1.28, 0.24]} />
+            <meshStandardMaterial {...material()} roughness={0.14} metalness={0.3} />
           </mesh>
-          <mesh position={[0, 0, 1.1]}>
-            <circleGeometry args={[0.56, 36]} />
-            <meshBasicMaterial map={texture} transparent={transparent} opacity={opacity} toneMapped={false} />
+          <mesh position={[0, 0, 0.14]}>
+            <planeGeometry args={[1.92, 0.98]} />
+            <meshBasicMaterial map={texture} transparent opacity={opacity} toneMapped={false} />
           </mesh>
-          <mesh position={[0, 0, 1.12]}>
-            <ringGeometry args={[0.59, 0.66, 36]} />
-            <meshBasicMaterial color={sideColor} transparent opacity={0.84 * opacity} />
+          <mesh scale={1.08}>
+            <boxGeometry args={[2.2, 1.28, 0.24]} />
+            <meshBasicMaterial color={surfaceColor} transparent opacity={0.42 * opacity} wireframe toneMapped={false} />
+          </mesh>
+          <mesh position={[0, -0.71, 0.16]}>
+            <boxGeometry args={[2.2, 0.055, 0.055]} />
+            <meshBasicMaterial color={surfaceColor} transparent opacity={0.9 * opacity} toneMapped={false} />
           </mesh>
         </>
       );
@@ -598,13 +600,13 @@ function CoreCube({ mode }: { mode: PlaybookLayoutMode }) {
     <group position={[0, 0, -0.7]}>
       <mesh ref={ref} rotation={[0.32, -0.42, 0]}>
         <icosahedronGeometry args={[1.28, 2]} />
-        <meshStandardMaterial color="#79a4ff" transparent opacity={0.18} roughness={0.16} metalness={0.55} wireframe />
+        <meshStandardMaterial color="#ff6b9d" transparent opacity={0.22} roughness={0.16} metalness={0.55} wireframe />
       </mesh>
       <mesh rotation={[-0.1, 0.5, 0.2]}>
         <boxGeometry args={[2.8, 2.8, 0.035]} />
-        <meshBasicMaterial color="#78a6ff" transparent opacity={0.22} wireframe />
+        <meshBasicMaterial color="#ffd166" transparent opacity={0.3} wireframe />
       </mesh>
-      <pointLight color="#ff8a4c" intensity={16} distance={10} />
+      <pointLight color="#ff6b9d" intensity={20} distance={11} />
     </group>
   );
 }
@@ -646,7 +648,7 @@ function OrbitController() {
 function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
   const particlesRef = useRef<THREE.Points>(null);
   const positions = useMemo(() => {
-    const count = mode === "orbit" ? 160 : mode === "solar" ? 120 : 0;
+    const count = mode === "orbit" ? 160 : 0;
     const spreadX = 18;
     const spreadY = 10;
     const spreadZ = 22;
@@ -662,22 +664,19 @@ function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
     return values;
   }, [mode]);
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (!particlesRef.current) {
       return;
     }
 
     particlesRef.current.rotation.y += delta * 0.045;
-    if (mode === "tunnel") {
-      particlesRef.current.position.z = (state.clock.elapsedTime * 0.55) % 4;
-    }
   });
 
-  const color = mode === "orbit" ? "#c5a9ff" : "#ffd5a3";
-  const size = mode === "orbit" ? 0.065 : 0.06;
+  const color = "#c5a9ff";
+  const size = 0.065;
   const opacity = 0.68;
 
-  if (mode !== "orbit" && mode !== "solar") {
+  if (mode !== "orbit") {
     return null;
   }
 
@@ -691,64 +690,79 @@ function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
   );
 }
 
-function WormholeEffect() {
+function ChromaticBloomEffect() {
   const ref = useRef<THREE.Group>(null);
-  const spiralCurves = useMemo(() => [
-    { color: "#ff4f9a", opacity: 0.78, points: 58 },
-    { color: "#8b5cff", opacity: 0.64, points: 58 },
-    { color: "#28d7ff", opacity: 0.54, points: 58 },
-  ].map(({ color, opacity, points }, spiralIndex) => ({
-    color,
-    opacity,
-    curve: new THREE.CatmullRomCurve3(Array.from({ length: points }, (_, pointIndex) => {
-      const progress = pointIndex / (points - 1);
-      const angle = progress * Math.PI * 5.2 + spiralIndex * 2.1;
-      const radius = 0.32 + progress * 4.9;
-      return new THREE.Vector3(
-        Math.cos(angle) * radius,
-        Math.sin(angle) * radius * 0.58,
-        Math.sin(progress * Math.PI * 3 + spiralIndex) * 0.24,
-      );
-    })),
-  })), []);
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (!ref.current) {
       return;
     }
 
-    ref.current.rotation.z -= delta * 0.16;
-    ref.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.34) * 0.12;
+    ref.current.rotation.z += delta * 0.045;
   });
 
-  const rings = [
-    { radius: 2.05, tube: 0.09, color: "#ff4f9a", opacity: 0.76 },
-    { radius: 3.35, tube: 0.075, color: "#8b5cff", opacity: 0.62 },
-    { radius: 4.8, tube: 0.055, color: "#28d7ff", opacity: 0.5 },
-    { radius: 6.35, tube: 0.035, color: "#ffb14d", opacity: 0.38 },
-  ];
+  const petals = ["#ff6b9d", "#65d6ff", "#ffd166", "#a78bfa", "#7ee7bd", "#ff9f68"];
 
   return (
-    <group ref={ref} position={[0, 0, -7.6]}>
+    <group ref={ref} position={[0, 0, -1.3]}>
       <mesh>
-        <sphereGeometry args={[1.5, 32, 20]} />
-        <meshBasicMaterial color="#010108" transparent opacity={0.98} />
+        <sphereGeometry args={[1.25, 32, 20]} />
+        <meshStandardMaterial color="#fff1c7" emissive="#ff7b7b" emissiveIntensity={1.7} roughness={0.2} metalness={0.1} />
       </mesh>
-      {rings.map((ring, index) => (
-        <mesh key={ring.radius} rotation={[index * 0.12, index * -0.16, index * 0.38]}>
-          <torusGeometry args={[ring.radius, ring.tube, 12, 128]} />
-          <meshBasicMaterial color={ring.color} transparent opacity={ring.opacity} toneMapped={false} />
+      {[2.1, 3.45, 4.85].map((radius, index) => (
+        <mesh key={radius} rotation={[Math.PI * 0.5, index * 0.18, index * 0.32]}>
+          <torusGeometry args={[radius, index === 1 ? 0.08 : 0.045, 12, 128]} />
+          <meshBasicMaterial color={petals[index]} transparent opacity={0.42} toneMapped={false} />
         </mesh>
       ))}
-      {spiralCurves.map((spiral) => (
-        <mesh key={spiral.color}>
-          <tubeGeometry args={[spiral.curve, 96, 0.075, 8, false]} />
-          <meshBasicMaterial color={spiral.color} transparent opacity={spiral.opacity} toneMapped={false} />
+      {petals.map((color, index) => {
+        const angle = (index / petals.length) * Math.PI * 2;
+        return <mesh key={color} position={[Math.cos(angle) * 2.7, Math.sin(angle) * 2.7, 0.08]} rotation={[0, 0, angle]} scale={[0.72, 1.8, 0.22]}>
+          <sphereGeometry args={[0.58, 20, 12]} />
+          <meshBasicMaterial color={color} transparent opacity={0.62} toneMapped={false} />
+        </mesh>
+      })}
+      <pointLight position={[-2.6, 1.8, 1.4]} color="#ff6b9d" intensity={16} distance={11} />
+      <pointLight position={[2.8, -1.5, 1.2]} color="#65d6ff" intensity={15} distance={11} />
+      <pointLight position={[0, 2.6, 1]} color="#ffd166" intensity={14} distance={10} />
+    </group>
+  );
+}
+
+function PrismCascadeEffect() {
+  const ref = useRef<THREE.Group>(null);
+  const ribbons = useMemo(() => [
+    { color: "#ff6b9d", offset: 0.35 },
+    { color: "#65d6ff", offset: -0.3 },
+    { color: "#a78bfa", offset: 0.1 },
+  ].map(({ color, offset }) => ({
+    color,
+    curve: new THREE.CatmullRomCurve3(Array.from({ length: 48 }, (_, index) => {
+      const progress = index / 47;
+      return new THREE.Vector3(
+        -9 + progress * 18,
+        Math.sin(progress * Math.PI * 2.2 + offset) * 2.2 + offset * 1.6,
+        -2.8 + Math.cos(progress * Math.PI * 1.8 + offset) * 0.35,
+      );
+    })),
+  })), []);
+
+  useFrame((_, delta) => {
+    if (ref.current) {
+      ref.current.rotation.z += delta * 0.025;
+    }
+  });
+
+  return (
+    <group ref={ref} position={[0, 0, 0]}>
+      {ribbons.map((ribbon) => (
+        <mesh key={ribbon.color}>
+          <tubeGeometry args={[ribbon.curve, 96, 0.06, 8, false]} />
+          <meshBasicMaterial color={ribbon.color} transparent opacity={0.48} toneMapped={false} />
         </mesh>
       ))}
-      <pointLight position={[-2.6, 1.4, 1.2]} color="#ff4f9a" intensity={32} distance={13} />
-      <pointLight position={[2.8, -0.8, 0.8]} color="#28d7ff" intensity={28} distance={13} />
-      <pointLight position={[0, 2.8, 0.4]} color="#ffb14d" intensity={24} distance={11} />
+      <pointLight position={[-5, 2, 2]} color="#ff6b9d" intensity={6} distance={11} />
+      <pointLight position={[5, -2, 2]} color="#65d6ff" intensity={6} distance={11} />
     </group>
   );
 }
@@ -757,8 +771,8 @@ function StageEffects({ mode }: { mode: PlaybookLayoutMode }) {
   const ref = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
-    if (ref.current && (mode === "solar" || mode === "orbit")) {
-      ref.current.rotation.z += delta * (mode === "solar" ? 0.035 : -0.022);
+    if (ref.current && mode === "orbit") {
+      ref.current.rotation.z -= delta * 0.022;
     }
   });
 
@@ -766,17 +780,8 @@ function StageEffects({ mode }: { mode: PlaybookLayoutMode }) {
     <>
       <StageParticles mode={mode} />
       <WatercolorBackdrop mode={mode} />
-      {mode === "tunnel" ? <WormholeEffect /> : null}
-      {mode === "solar" ? (
-        <group ref={ref} position={[0, 0, -0.8]}>
-          {[2.7, 4.65, 6.55].map((radius, index) => (
-            <mesh key={radius} rotation={[Math.PI * 0.5, 0, index * 0.18]}>
-              <torusGeometry args={[radius, index === 1 ? 0.035 : 0.018, 8, 96]} />
-              <meshBasicMaterial color={index % 2 ? "#ffb36b" : "#ff5d36"} transparent opacity={0.3 - index * 0.05} />
-            </mesh>
-          ))}
-        </group>
-      ) : null}
+      {mode === "solar" ? <ChromaticBloomEffect /> : null}
+      {mode === "prism" ? <PrismCascadeEffect /> : null}
       {mode === "orbit" ? (
         <group ref={ref} position={[0, 0, -0.5]}>
           <mesh>
@@ -798,7 +803,7 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
           const [x, y, z] = getSolarPosition(slotIndex);
           return <mesh key={slotIndex} position={[x * 0.68, y * 0.68, z - 0.2]} rotation={[0, 0, Math.atan2(y, x)]}>
             <boxGeometry args={[Math.hypot(x, y) * 0.44, 0.018, 0.018]} />
-            <meshBasicMaterial color={slotIndex % 2 ? "#bd7e54" : "#5279d8"} transparent opacity={0.32} />
+            <meshBasicMaterial color={["#ff6b9d", "#65d6ff", "#ffd166", "#a78bfa"][slotIndex % 4]} transparent opacity={0.46} toneMapped={false} />
           </mesh>;
         })}
       </>
@@ -870,7 +875,7 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
     );
   }
 
-  if (mode === "tunnel") {
+  if (mode === "prism") {
     return null;
   }
 
@@ -918,31 +923,31 @@ function ComparisonStage({
   });
 
   const stageBackground = mode === "solar"
-    ? "#050914"
+    ? "#160b1b"
     : mode === "index"
       ? "#f5f8ff"
       : mode === "timeline"
         ? "#fff8f2"
         : mode === "orbit"
           ? "#080612"
-          : "#020207";
+          : "#0e1324";
   const keyLightColor = mode === "solar"
-    ? "#b9d8ff"
+    ? "#ffd0e5"
     : mode === "index"
       ? "#ffffff"
       : mode === "timeline"
         ? "#fff5e7"
         : mode === "orbit"
           ? "#d4c4ff"
-          : "#ffb5ee";
+          : "#d6e4ff";
   const lightStage = mode === "index" || mode === "timeline";
 
   return (
     <>
       {!lightStage ? <color attach="background" args={[stageBackground]} /> : null}
-      <ambientLight intensity={lightStage ? 1.45 : mode === "tunnel" ? 0.48 : mode === "orbit" ? 0.8 : 0.7} />
-      <directionalLight position={[-5, 8, 8]} color={keyLightColor} intensity={mode === "tunnel" ? 2.8 : 3.7} castShadow={shadowsEnabled} />
-      <pointLight position={[0, 0, 4]} color={mode === "solar" ? "#6db7ff" : mode === "orbit" ? "#a881ff" : mode === "timeline" ? "#ff9edc" : mode === "index" ? "#8bdcff" : "#ff4f9a"} intensity={mode === "tunnel" ? 7 : lightStage ? 9 : mode === "solar" || mode === "orbit" ? 10 : 7} distance={14} />
+      <ambientLight intensity={lightStage ? 1.45 : mode === "prism" ? 0.72 : mode === "orbit" ? 0.8 : 0.7} />
+      <directionalLight position={[-5, 8, 8]} color={keyLightColor} intensity={mode === "prism" ? 3.5 : 3.7} castShadow={shadowsEnabled} />
+      <pointLight position={[0, 0, 4]} color={mode === "solar" ? "#ff83bd" : mode === "orbit" ? "#a881ff" : mode === "timeline" ? "#ff9edc" : mode === "index" ? "#8bdcff" : "#65d6ff"} intensity={lightStage ? 9 : mode === "solar" || mode === "orbit" ? 10 : 7} distance={14} />
       {mode === "index" ? <pointLight position={[-5, 2, 2]} color="#ff9fcf" intensity={8} distance={12} /> : null}
       {mode === "timeline" ? <pointLight position={[5, -2, 1]} color="#9e8cff" intensity={8} distance={12} /> : null}
       <StageEffects mode={mode} />
@@ -984,20 +989,20 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
   ), [allPlaybooks, normalizedQuery]);
   const playbooks = allPlaybooks;
   const title = mode === "solar"
-    ? "SOLAR BURST"
+    ? "CHROMATIC BLOOM"
     : mode === "index"
       ? "STORY INDEX"
-      : mode === "tunnel"
-        ? "DEEP SPACE TUNNEL"
+      : mode === "prism"
+        ? "PRISM CASCADE"
         : mode === "timeline"
           ? "TIMELINE RAIL"
           : "ORBIT RINGS";
   const description = mode === "solar"
-    ? "중앙 코어를 중심으로 스토리가 방사됩니다"
+    ? "컬러 코어와 꽃잎형 레이어가 스토리를 펼칩니다"
     : mode === "index"
       ? "전체를 훑고 검색 결과를 앞으로 당겨 바로 들어갑니다"
-      : mode === "tunnel"
-        ? "스토리 큐브가 깊이 방향으로 이어지는 탐색 공간입니다"
+      : mode === "prism"
+        ? "반투명 프리즘 카드가 계단형 캐스케이드로 이어집니다"
         : mode === "timeline"
           ? "스토리를 순서와 레일 단위로 빠르게 훑습니다"
           : "그룹과 스토리가 동심 궤도로 분리됩니다";
