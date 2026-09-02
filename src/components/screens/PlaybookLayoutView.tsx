@@ -41,12 +41,27 @@ function getSolarPosition(index: number): Vec3 {
   ];
 }
 
-function getFeatureCenter(playbooks: readonly PlaybookItem[]) {
-  const features = playbooks.map((item) => Number(item.cubeKey.split(",")[0]));
-  return features.length ? (Math.min(...features) + Math.max(...features)) / 2 : 2.5;
+function getCityFeatures(playbooks: readonly PlaybookItem[]) {
+  return Array.from(new Set(playbooks.map((item) => Number(item.cubeKey.split(",")[0])))).sort((a, b) => a - b);
 }
 
-function getCameraDistance(mode: PlaybookLayoutMode, playbookCount: number) {
+function getCityPosition(playbook: PlaybookItem, visiblePlaybooks: readonly PlaybookItem[]): Vec3 {
+  const [feature] = playbook.cubeKey.split(",").map(Number);
+  const features = getCityFeatures(visiblePlaybooks);
+  const featureIndex = features.indexOf(feature);
+  const towerItems = visiblePlaybooks
+    .filter((item) => Number(item.cubeKey.split(",")[0]) === feature)
+    .slice()
+    .sort((a, b) => a.cubeKey.localeCompare(b.cubeKey));
+  const towerIndex = towerItems.findIndex((item) => item.id === playbook.id);
+  const x = (featureIndex - (features.length - 1) / 2) * 3.1;
+  const groupOffset = playbook.group === "H" ? -0.72 : 0.72;
+  return [x + groupOffset, -3.05 + towerIndex * 1.55, playbook.group === "H" ? 0.45 : -0.45];
+}
+
+function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly PlaybookItem[]) {
+  const playbookCount = playbooks.length;
+
   if (mode === "solar") {
     return 17.5 + Math.max(0, Math.ceil(playbookCount / 8) - 1) * 1.65;
   }
@@ -55,7 +70,7 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbookCount: number) {
     return 17.5 + Math.min(14, Math.max(0, Math.ceil(playbookCount / 4) - 3) * 0.6);
   }
 
-  const featureCount = new Set(PLAYBOOK_CATALOG.map((item) => item.cubeKey.split(",")[0])).size;
+  const featureCount = getCityFeatures(playbooks).length;
   return 17.5 + Math.min(12, Math.max(0, featureCount - 6) * 1.3);
 }
 
@@ -72,17 +87,7 @@ function cubePosition(
   }
 
   if (mode === "city") {
-    const sameCellItems = visiblePlaybooks.filter((item) => {
-      const [itemFeature, , itemStory] = item.cubeKey.split(",").map(Number);
-      return itemFeature === feature && itemStory === story;
-    });
-    const sameCellIndex = sameCellItems.findIndex((item) => item.id === playbook.id);
-    const laneOffset = (sameCellIndex - (sameCellItems.length - 1) / 2) * 1.55;
-    return [
-      (feature - getFeatureCenter(visiblePlaybooks)) * 2.5 + laneOffset,
-      (2 - story) * 1.75 - 0.7,
-      (groupAxis - 3.5) * 0.5,
-    ];
+    return getCityPosition(playbook, visiblePlaybooks);
   }
 
   const layer = Math.floor(index / 4);
@@ -297,15 +302,27 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
   }
 
   if (mode === "city") {
+    const features = getCityFeatures(playbooks);
+    const highestTower = Math.max(1, ...features.map((feature) => playbooks.filter((item) => Number(item.cubeKey.split(",")[0]) === feature).length));
     return (
       <>
         <gridHelper args={[16, 8, "#7d9bd2", "#c5d1e2"]} position={[0, -4.05, 0]} />
-        {Array.from(new Set(playbooks.map((item) => Number(item.cubeKey.split(",")[0])))).map((feature) => (
-          <mesh key={feature} position={[(feature - getFeatureCenter(playbooks)) * 2.5, -3.98, 0]}>
+        {features.map((feature, featureIndex) => (
+          <mesh key={feature} position={[(featureIndex - (features.length - 1) / 2) * 3.1, -3.98, 0]}>
             <boxGeometry args={[1.72, 0.12, 2.8]} />
             <meshStandardMaterial color="#c6d6ee" transparent opacity={0.48} roughness={0.36} metalness={0.18} />
           </mesh>
         ))}
+        {features.map((feature, featureIndex) => (
+          <mesh key={`tower-${feature}`} position={[(featureIndex - (features.length - 1) / 2) * 3.1, -3.05 + (highestTower - 1) * 0.775, -0.45]}>
+            <boxGeometry args={[0.045, Math.max(1.2, highestTower * 1.55), 0.045]} />
+            <meshBasicMaterial color="#86a7d9" transparent opacity={0.42} />
+          </mesh>
+        ))}
+        <mesh position={[0, -3.86, 0]}>
+          <boxGeometry args={[16.8, 0.07, 0.42]} />
+          <meshStandardMaterial color="#8aa1bf" transparent opacity={0.46} roughness={0.46} metalness={0.1} />
+        </mesh>
         <mesh position={[0, 0, -1.2]}>
           <boxGeometry args={[15.8, 0.035, 0.035]} />
           <meshBasicMaterial color="#8ea6c4" transparent opacity={0.55} />
@@ -401,7 +418,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
         <Canvas
           key={`${mode}-${playbooks.length}`}
-          camera={{ position: [0, 0.45, getCameraDistance(mode, playbooks.length)], fov: 38 }}
+          camera={{ position: [0, 0.45, getCameraDistance(mode, playbooks)], fov: 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false }}
           shadows={playbooks.length <= 24}
