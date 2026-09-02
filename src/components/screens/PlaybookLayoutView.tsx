@@ -326,12 +326,12 @@ function PlaybookObject({
       return (
         <>
           <mesh rotation={[0.18, -0.22, 0.08]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-            <octahedronGeometry args={[1.02, 0]} />
-            <meshStandardMaterial {...material()} roughness={0.3} metalness={0.5} />
+            <dodecahedronGeometry args={[1.02, 1]} />
+            <meshStandardMaterial {...material(texture)} roughness={0.25} metalness={0.36} />
           </mesh>
-          <mesh position={[0, 0, 0.58]} rotation={[0.08, -0.12, 0.08]}>
-            <planeGeometry args={[1.18, 0.8]} />
-            <meshBasicMaterial map={texture} transparent={transparent} opacity={opacity} toneMapped={false} />
+          <mesh scale={1.08} rotation={[0.18, -0.22, 0.08]}>
+            <dodecahedronGeometry args={[1.02, 1]} />
+            <meshBasicMaterial color={sideColor} transparent opacity={0.2 * opacity} wireframe />
           </mesh>
         </>
       );
@@ -340,13 +340,17 @@ function PlaybookObject({
     if (mode === "tunnel") {
       return (
         <>
-          <mesh rotation={[0.15, 0.28, 0.08]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-            <coneGeometry args={[0.86, 1.48, 4]} />
-            <meshStandardMaterial {...material()} roughness={0.34} metalness={0.44} />
+          <mesh rotation={[Math.PI * 0.5, 0, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <capsuleGeometry args={[0.68, 0.8, 8, 18]} />
+            <meshStandardMaterial {...material()} roughness={0.28} metalness={0.42} />
           </mesh>
-          <mesh position={[0, 0, 0.52]} rotation={[0.02, -0.12, 0.08]}>
-            <planeGeometry args={[1.08, 0.72]} />
+          <mesh position={[0, 0, 0.76]}>
+            <circleGeometry args={[0.56, 36]} />
             <meshBasicMaterial map={texture} transparent={transparent} opacity={opacity} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 0, 0.78]}>
+            <ringGeometry args={[0.59, 0.66, 36]} />
+            <meshBasicMaterial color={sideColor} transparent opacity={0.84 * opacity} />
           </mesh>
         </>
       );
