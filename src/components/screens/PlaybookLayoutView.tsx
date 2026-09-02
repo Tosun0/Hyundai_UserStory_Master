@@ -255,6 +255,8 @@ function PlaybookObject({
   hovered,
   focused,
   hasQuery,
+  selected,
+  hasSelection,
 }: {
   playbook: PlaybookItem;
   index: number;
@@ -267,6 +269,8 @@ function PlaybookObject({
   hovered: boolean;
   focused: boolean;
   hasQuery: boolean;
+  selected: boolean;
+  hasSelection: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const basePosition = useMemo(
@@ -292,14 +296,44 @@ function PlaybookObject({
       return;
     }
 
-    const focusOffset = isIndex && hasQuery && focused ? 1.25 : 0;
-    const targetScale = layoutScale * (hovered ? 1.18 : 1) * (isIndex && hasQuery && !focused ? 0.82 : 1);
-    group.position.lerp(new THREE.Vector3(basePosition[0], basePosition[1], basePosition[2] + focusOffset), 1 - Math.pow(0.001, delta));
+    const interactionPosition = new THREE.Vector3(basePosition[0], basePosition[1], basePosition[2]);
+    const modeFocus = mode !== "timeline" && selected;
+
+    if (modeFocus) {
+      if (mode === "solar") {
+        interactionPosition.multiplyScalar(0.82);
+        interactionPosition.z += 1.2;
+      } else if (mode === "index") {
+        interactionPosition.y += 0.35;
+        interactionPosition.z += 1.35;
+      } else if (mode === "tunnel") {
+        interactionPosition.z += 3.2;
+      } else if (mode === "orbit") {
+        interactionPosition.y += 0.55;
+        interactionPosition.z += 1.25;
+      } else if (mode === "focus") {
+        interactionPosition.x *= 0.2;
+        interactionPosition.y *= 0.2;
+        interactionPosition.z += 3.15;
+      }
+    }
+
+    const targetScale = layoutScale
+      * (hovered ? 1.18 : 1)
+      * (modeFocus ? (mode === "focus" ? 1.28 : 1.16) : 1)
+      * (isIndex && hasQuery && !focused ? 0.82 : 1)
+      * (hasSelection && !selected && mode !== "timeline" ? 0.76 : 1);
+    group.position.lerp(interactionPosition, 1 - Math.pow(0.001, delta));
     group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
   });
 
-  const opacity = isIndex && hasQuery && !focused ? 0.16 : 1;
-  const transparent = isIndex && hasQuery;
+  const opacity = isIndex && hasQuery && !focused
+    ? 0.16
+    : hasSelection && !selected && mode !== "timeline"
+      ? 0.28
+      : 1;
+  const interactiveDim = hasSelection && !selected && mode !== "timeline";
+  const transparent = isIndex && hasQuery || interactiveDim;
   const timelineLabelTexture = useMemo(
     () => (mode === "timeline" ? makeStoryLabelTexture(playbook, index) : null),
     [index, mode, playbook],
@@ -452,6 +486,13 @@ function PlaybookObject({
 
 function CoreCube({ mode }: { mode: PlaybookLayoutMode }) {
   const ref = useRef<THREE.Mesh>(null);
+
+  useFrame((_, delta) => {
+    if (mode === "solar" && ref.current) {
+      ref.current.rotation.y += delta * 0.18;
+      ref.current.rotation.x += delta * 0.05;
+    }
+  });
 
   if (mode !== "solar") {
     return null;
@@ -652,7 +693,7 @@ function ComparisonStage({
       <group>
         <CoreCube mode={mode} />
         {playbooks.map((playbook, index) => (
-            <PlaybookObject
+          <PlaybookObject
             key={playbook.id}
             playbook={playbook}
             index={index}
@@ -663,6 +704,8 @@ function ComparisonStage({
             hovered={hoveredId === playbook.id}
             focused={focusedIds.has(playbook.id)}
             hasQuery={hasQuery}
+            selected={hoveredId === playbook.id}
+            hasSelection={hoveredId !== null}
             onHover={(item) => setHoveredId(item?.id ?? null)}
             onOpenPlaybook={onOpenPlaybook}
           />
