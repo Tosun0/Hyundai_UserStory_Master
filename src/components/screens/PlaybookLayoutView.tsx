@@ -6,7 +6,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { PLAYBOOK_CATALOG } from "../../data/playbookCatalog";
 
-export type PlaybookLayoutMode = "solar" | "index" | "tunnel" | "timeline" | "orbit" | "focus";
+export type PlaybookLayoutMode = "solar" | "index" | "tunnel" | "timeline" | "orbit";
 
 type PlaybookLayoutViewProps = {
   mode: PlaybookLayoutMode;
@@ -88,16 +88,6 @@ function getOrbitPosition(index: number): Vec3 {
   ];
 }
 
-function getFocusStackPosition(index: number): Vec3 {
-  const column = index % 4;
-  const row = Math.floor(index / 4);
-  return [
-    (column - 1.5) * 1.35 + row * 0.32,
-    (1.5 - column) * 0.18 - row * 0.06,
-    1.1 - index * 0.72,
-  ];
-}
-
 function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly PlaybookItem[]) {
   const playbookCount = playbooks.length;
 
@@ -116,10 +106,6 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
 
   if (mode === "timeline") {
     return 18.5 + Math.min(10, Math.max(0, Math.ceil(playbooks.length / 5) - 2) * 1.2);
-  }
-
-  if (mode === "focus") {
-    return 15.5 + Math.min(8, Math.max(0, Math.ceil(playbooks.length / 4) - 3) * 0.8);
   }
 
   return 18.5 + Math.min(6, Math.max(0, Math.ceil(playbooks.length / 6) - 2) * 0.65);
@@ -147,10 +133,6 @@ function cubePosition(
 
   if (mode === "orbit") {
     return getOrbitPosition(index);
-  }
-
-  if (mode === "focus") {
-    return getFocusStackPosition(index);
   }
 
   const layer = Math.floor(index / 4);
@@ -279,7 +261,7 @@ function PlaybookObject({
   );
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
   const isIndex = mode === "index";
-  const layoutScale = isIndex ? 0.86 : mode === "tunnel" ? 0.74 : mode === "focus" ? 0.82 : 0.9;
+  const layoutScale = isIndex ? 0.86 : mode === "tunnel" ? 0.74 : 0.9;
   const baseRotation = useMemo<Vec3>(
     () => isIndex
       ? [0.025 + (index % 2) * 0.018, -0.05 + (index % 3) * 0.025, 0]
@@ -311,16 +293,12 @@ function PlaybookObject({
       } else if (mode === "orbit") {
         interactionPosition.y += 0.55;
         interactionPosition.z += 1.25;
-      } else if (mode === "focus") {
-        interactionPosition.x *= 0.2;
-        interactionPosition.y *= 0.2;
-        interactionPosition.z += 3.15;
       }
     }
 
     const targetScale = layoutScale
       * (hovered ? 1.18 : 1)
-      * (modeFocus ? (mode === "focus" ? 1.28 : 1.16) : 1)
+      * (modeFocus ? 1.16 : 1)
       * (isIndex && hasQuery && !focused ? 0.82 : 1)
       * (hasSelection && !selected && mode !== "timeline" ? 0.76 : 1);
     group.position.lerp(interactionPosition, 1 - Math.pow(0.001, delta));
@@ -404,21 +382,6 @@ function PlaybookObject({
       );
     }
 
-    if (mode === "focus") {
-      return (
-        <>
-          <mesh rotation={[0.18, -0.22, 0.08]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-            <dodecahedronGeometry args={[1.02, 1]} />
-            <meshStandardMaterial {...material(texture)} roughness={0.25} metalness={0.36} />
-          </mesh>
-          <mesh scale={1.08} rotation={[0.18, -0.22, 0.08]}>
-            <dodecahedronGeometry args={[1.02, 1]} />
-            <meshBasicMaterial color={sideColor} transparent opacity={0.2 * opacity} wireframe />
-          </mesh>
-        </>
-      );
-    }
-
     if (mode === "tunnel") {
       return (
         <>
@@ -426,11 +389,11 @@ function PlaybookObject({
             <capsuleGeometry args={[0.68, 0.8, 8, 18]} />
             <meshStandardMaterial {...material()} roughness={0.28} metalness={0.42} />
           </mesh>
-          <mesh position={[0, 0, 0.76]}>
+          <mesh position={[0, 0, 1.1]}>
             <circleGeometry args={[0.56, 36]} />
             <meshBasicMaterial map={texture} transparent={transparent} opacity={opacity} toneMapped={false} />
           </mesh>
-          <mesh position={[0, 0, 0.78]}>
+          <mesh position={[0, 0, 1.12]}>
             <ringGeometry args={[0.59, 0.66, 36]} />
             <meshBasicMaterial color={sideColor} transparent opacity={0.84 * opacity} />
           </mesh>
@@ -627,19 +590,6 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
     );
   }
 
-  if (mode === "focus") {
-    return (
-      <>
-        {Array.from({ length: Math.min(10, Math.max(4, playbooks.length)) }, (_, index) => (
-          <mesh key={index} position={[0, 0, 0.45 - index * 0.72]} rotation={[0.02, 0, index % 2 ? -0.025 : 0.025]}>
-            <boxGeometry args={[7.8 - index * 0.32, 5.1 - index * 0.22, 0.025]} />
-            <meshBasicMaterial color={index % 2 ? "#bd7e54" : "#5279d8"} transparent opacity={0.22 - index * 0.012} wireframe />
-          </mesh>
-        ))}
-      </>
-    );
-  }
-
   return (
     <>
       {Array.from({ length: Math.min(10, Math.max(4, Math.ceil(playbooks.length / 4))) }, (_, index) => -1.8 - index * 4.15).map((z, index) => (
@@ -734,9 +684,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
         ? "DEEP SPACE TUNNEL"
         : mode === "timeline"
           ? "TIMELINE RAIL"
-          : mode === "orbit"
-            ? "ORBIT RINGS"
-            : "FOCUS STACK";
+          : "ORBIT RINGS";
   const description = mode === "solar"
     ? "중앙 코어를 중심으로 스토리가 방사됩니다"
     : mode === "index"
@@ -745,9 +693,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
         ? "스토리 큐브가 깊이 방향으로 이어지는 탐색 공간입니다"
         : mode === "timeline"
           ? "스토리를 순서와 레일 단위로 빠르게 훑습니다"
-          : mode === "orbit"
-            ? "그룹과 스토리가 동심 궤도로 분리됩니다"
-            : "검색하거나 호버한 스토리를 전면으로 꺼냅니다";
+          : "그룹과 스토리가 동심 궤도로 분리됩니다";
 
   return (
     <main className={`playbook-layout playbook-layout--${mode}`} data-layout-mode={mode}>

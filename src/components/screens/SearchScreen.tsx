@@ -42,7 +42,6 @@ const layoutModes: readonly { id: PlaybookLayoutMode; label: string; shortLabel:
   { id: "tunnel", label: "Deep Space Tunnel", shortLabel: "Tunnel" },
   { id: "timeline", label: "Timeline Rail", shortLabel: "Rail" },
   { id: "orbit", label: "Orbit Rings", shortLabel: "Orbit" },
-  { id: "focus", label: "Focus Stack", shortLabel: "Focus" },
 ];
 
 const cubeMapTopNavItems = [
