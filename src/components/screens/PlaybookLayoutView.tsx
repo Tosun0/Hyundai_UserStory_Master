@@ -6,7 +6,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { PLAYBOOK_CATALOG } from "../../data/playbookCatalog";
 
-export type PlaybookLayoutMode = "solar" | "gallery" | "tunnel";
+export type PlaybookLayoutMode = "solar" | "index" | "tunnel" | "timeline" | "orbit" | "focus";
 
 type PlaybookLayoutViewProps = {
   mode: PlaybookLayoutMode;
@@ -41,19 +41,52 @@ function getSolarPosition(index: number): Vec3 {
   ];
 }
 
-function getGalleryColumns(playbookCount: number) {
+function getIndexColumns(playbookCount: number) {
   return Math.min(8, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, playbookCount) * 1.35))));
 }
 
-function getGalleryPosition(index: number, playbookCount: number): Vec3 {
-  const columns = getGalleryColumns(playbookCount);
+function getIndexPosition(index: number, playbookCount: number): Vec3 {
+  const columns = getIndexColumns(playbookCount);
   const rows = Math.ceil(playbookCount / columns);
   const column = index % columns;
   const row = Math.floor(index / columns);
   return [
-    (column - (columns - 1) / 2) * 2.2,
-    ((rows - 1) / 2 - row) * 1.95 - 0.2,
-    (column % 2 ? 0.42 : -0.42) + (row % 3 - 1) * 0.12,
+    (column - (columns - 1) / 2) * 2.42,
+    ((rows - 1) / 2 - row) * 1.75 - 0.2,
+    (column % 2 ? 0.28 : -0.28) + (row % 3 - 1) * 0.1,
+  ];
+}
+
+function getTimelinePosition(index: number, playbookCount: number): Vec3 {
+  const columns = Math.min(6, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, playbookCount)))));
+  const column = index % columns;
+  const row = Math.floor(index / columns);
+  return [
+    (column - (columns - 1) / 2) * 2.35,
+    row % 2 ? 1.1 : -1.1,
+    -row * 1.5 + (column % 2 ? 0.18 : -0.18),
+  ];
+}
+
+function getOrbitPosition(index: number): Vec3 {
+  const ring = Math.floor(index / 6);
+  const slot = index % 6;
+  const radius = 3.3 + ring * 1.85;
+  const angle = (slot / 6) * Math.PI * 2 + ring * 0.45;
+  return [
+    Math.cos(angle) * radius,
+    Math.sin(angle) * radius * 0.52,
+    Math.sin(angle) * 0.9 - ring * 0.45,
+  ];
+}
+
+function getFocusStackPosition(index: number): Vec3 {
+  const column = index % 4;
+  const row = Math.floor(index / 4);
+  return [
+    (column - 1.5) * 1.35 + row * 0.32,
+    (1.5 - column) * 0.18 - row * 0.06,
+    1.1 - index * 0.72,
   ];
 }
 
@@ -68,8 +101,20 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
     return 17.5 + Math.min(14, Math.max(0, Math.ceil(playbookCount / 4) - 3) * 0.6);
   }
 
-  const rows = Math.ceil(playbooks.length / getGalleryColumns(playbooks.length));
-  return 17.5 + Math.min(14, Math.max(0, rows - 3) * 1.45);
+  if (mode === "index") {
+    const rows = Math.ceil(playbooks.length / getIndexColumns(playbooks.length));
+    return 17.5 + Math.min(14, Math.max(0, rows - 3) * 1.35);
+  }
+
+  if (mode === "timeline") {
+    return 18.5 + Math.min(10, Math.max(0, Math.ceil(playbooks.length / 5) - 2) * 1.2);
+  }
+
+  if (mode === "focus") {
+    return 15.5 + Math.min(8, Math.max(0, Math.ceil(playbooks.length / 4) - 3) * 0.8);
+  }
+
+  return 18.5 + Math.min(6, Math.max(0, Math.ceil(playbooks.length / 6) - 2) * 0.65);
 }
 
 function cubePosition(
@@ -84,8 +129,20 @@ function cubePosition(
     return getSolarPosition(index);
   }
 
-  if (mode === "gallery") {
-    return getGalleryPosition(index, visiblePlaybooks.length);
+  if (mode === "index") {
+    return getIndexPosition(index, visiblePlaybooks.length);
+  }
+
+  if (mode === "timeline") {
+    return getTimelinePosition(index, visiblePlaybooks.length);
+  }
+
+  if (mode === "orbit") {
+    return getOrbitPosition(index);
+  }
+
+  if (mode === "focus") {
+    return getFocusStackPosition(index);
   }
 
   const layer = Math.floor(index / 4);
@@ -158,6 +215,8 @@ function PlaybookCube({
   onOpenPlaybook,
   onHover,
   hovered,
+  focused,
+  hasQuery,
 }: {
   playbook: PlaybookItem;
   index: number;
@@ -168,6 +227,8 @@ function PlaybookCube({
   onOpenPlaybook: (playbook: PlaybookItem) => void;
   onHover: (playbook: PlaybookItem | null) => void;
   hovered: boolean;
+  focused: boolean;
+  hasQuery: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const basePosition = useMemo(
@@ -175,12 +236,15 @@ function PlaybookCube({
     [index, mode, playbook, visiblePlaybooks],
   );
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
-  const layoutScale = mode === "gallery" ? 0.82 : mode === "tunnel" ? 0.74 : 0.9;
+  const isIndex = mode === "index";
+  const layoutScale = isIndex ? 0.86 : mode === "tunnel" ? 0.74 : mode === "focus" ? 0.82 : 0.9;
   const baseRotation = useMemo<Vec3>(
-    () => mode === "gallery"
+    () => isIndex
       ? [0.025 + (index % 2) * 0.018, -0.05 + (index % 3) * 0.025, 0]
+      : mode === "timeline"
+        ? [0.02, index % 2 ? -0.08 : 0.08, index % 2 ? -0.04 : 0.04]
       : [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
-    [index, mode],
+    [index, isIndex, mode],
   );
 
   useFrame((_, delta) => {
@@ -190,9 +254,18 @@ function PlaybookCube({
       return;
     }
 
-    const targetScale = layoutScale * (hovered ? 1.18 : 1);
+    const focusOffset = isIndex && hasQuery && focused ? 1.25 : 0;
+    const targetScale = layoutScale * (hovered ? 1.18 : 1) * (isIndex && hasQuery && !focused ? 0.82 : 1);
+    group.position.lerp(new THREE.Vector3(basePosition[0], basePosition[1], basePosition[2] + focusOffset), 1 - Math.pow(0.001, delta));
     group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
   });
+
+  const opacity = isIndex && hasQuery && !focused ? 0.16 : 1;
+  const depth = isIndex ? 0.72 : 0.42;
+  const width = isIndex ? 2.12 : 1.72;
+  const height = isIndex ? 1.3 : 1.72;
+  const frontWidth = isIndex ? 1.86 : 1.55;
+  const frontHeight = isIndex ? 0.96 : 1.55;
 
   return (
     <group
@@ -213,18 +286,22 @@ function PlaybookCube({
       }}
     >
       <mesh castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-        <boxGeometry args={[1.72, 1.72, 0.42]} />
-        <meshStandardMaterial attach="material-0" color={sideColor} roughness={0.42} metalness={0.35} />
-        <meshStandardMaterial attach="material-1" color={sideColor} roughness={0.42} metalness={0.35} />
-        <meshStandardMaterial attach="material-2" color="#d9e6f7" roughness={0.28} metalness={0.2} />
-        <meshStandardMaterial attach="material-3" color="#273647" roughness={0.62} metalness={0.22} />
-        <meshStandardMaterial attach="material-4" map={texture} roughness={0.55} metalness={0.08} />
-        <meshStandardMaterial attach="material-5" color="#18232d" roughness={0.6} metalness={0.2} />
+        <boxGeometry args={[width, height, depth]} />
+        <meshStandardMaterial attach="material-0" color={sideColor} transparent={isIndex && hasQuery} opacity={opacity} roughness={0.42} metalness={0.35} />
+        <meshStandardMaterial attach="material-1" color={sideColor} transparent={isIndex && hasQuery} opacity={opacity} roughness={0.42} metalness={0.35} />
+        <meshStandardMaterial attach="material-2" color="#d9e6f7" transparent={isIndex && hasQuery} opacity={opacity} roughness={0.28} metalness={0.2} />
+        <meshStandardMaterial attach="material-3" color="#273647" transparent={isIndex && hasQuery} opacity={opacity} roughness={0.62} metalness={0.22} />
+        <meshStandardMaterial attach="material-4" map={texture} transparent={isIndex && hasQuery} opacity={opacity} roughness={0.55} metalness={0.08} />
+        <meshStandardMaterial attach="material-5" color="#18232d" transparent={isIndex && hasQuery} opacity={opacity} roughness={0.6} metalness={0.2} />
       </mesh>
-      <mesh position={[0, 0, 0.225]}>
-        <planeGeometry args={[1.55, 1.55]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
+      <mesh position={[0, 0, depth / 2 + 0.006]}>
+        <planeGeometry args={[frontWidth, frontHeight]} />
+        <meshBasicMaterial map={texture} transparent={isIndex && hasQuery} opacity={opacity} toneMapped={false} />
       </mesh>
+      {isIndex ? <mesh position={[0, -0.57, depth / 2 + 0.02]}>
+        <boxGeometry args={[1.84, 0.055, 0.035]} />
+        <meshBasicMaterial color={focused || !hasQuery ? (playbook.group === "H" ? "#5279d8" : "#bd7e54") : "#9aa8b8"} transparent opacity={opacity} />
+      </mesh> : null}
       <InfoPanel playbook={playbook} visible={hovered} />
     </group>
   );
@@ -301,19 +378,19 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
     );
   }
 
-  if (mode === "gallery") {
-    const columns = getGalleryColumns(playbooks.length);
+  if (mode === "index") {
+    const columns = getIndexColumns(playbooks.length);
     const rows = Math.ceil(playbooks.length / columns);
-    const width = Math.max(8, (columns - 1) * 2.2 + 2.8);
+    const width = Math.max(8, (columns - 1) * 2.42 + 3.2);
     return (
       <>
         <mesh position={[0, 0, -1.35]}>
-          <boxGeometry args={[width, Math.max(5.2, rows * 1.95 + 0.8), 0.05]} />
+          <boxGeometry args={[width, Math.max(5.2, rows * 1.75 + 0.8), 0.05]} />
           <meshBasicMaterial color="#9bb2d1" transparent opacity={0.2} wireframe />
         </mesh>
-        {Array.from({ length: rows + 1 }, (_, row) => ((rows - 1) / 2 - row + 0.5) * 1.95 - 0.2).map((y) => (
+        {Array.from({ length: rows + 1 }, (_, row) => ((rows - 1) / 2 - row + 0.5) * 1.75 - 0.2).map((y) => (
           <mesh key={y} position={[0, y, -1.08]}>
-            <boxGeometry args={[width, 0.025, 0.025]} />
+          <boxGeometry args={[width, 0.04, 0.04]} />
             <meshBasicMaterial color="#7599d2" transparent opacity={0.46} />
           </mesh>
         ))}
@@ -321,6 +398,58 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
           <boxGeometry args={[width + 1.2, 0.08, 2.2]} />
           <meshStandardMaterial color="#d2deef" transparent opacity={0.58} roughness={0.34} metalness={0.18} />
         </mesh>
+      </>
+    );
+  }
+
+  if (mode === "timeline") {
+    const columns = Math.min(6, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, playbooks.length)))));
+    const rows = Math.ceil(playbooks.length / columns);
+    const width = Math.max(9, (columns - 1) * 2.35 + 3);
+    return (
+      <>
+        {Array.from({ length: rows }, (_, row) => (
+          <group key={row} position={[0, row % 2 ? 1.1 : -1.1, -row * 1.5]}>
+            <mesh>
+              <boxGeometry args={[width, 0.08, 0.08]} />
+              <meshStandardMaterial color={row % 2 ? "#bd7e54" : "#5279d8"} emissive={row % 2 ? "#5f2712" : "#172d68"} emissiveIntensity={0.25} />
+            </mesh>
+            <mesh position={[width / 2 - 0.35, 0, 0]} rotation={[0, 0, row % 2 ? -0.55 : 0.55]}>
+              <coneGeometry args={[0.18, 0.48, 4]} />
+              <meshBasicMaterial color={row % 2 ? "#bd7e54" : "#5279d8"} />
+            </mesh>
+          </group>
+        ))}
+      </>
+    );
+  }
+
+  if (mode === "orbit") {
+    return (
+      <>
+        {[3.3, 5.15, 7].map((radius, index) => (
+          <mesh key={radius} rotation={[Math.PI * 0.5, 0, index * 0.34]}>
+            <torusGeometry args={[radius, 0.025, 8, 72]} />
+            <meshBasicMaterial color={index % 2 ? "#bd7e54" : "#5279d8"} transparent opacity={0.38} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0, -0.45]}>
+          <sphereGeometry args={[0.66, 20, 12]} />
+          <meshStandardMaterial color="#d9e6f7" emissive="#6d89bd" emissiveIntensity={0.9} metalness={0.4} roughness={0.22} />
+        </mesh>
+      </>
+    );
+  }
+
+  if (mode === "focus") {
+    return (
+      <>
+        {Array.from({ length: Math.min(10, Math.max(4, playbooks.length)) }, (_, index) => (
+          <mesh key={index} position={[0, 0, 0.45 - index * 0.72]} rotation={[0.02, 0, index % 2 ? -0.025 : 0.025]}>
+            <boxGeometry args={[7.8 - index * 0.32, 5.1 - index * 0.22, 0.025]} />
+            <meshBasicMaterial color={index % 2 ? "#bd7e54" : "#5279d8"} transparent opacity={0.22 - index * 0.012} wireframe />
+          </mesh>
+        ))}
       </>
     );
   }
@@ -345,10 +474,14 @@ function ComparisonStage({
   mode,
   playbooks,
   onOpenPlaybook,
+  focusedIds,
+  hasQuery,
 }: {
   mode: PlaybookLayoutMode;
   playbooks: readonly PlaybookItem[];
   onOpenPlaybook: (playbook: PlaybookItem) => void;
+  focusedIds: ReadonlySet<string>;
+  hasQuery: boolean;
 }) {
   const [hoveredId, setHoveredId] = useState<PlaybookItem["id"] | null>(null);
   const textureSources = useMemo(
@@ -383,6 +516,8 @@ function ComparisonStage({
             shadowsEnabled={shadowsEnabled}
             texture={textures[index]}
             hovered={hoveredId === playbook.id}
+            focused={focusedIds.has(playbook.id)}
+            hasQuery={hasQuery}
             onHover={(item) => setHoveredId(item?.id ?? null)}
             onOpenPlaybook={onOpenPlaybook}
           />
@@ -397,26 +532,45 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
   const allPlaybooks = getVisiblePlaybooks(playbookGroup);
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
-  const playbooks = mode === "gallery" && normalizedQuery
-    ? allPlaybooks.filter((playbook) => [playbook.id, playbook.title, ...playbook.tags].join(" ").toLowerCase().includes(normalizedQuery))
-    : allPlaybooks;
-  const title = mode === "solar" ? "SOLAR BURST" : mode === "gallery" ? "STORY GALLERY" : "DEEP SPACE TUNNEL";
+  const focusedIds = useMemo(() => new Set(
+    allPlaybooks
+      .filter((playbook) => !normalizedQuery || [playbook.id, playbook.title, ...playbook.tags].join(" ").toLowerCase().includes(normalizedQuery))
+      .map((playbook) => playbook.id),
+  ), [allPlaybooks, normalizedQuery]);
+  const playbooks = allPlaybooks;
+  const title = mode === "solar"
+    ? "SOLAR BURST"
+    : mode === "index"
+      ? "STORY INDEX"
+      : mode === "tunnel"
+        ? "DEEP SPACE TUNNEL"
+        : mode === "timeline"
+          ? "TIMELINE RAIL"
+          : mode === "orbit"
+            ? "ORBIT RINGS"
+            : "FOCUS STACK";
   const description = mode === "solar"
     ? "중앙 코어를 중심으로 스토리가 방사됩니다"
-    : mode === "gallery"
-      ? "한눈에 훑고 검색해서 들어가는 3D 인덱스입니다"
-      : "스토리 큐브가 깊이 방향으로 이어지는 탐색 공간입니다";
+    : mode === "index"
+      ? "전체를 훑고 검색 결과를 앞으로 당겨 바로 들어갑니다"
+      : mode === "tunnel"
+        ? "스토리 큐브가 깊이 방향으로 이어지는 탐색 공간입니다"
+        : mode === "timeline"
+          ? "스토리를 순서와 레일 단위로 빠르게 훑습니다"
+          : mode === "orbit"
+            ? "그룹과 스토리가 동심 궤도로 분리됩니다"
+            : "검색하거나 호버한 스토리를 전면으로 꺼냅니다";
 
   return (
     <main className={`playbook-layout playbook-layout--${mode}`} data-layout-mode={mode}>
       <div className="playbook-layout__backdrop" aria-hidden="true" />
       <div className="playbook-3d-layout__header">
         <strong>{title}</strong>
-        <span>{description} · {normalizedQuery ? `${playbooks.length}/${allPlaybooks.length}개` : `${allPlaybooks.length}개`} 스토리 · 드래그 회전 / 스크롤 줌 / 큐브 클릭</span>
+        <span>{description} · {mode === "index" && normalizedQuery ? `${focusedIds.size}/${allPlaybooks.length}개` : `${allPlaybooks.length}개`} 스토리 · 드래그 회전 / 스크롤 줌 / 큐브 클릭</span>
       </div>
-      {mode === "gallery" ? (
+      {mode === "index" ? (
         <label className="playbook-3d-layout__finder">
-          <span>STORY INDEX</span>
+          <span>FIND STORY</span>
           <input
             type="search"
             value={query}
@@ -428,14 +582,14 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       ) : null}
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 큐브">
         <Canvas
-          key={`${mode}-${playbooks.length}`}
+          key={mode}
           camera={{ position: [0, 0.45, getCameraDistance(mode, playbooks)], fov: 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false }}
           shadows={playbooks.length <= 24}
           fallback={<div className="playbook-3d-layout__fallback">3D 화면을 불러오는 중입니다.</div>}
         >
-          <ComparisonStage mode={mode} playbooks={playbooks} onOpenPlaybook={onOpenPlaybook} />
+          <ComparisonStage mode={mode} playbooks={playbooks} focusedIds={focusedIds} hasQuery={mode === "index" && Boolean(normalizedQuery)} onOpenPlaybook={onOpenPlaybook} />
         </Canvas>
       </div>
     </main>

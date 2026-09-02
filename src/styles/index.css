@@ -904,8 +904,8 @@ button {
 }
 
 .layout-mode-switcher__title {
-  padding: 0 7px 0 11px;
-  color: rgb(31 41 55 / 56%);
+  padding-left: 11px;
+  color: rgb(255 255 255 / 62%);
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
@@ -914,6 +914,48 @@ button {
 .layout-mode-switcher__buttons {
   display: flex;
   gap: 4px;
+}
+
+.layout-mode-switcher__select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  border-radius: 999px;
+  background: #2c2c2d;
+  color: #fff;
+  box-shadow: 0 5px 14px rgb(44 44 45 / 20%);
+}
+
+.layout-mode-switcher__select-wrap:focus-within {
+  outline: 2px solid rgb(82 121 216 / 55%);
+  outline-offset: 2px;
+}
+
+.layout-mode-switcher__select {
+  min-height: 40px;
+  min-width: 168px;
+  padding: 8px 34px 8px 13px;
+  border: 0;
+  border-radius: 999px;
+  appearance: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  outline: 0;
+}
+
+.layout-mode-switcher__select option {
+  color: #1f2937;
+}
+
+.layout-mode-switcher__select-icon {
+  position: absolute;
+  right: 9px;
+  pointer-events: none;
+  font-size: 19px;
 }
 
 .layout-mode-switcher button {

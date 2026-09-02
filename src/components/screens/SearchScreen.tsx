@@ -38,8 +38,11 @@ function getOrbitStatWidthClass(id: string) {
 
 const layoutModes: readonly { id: PlaybookLayoutMode; label: string; shortLabel: string }[] = [
   { id: "solar", label: "Solar Burst", shortLabel: "Solar" },
-  { id: "gallery", label: "Story Gallery", shortLabel: "Gallery" },
+  { id: "index", label: "Story Index", shortLabel: "Index" },
   { id: "tunnel", label: "Deep Space Tunnel", shortLabel: "Tunnel" },
+  { id: "timeline", label: "Timeline Rail", shortLabel: "Rail" },
+  { id: "orbit", label: "Orbit Rings", shortLabel: "Orbit" },
+  { id: "focus", label: "Focus Stack", shortLabel: "Focus" },
 ];
 
 const cubeMapTopNavItems = [
@@ -181,7 +184,6 @@ export function SearchScreen({
             role="toolbar"
             aria-label="배치 방식 선택"
           >
-            <span className="layout-mode-switcher__title">배치 방식</span>
             <div className="layout-mode-switcher__buttons">
               <button
                 type="button"
@@ -192,19 +194,18 @@ export function SearchScreen({
                 <span className="material-symbols-outlined" aria-hidden="true">view_in_ar</span>
                 Cube View
               </button>
-              {layoutModes.map((mode) => (
-                <button
-                  key={mode.id}
-                  type="button"
-                  className={layoutMode === mode.id ? "is-active" : ""}
-                  onClick={() => setLayoutMode(mode.id)}
-                  aria-pressed={layoutMode === mode.id}
-                  aria-label={mode.label}
+              <label className="layout-mode-switcher__select-wrap">
+                <span className="layout-mode-switcher__title">배치 방식</span>
+                <select
+                  className="layout-mode-switcher__select"
+                  value={layoutMode}
+                  onChange={(event) => setLayoutMode(event.target.value as PlaybookLayoutMode)}
+                  aria-label="비교 배치 방식"
                 >
-                  <span className="layout-mode-switcher__full-label">{mode.label}</span>
-                  <span className="layout-mode-switcher__short-label">{mode.shortLabel}</span>
-                </button>
-              ))}
+                  {layoutModes.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
+                </select>
+                <span className="material-symbols-outlined layout-mode-switcher__select-icon" aria-hidden="true">expand_more</span>
+              </label>
             </div>
           </div>
         ) : isCubeView ? (
