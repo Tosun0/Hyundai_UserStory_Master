@@ -38,10 +38,10 @@ function getOrbitStatWidthClass(id: string) {
 
 const layoutModes: readonly { id: PlaybookLayoutMode; label: string; shortLabel: string }[] = [
   { id: "solar", label: "Solar Burst", shortLabel: "Solar" },
-  { id: "index", label: "Story Index", shortLabel: "Index" },
-  { id: "tunnel", label: "Deep Space Tunnel", shortLabel: "Tunnel" },
-  { id: "timeline", label: "Timeline Rail", shortLabel: "Rail" },
   { id: "orbit", label: "Orbit Rings", shortLabel: "Orbit" },
+  { id: "tunnel", label: "Deep Space Tunnel", shortLabel: "Tunnel" },
+  { id: "index", label: "Story Index", shortLabel: "Index" },
+  { id: "timeline", label: "Timeline Rail", shortLabel: "Rail" },
 ];
 
 const cubeMapTopNavItems = [
