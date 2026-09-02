@@ -57,14 +57,22 @@ function getIndexPosition(index: number, playbookCount: number): Vec3 {
   ];
 }
 
+function getTimelineColumns(playbookCount: number) {
+  return Math.min(6, Math.max(4, playbookCount));
+}
+
+function getTimelineRowY(row: number) {
+  return row % 2 ? -0.95 : 0.95;
+}
+
 function getTimelinePosition(index: number, playbookCount: number): Vec3 {
-  const columns = Math.min(6, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, playbookCount)))));
+  const columns = getTimelineColumns(playbookCount);
   const column = index % columns;
   const row = Math.floor(index / columns);
   return [
-    (column - (columns - 1) / 2) * 2.35,
-    row % 2 ? 1.1 : -1.1,
-    -row * 1.5 + (column % 2 ? 0.18 : -0.18),
+    (column - (columns - 1) / 2) * 2.28,
+    getTimelineRowY(row),
+    -row * 2.25,
   ];
 }
 
@@ -188,6 +196,36 @@ function makeInfoTexture(playbook: PlaybookItem) {
   return texture;
 }
 
+function makeStoryLabelTexture(playbook: PlaybookItem, index: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 760;
+  canvas.height = 126;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return null;
+  }
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "rgba(15, 23, 42, 0.92)";
+  context.roundRect(4, 4, canvas.width - 8, canvas.height - 8, 18);
+  context.fill();
+  context.fillStyle = playbook.group === "H" ? "#8ab4ff" : "#f0aa7d";
+  context.font = "800 21px Arial";
+  context.fillText(`${String(index + 1).padStart(2, "0")}  ·  ${playbook.id}`, 24, 36);
+  context.fillStyle = "#ffffff";
+  context.font = "800 27px Arial";
+  context.fillText(playbook.title.slice(0, 30), 24, 79);
+  context.fillStyle = "rgba(255,255,255,0.58)";
+  context.font = "500 17px Arial";
+  context.fillText(playbook.tags.slice(0, 3).join("  /  "), 24, 106);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
 function InfoPanel({ playbook, visible }: { playbook: PlaybookItem; visible: boolean }) {
   const texture = useMemo(() => (visible ? makeInfoTexture(playbook) : null), [playbook, visible]);
 
@@ -262,6 +300,12 @@ function PlaybookObject({
 
   const opacity = isIndex && hasQuery && !focused ? 0.16 : 1;
   const transparent = isIndex && hasQuery;
+  const timelineLabelTexture = useMemo(
+    () => (mode === "timeline" ? makeStoryLabelTexture(playbook, index) : null),
+    [index, mode, playbook],
+  );
+
+  useEffect(() => () => timelineLabelTexture?.dispose(), [timelineLabelTexture]);
 
   const material = (map?: THREE.Texture) => ({
     color: sideColor,
@@ -291,17 +335,21 @@ function PlaybookObject({
     if (mode === "timeline") {
       return (
         <>
-          <mesh rotation={[Math.PI * 0.5, 0, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
-            <cylinderGeometry args={[0.76, 0.76, 0.46, 10]} />
-            <meshStandardMaterial {...material()} roughness={0.32} metalness={0.52} />
+          <mesh position={[0, 0.12, 0]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <boxGeometry args={[1.84, 1.18, 0.36]} />
+            <meshStandardMaterial {...material()} roughness={0.3} metalness={0.42} />
           </mesh>
-          <mesh position={[0, 0, 0.245]}>
-            <circleGeometry args={[0.6, 32]} />
+          <mesh position={[0, 0.12, 0.19]}>
+            <planeGeometry args={[1.58, 0.82]} />
             <meshBasicMaterial map={texture} transparent={transparent} opacity={opacity} toneMapped={false} />
           </mesh>
-          <mesh position={[0, 0, 0.26]}>
-            <ringGeometry args={[0.62, 0.7, 32]} />
-            <meshBasicMaterial color={playbook.group === "H" ? "#5279d8" : "#bd7e54"} transparent opacity={0.9 * opacity} />
+          <mesh position={[0, -0.66, 0.2]}>
+            <planeGeometry args={[1.84, 0.3]} />
+            <meshBasicMaterial map={timelineLabelTexture} transparent opacity={opacity} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, -0.78, 0]}>
+            <boxGeometry args={[0.05, 0.3, 0.05]} />
+            <meshBasicMaterial color={playbook.group === "H" ? "#5279d8" : "#bd7e54"} transparent opacity={opacity} />
           </mesh>
         </>
       );
@@ -498,21 +546,23 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
   }
 
   if (mode === "timeline") {
-    const columns = Math.min(6, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, playbooks.length)))));
+    const columns = getTimelineColumns(playbooks.length);
     const rows = Math.ceil(playbooks.length / columns);
-    const width = Math.max(9, (columns - 1) * 2.35 + 3);
+    const width = Math.max(9, (columns - 1) * 2.28 + 2.6);
     return (
       <>
         {Array.from({ length: rows }, (_, row) => (
-          <group key={row} position={[0, row % 2 ? 1.1 : -1.1, -row * 1.5]}>
-            <mesh>
-              <boxGeometry args={[width, 0.08, 0.08]} />
-              <meshStandardMaterial color={row % 2 ? "#bd7e54" : "#5279d8"} emissive={row % 2 ? "#5f2712" : "#172d68"} emissiveIntensity={0.25} />
+          <group key={row} position={[0, getTimelineRowY(row) - 0.76, -row * 2.25]}>
+            <mesh rotation={[0, 0, Math.PI * 0.5]}>
+              <cylinderGeometry args={[0.045, 0.045, width, 12]} />
+              <meshStandardMaterial color={row % 2 ? "#bd7e54" : "#5279d8"} emissive={row % 2 ? "#5f2712" : "#172d68"} emissiveIntensity={0.22} metalness={0.55} roughness={0.28} />
             </mesh>
-            <mesh position={[width / 2 - 0.35, 0, 0]} rotation={[0, 0, row % 2 ? -0.55 : 0.55]}>
-              <coneGeometry args={[0.18, 0.48, 4]} />
-              <meshBasicMaterial color={row % 2 ? "#bd7e54" : "#5279d8"} />
-            </mesh>
+            {Array.from({ length: columns }, (_, column) => (
+              <mesh key={column} position={[(column - (columns - 1) / 2) * 2.28, 0, 0]}>
+                <boxGeometry args={[0.035, 0.28, 0.035]} />
+                <meshBasicMaterial color={row % 2 ? "#bd7e54" : "#5279d8"} transparent opacity={0.78} />
+              </mesh>
+            ))}
           </group>
         ))}
       </>
