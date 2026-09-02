@@ -90,20 +90,23 @@ function getHelixPosition(index: number, playbookCount: number): Vec3 {
   return [
     Math.cos(angle) * radius,
     vertical,
-    Math.sin(angle) * radius - 0.4,
+    Math.sin(angle) * radius - 0.12,
   ];
 }
 
 function getSpherePosition(index: number, playbookCount: number): Vec3 {
-  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-  const y = 1 - ((index + 0.5) / Math.max(1, playbookCount)) * 2;
-  const radius = Math.sqrt(1 - y * y);
-  const angle = index * goldenAngle;
-  const sphereRadius = 5.35;
+  const sphereRadius = 4.2;
+  const trackCount = Math.min(3, Math.max(2, Math.ceil(playbookCount / 5)));
+  const itemsPerTrack = Math.ceil(playbookCount / trackCount);
+  const track = index % trackCount;
+  const step = Math.floor(index / trackCount);
+  const y = (track - (trackCount - 1) / 2) * 1.48;
+  const radius = Math.sqrt(Math.max(0.5, sphereRadius * sphereRadius - y * y));
+  const angle = -Math.PI + (step / Math.max(1, itemsPerTrack - 1)) * Math.PI + (track % 2 ? 0.08 : -0.08);
   return [
-    Math.cos(angle) * radius * sphereRadius,
-    y * sphereRadius,
-    Math.sin(angle) * radius * sphereRadius,
+    Math.cos(angle) * radius * 0.18,
+    y,
+    Math.sin(angle) * radius,
   ];
 }
 
@@ -137,6 +140,8 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
 
   return 18.5 + Math.min(6, Math.max(0, Math.ceil(playbooks.length / 6) - 2) * 0.65);
 }
+
+const SPHERE_CAMERA_DISTANCE = 4.15;
 
 function cubePosition(
   playbook: PlaybookItem,
@@ -381,6 +386,22 @@ function InfoPanel({ playbook, visible }: { playbook: PlaybookItem; visible: boo
   );
 }
 
+function makeCurvedCardGeometry(width: number, height: number) {
+  const geometry = new THREE.PlaneGeometry(width, height, 16, 5);
+  const position = geometry.attributes.position;
+  const halfWidth = width * 0.5;
+
+  for (let index = 0; index < position.count; index += 1) {
+    const x = position.getX(index);
+    const normalizedX = x / halfWidth;
+    position.setZ(index, 0.18 * normalizedX * normalizedX);
+  }
+
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 function PlaybookObject({
   playbook,
   index,
@@ -388,13 +409,15 @@ function PlaybookObject({
   visiblePlaybooks,
   shadowsEnabled,
   texture,
-  onOpenPlaybook,
   onHover,
   hovered,
   focused,
   hasQuery,
   selected,
   hasSelection,
+  focusedView,
+  hasFocusedView,
+  onFocusPlaybook,
 }: {
   playbook: PlaybookItem;
   index: number;
@@ -402,13 +425,15 @@ function PlaybookObject({
   visiblePlaybooks: readonly PlaybookItem[];
   shadowsEnabled: boolean;
   texture: THREE.Texture;
-  onOpenPlaybook: (playbook: PlaybookItem) => void;
   onHover: (playbook: PlaybookItem | null) => void;
   hovered: boolean;
   focused: boolean;
   hasQuery: boolean;
   selected: boolean;
   hasSelection: boolean;
+  focusedView: boolean;
+  hasFocusedView: boolean;
+  onFocusPlaybook: (playbook: PlaybookItem) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const basePosition = useMemo(
@@ -424,15 +449,25 @@ function PlaybookObject({
   const isPrism = mode === "prism";
   const isHelix = mode === "helix";
   const isSphere = mode === "sphere";
-  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.86 : 0.9;
+  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.72 : 0.9;
+  const curvedCardGeometry = useMemo(
+    () => makeCurvedCardGeometry(isSphere ? 1.55 : 2.5, isSphere ? 0.92 : 1.5),
+    [isSphere],
+  );
   const baseRotation = useMemo<Vec3>(
     () => isIndex
       ? [0.025 + (index % 2) * 0.018, -0.05 + (index % 3) * 0.025, 0]
       : mode === "timeline"
         ? [0.02, index % 2 ? -0.08 : 0.08, index % 2 ? -0.04 : 0.04]
-      : [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
-    [index, isIndex, mode],
+      : isSphere
+        ? [0, -basePosition[0] * 0.015, basePosition[1] * 0.012]
+        : isHelix
+          ? [0.02, -basePosition[0] * 0.025, basePosition[2] * 0.015]
+          : [0.08 + (index % 3) * 0.035, -0.18 + (index % 4) * 0.08, 0],
+    [basePosition, index, isHelix, isIndex, isSphere, mode],
   );
+
+  useEffect(() => () => curvedCardGeometry.dispose(), [curvedCardGeometry]);
 
   useFrame((_, delta) => {
     const group = groupRef.current;
@@ -444,7 +479,13 @@ function PlaybookObject({
     const interactionPosition = new THREE.Vector3(basePosition[0], basePosition[1], basePosition[2]);
     const modeFocus = mode !== "timeline" && selected;
 
-    if (modeFocus) {
+    if (hasFocusedView) {
+      if (focusedView) {
+        interactionPosition.set(0, 0, mode === "sphere" ? -0.92 : 2.35);
+      }
+    }
+
+    if (modeFocus && !hasFocusedView) {
       // Keep the hover cue in a shallow, shared depth band so it never jumps
       // across neighbouring cards or drops out from under the pointer.
       interactionPosition.y += mode === "sphere" ? 0.12 : 0.1;
@@ -454,7 +495,8 @@ function PlaybookObject({
     const targetScale = layoutScale
       * (hovered ? 1.08 : 1)
       * (isIndex && hasQuery && !focused ? 0.82 : 1)
-      * (hasSelection && !selected && mode !== "timeline" ? 0.88 : 1);
+      * (hasSelection && !selected && mode !== "timeline" ? 0.88 : 1)
+      * (hasFocusedView ? (focusedView ? 1.48 : 0.001) : 1);
     group.position.lerp(interactionPosition, 1 - Math.pow(0.001, delta));
     group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
   });
@@ -466,7 +508,8 @@ function PlaybookObject({
       : 1;
   const interactiveDim = hasSelection && !selected && mode !== "timeline";
   const lightStage = isIndex || mode === "timeline";
-  const transparent = lightStage || isPrism || (isIndex && hasQuery) || interactiveDim;
+  const viewOpacity = hasFocusedView && !focusedView ? 0 : opacity;
+  const transparent = lightStage || isPrism || isHelix || isSphere || (isIndex && hasQuery) || interactiveDim || hasFocusedView;
   const surfaceColor = isIndex
     ? lightPalette[index % lightPalette.length]
     : mode === "timeline"
@@ -474,7 +517,7 @@ function PlaybookObject({
       : isPrism
         ? prismPalette[index % prismPalette.length]
       : sideColor;
-  const surfaceOpacity = isIndex ? 0.7 * opacity : mode === "timeline" ? 0.86 * opacity : isPrism ? 0.78 * opacity : opacity;
+  const surfaceOpacity = isIndex ? 0.7 * viewOpacity : mode === "timeline" ? 0.86 * viewOpacity : isPrism ? 0.78 * viewOpacity : viewOpacity;
   const timelineLabelTexture = useMemo(
     () => (mode === "timeline" ? makeStoryLabelTexture(playbook, index) : null),
     [index, mode, playbook],
@@ -532,7 +575,7 @@ function PlaybookObject({
       );
     }
 
-    if (mode === "orbit" || mode === "sphere") {
+    if (mode === "orbit") {
       return (
         <>
           <mesh castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
@@ -542,6 +585,26 @@ function PlaybookObject({
           <mesh scale={1.12}>
             <sphereGeometry args={[0.9, 16, 12]} />
             <meshBasicMaterial color={sideColor} transparent opacity={0.23 * opacity} wireframe />
+          </mesh>
+        </>
+      );
+    }
+
+    if (isHelix || isSphere) {
+      return (
+        <>
+          <mesh geometry={curvedCardGeometry} position={[0, 0, -0.055]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <meshStandardMaterial
+              color={surfaceColor}
+              transparent
+              opacity={0.86 * viewOpacity}
+              roughness={0.2}
+              metalness={0.24}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          <mesh geometry={curvedCardGeometry} position={[0, 0, 0.015]}>
+            <meshBasicMaterial map={texture} transparent opacity={viewOpacity} toneMapped={false} side={THREE.DoubleSide} />
           </mesh>
         </>
       );
@@ -595,7 +658,7 @@ function PlaybookObject({
       rotation={baseRotation}
       onClick={(event) => {
         event.stopPropagation();
-        onOpenPlaybook(playbook);
+        onFocusPlaybook(playbook);
       }}
       onPointerEnter={(event) => {
         event.stopPropagation();
@@ -611,7 +674,7 @@ function PlaybookObject({
         <boxGeometry args={[1.84, 0.055, 0.035]} />
         <meshBasicMaterial color={focused || !hasQuery ? lightPalette[index % lightPalette.length] : "#b4b9c8"} transparent opacity={opacity} />
       </mesh> : null}
-      <InfoPanel playbook={playbook} visible={hovered} />
+      <InfoPanel playbook={playbook} visible={hovered || focusedView} />
     </group>
   );
 }
@@ -655,10 +718,10 @@ function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
-    controls.enableZoom = mode !== "helix";
+    controls.enableZoom = mode !== "helix" && mode !== "sphere";
     controls.zoomSpeed = 0.8;
-    controls.minDistance = 10;
-    controls.maxDistance = 28;
+    controls.minDistance = mode === "sphere" ? 0.35 : 10;
+    controls.maxDistance = mode === "sphere" ? 4.6 : 28;
     controls.rotateSpeed = 0.55;
     controls.minPolarAngle = Math.PI * 0.32;
     controls.maxPolarAngle = Math.PI * 0.68;
@@ -677,7 +740,7 @@ function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
     if (mode === "sphere" && sphereIntro.current < 1) {
       sphereIntro.current = Math.min(1, sphereIntro.current + delta / 1.35);
       const eased = 1 - Math.pow(1 - sphereIntro.current, 3);
-      camera.position.set(0, 0.45 * eased, 0.2 + (18.5 - 0.2) * eased);
+      camera.position.set(0, 0.3 * eased, 0.2 + (SPHERE_CAMERA_DISTANCE - 0.2) * eased);
       camera.lookAt(0, 0, 0);
       if (sphereIntro.current >= 1 && controlsRef.current) {
         controlsRef.current.enabled = true;
@@ -693,7 +756,7 @@ function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
   return null;
 }
 
-function HelixMotionGroup({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {
+function HelixMotionGroup({ enabled, focusActive, children }: { enabled: boolean; focusActive: boolean; children: React.ReactNode }) {
   const { gl } = useThree();
   const ref = useRef<THREE.Group>(null);
   const scrollTarget = useRef(0);
@@ -714,7 +777,11 @@ function HelixMotionGroup({ enabled, children }: { enabled: boolean; children: R
 
   useFrame((_, delta) => {
     if (ref.current) {
+      if (focusActive) {
+        scrollTarget.current = 0;
+      }
       ref.current.position.y = THREE.MathUtils.damp(ref.current.position.y, scrollTarget.current, 5, delta);
+      ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, scrollTarget.current * 0.24, 4, delta);
     }
   });
 
@@ -915,16 +982,41 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
   }
 
   if (mode === "sphere") {
+    const sphereRadius = 4.2;
+    const trackCount = Math.min(3, Math.max(2, Math.ceil(playbooks.length / 5)));
     return (
       <>
         <mesh>
           <sphereGeometry args={[5.55, 32, 24]} />
-          <meshBasicMaterial color="#8ab4ff" transparent opacity={0.2} wireframe toneMapped={false} />
+          <meshBasicMaterial color="#8ab4ff" transparent opacity={0.035} wireframe toneMapped={false} />
         </mesh>
-        <mesh rotation={[Math.PI * 0.5, 0, 0]}>
-          <torusGeometry args={[5.58, 0.035, 8, 96]} />
-          <meshBasicMaterial color="#ff9fcf" transparent opacity={0.56} toneMapped={false} />
-        </mesh>
+        {Array.from({ length: trackCount }, (_, index) => {
+          const y = (index - (trackCount - 1) / 2) * 1.48;
+          const radius = Math.sqrt(Math.max(0.5, sphereRadius * sphereRadius - y * y));
+          return (
+            <mesh key={index} position={[0, y, 0]} rotation={[Math.PI * 0.5, 0, 0]}>
+              <torusGeometry args={[radius, 0.035, 8, 96]} />
+              <meshBasicMaterial color={index % 2 ? "#65d6ff" : "#ff9fcf"} transparent opacity={0.54} toneMapped={false} />
+            </mesh>
+          );
+        })}
+        {[-1, 1].map((direction) => {
+          const curve = new THREE.CatmullRomCurve3(Array.from({ length: 64 }, (_, index) => {
+            const progress = index / 63;
+            const angle = -Math.PI * 0.82 + progress * Math.PI * 1.64;
+            return new THREE.Vector3(
+              Math.cos(angle) * 4.1,
+              Math.sin(angle * 1.25) * 3.6 * direction,
+              Math.sin(angle) * 4.1,
+            );
+          }));
+          return (
+            <mesh key={direction}>
+              <tubeGeometry args={[curve, 96, 0.028, 6, false]} />
+              <meshBasicMaterial color={direction > 0 ? "#ffd166" : "#a78bfa"} transparent opacity={0.58} toneMapped={false} />
+            </mesh>
+          );
+        })}
       </>
     );
   }
@@ -1028,6 +1120,7 @@ function ComparisonStage({
   hasQuery: boolean;
 }) {
   const [hoveredId, setHoveredId] = useState<PlaybookItem["id"] | null>(null);
+  const [focusedViewId, setFocusedViewId] = useState<PlaybookItem["id"] | null>(null);
   const hoverClearTimer = useRef<number | null>(null);
   const handleHover = useCallback((playbook: PlaybookItem | null) => {
     if (hoverClearTimer.current !== null) {
@@ -1045,6 +1138,20 @@ function ComparisonStage({
       hoverClearTimer.current = null;
     }, 90);
   }, []);
+
+  useEffect(() => {
+    setFocusedViewId(null);
+  }, [mode, playbooks]);
+
+  const handleFocusPlaybook = useCallback((playbook: PlaybookItem) => {
+    if (focusedViewId === playbook.id) {
+      onOpenPlaybook(playbook);
+      return;
+    }
+
+    setFocusedViewId(playbook.id);
+    setHoveredId(playbook.id);
+  }, [focusedViewId, onOpenPlaybook]);
 
   useEffect(() => () => {
     if (hoverClearTimer.current !== null) {
@@ -1097,7 +1204,18 @@ function ComparisonStage({
       {mode === "index" ? <pointLight position={[-5, 2, 2]} color="#ff9fcf" intensity={8} distance={12} /> : null}
       {mode === "timeline" ? <pointLight position={[5, -2, 1]} color="#9e8cff" intensity={8} distance={12} /> : null}
       <StageEffects mode={mode} />
-      <HelixMotionGroup enabled={mode === "helix"}>
+      <HelixMotionGroup enabled={mode === "helix"} focusActive={focusedViewId !== null}>
+        <mesh
+          position={[0, 0, -12]}
+          onClick={(event) => {
+            event.stopPropagation();
+            setFocusedViewId(null);
+            setHoveredId(null);
+          }}
+        >
+          <planeGeometry args={[100, 100]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
         <StageGuides mode={mode} playbooks={playbooks} />
         <group>
           <CoreCube mode={mode} />
@@ -1115,8 +1233,10 @@ function ComparisonStage({
               hasQuery={hasQuery}
               selected={hoveredId === playbook.id}
               hasSelection={hoveredId !== null}
+              focusedView={focusedViewId === playbook.id}
+              hasFocusedView={focusedViewId !== null}
               onHover={handleHover}
-              onOpenPlaybook={onOpenPlaybook}
+              onFocusPlaybook={handleFocusPlaybook}
             />
           ))}
         </group>
@@ -1158,7 +1278,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
         : mode === "helix"
           ? "스크롤로 세로 소용돌이를 오르내리며 플레이북을 만납니다"
           : mode === "sphere"
-            ? "원점에서 이동한 카메라가 구체 표면의 플레이북을 펼칩니다"
+            ? "구체 안쪽 카메라에서 내부 스플라인을 따라 플레이북을 만납니다"
         : mode === "timeline"
           ? "스토리를 순서와 레일 단위로 빠르게 훑습니다"
           : "그룹과 스토리가 동심 궤도로 분리됩니다";
@@ -1168,7 +1288,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-layout__backdrop" aria-hidden="true" />
       <div className="playbook-3d-layout__header">
         <strong>{title}</strong>
-        <span>{description} · {mode === "index" && normalizedQuery ? `${focusedIds.size}/${allPlaybooks.length}개` : `${allPlaybooks.length}개`} 스토리 · 드래그 회전 / 스크롤 줌 / 오브젝트 클릭</span>
+        <span>{description} · {mode === "index" && normalizedQuery ? `${focusedIds.size}/${allPlaybooks.length}개` : `${allPlaybooks.length}개`} 스토리 · 드래그 회전 / 스크롤 줌 / 첫 클릭 포커스 / 두 번째 클릭 열기</span>
       </div>
       {mode === "index" ? (
         <label className="playbook-3d-layout__finder">
@@ -1190,6 +1310,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
           gl={{ antialias: true, alpha: false }}
           shadows={playbooks.length <= 24}
           fallback={<div className="playbook-3d-layout__fallback">3D 화면을 불러오는 중입니다.</div>}
+          onPointerMissed={() => undefined}
         >
           <ComparisonStage mode={mode} playbooks={playbooks} focusedIds={focusedIds} hasQuery={mode === "index" && Boolean(normalizedQuery)} onOpenPlaybook={onOpenPlaybook} />
         </Canvas>
