@@ -887,7 +887,7 @@ function OrbitController({ mode, sphereGroupRef }: { mode: PlaybookLayoutMode; s
     controls.rotateSpeed = 0.55;
     controls.minPolarAngle = Math.PI * 0.32;
     controls.maxPolarAngle = Math.PI * 0.68;
-    controls.enabled = true;
+    controls.enabled = mode !== "helix";
     controls.target.set(0, 0, 0);
     controls.update();
     controlsRef.current = controls;
