@@ -88,12 +88,12 @@ const HELIX_RAIL_RADII = [3.7, 4.22] as const;
 
 function getHelixPoint(railIndex: number, angle: number): Vec3 {
   const radius = HELIX_RAIL_RADII[railIndex % HELIX_RAIL_RADII.length];
-  // The front of the helix is -Z. At angle 0 every rail is exactly on
-  // the camera's screen-center line: x = 0, y = 0, z = -radius.
+  // The camera is on +Z, so the near/front phase is +Z. At angle 0 every rail is exactly on
+  // the camera's screen-center line: x = 0, y = 0, z = +radius.
   return [
     Math.sin(angle) * radius,
     angle * HELIX_PITCH_PER_RADIAN,
-    -Math.cos(angle) * radius,
+    Math.cos(angle) * radius,
   ];
 }
 
@@ -970,9 +970,9 @@ function HelixMotionGroup({ enabled, focusActive, children }: { enabled: boolean
       }
       ref.current.position.y = THREE.MathUtils.damp(ref.current.position.y, scrollTarget.current, 5, delta);
       // A point at angle θ reaches y = 0 when scroll = -pitch * θ.
-      // Rotating by the same θ puts that point on x = 0, so the two values
+      // With the camera-near phase on +Z, rotating by -θ puts that point on x = 0, so the two values
       // must be coupled instead of using an arbitrary visual multiplier.
-      const centeredRotation = -scrollTarget.current / HELIX_PITCH_PER_RADIAN;
+      const centeredRotation = scrollTarget.current / HELIX_PITCH_PER_RADIAN;
       ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, centeredRotation, 4, delta);
     }
   });
@@ -1519,7 +1519,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 스테이지">
         <Canvas
           key={mode}
-          camera={{ position: mode === "sphere" ? [0, 0, 0.1] : [0, 0.45, getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 68 : 38 }}
+          camera={{ position: mode === "sphere" ? [0, 0, 0.1] : mode === "helix" ? [0, 0, getCameraDistance(mode, playbooks)] : [0, 0.45, getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 68 : 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: mode === "sphere" }}
           shadows={playbooks.length <= 24}
