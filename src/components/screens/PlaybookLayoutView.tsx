@@ -957,7 +957,7 @@ function HelixMotionGroup({ enabled, focusActive, children }: { enabled: boolean
 
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-      scrollTarget.current = THREE.MathUtils.clamp(scrollTarget.current - event.deltaY * 0.006, -5.5, 5.5);
+      scrollTarget.current = THREE.MathUtils.clamp(scrollTarget.current + event.deltaY * 0.006, -5.5, 5.5);
     };
 
     gl.domElement.addEventListener("wheel", handleWheel, { passive: false });
