@@ -94,34 +94,44 @@ function getHelixPosition(index: number, playbookCount: number): Vec3 {
   ];
 }
 
-function getSphereTrackCount(playbookCount: number) {
-  return Math.min(4, Math.max(3, Math.ceil(playbookCount / 5)));
-}
+const SPHERE_SURFACE_RADIUS = 3.05;
+const SPHERE_CARD_RADIUS = 2.88;
 
-const SPHERE_SURFACE_RADIUS = 5.35;
-const SPHERE_CARD_RADIUS = 5.24;
-
-function getSphereTrackPoint(track: number, trackCount: number, progress: number, radius = SPHERE_CARD_RADIUS): Vec3 {
-  const latitude = (track - (trackCount - 1) / 2) * (Math.PI / 6);
-  const arc = -1.08 + progress * 2.16;
-  const horizontalRadius = Math.cos(latitude) * radius;
-  return [
-    Math.sin(arc) * horizontalRadius,
-    Math.sin(latitude) * radius,
-    -Math.cos(arc) * horizontalRadius,
-  ];
+function getSphereColumns(playbookCount: number) {
+  return Math.min(6, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, playbookCount)))));
 }
 
 function getSpherePosition(index: number, playbookCount: number): Vec3 {
-  const trackCount = getSphereTrackCount(playbookCount);
-  const itemsPerTrack = Math.ceil(playbookCount / trackCount);
-  const track = index % trackCount;
-  const step = Math.floor(index / trackCount);
-  return getSphereTrackPoint(
-    track,
-    trackCount,
-    step / Math.max(1, itemsPerTrack - 1),
-  );
+  if (playbookCount !== 12) {
+    const columns = getSphereColumns(playbookCount);
+    const rows = Math.ceil(playbookCount / columns);
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const latitude = ((rows - 1) / 2 - row) * 0.42;
+    const longitude = Math.PI + (column - (columns - 1) / 2) * 0.58;
+    const horizontalRadius = Math.cos(latitude) * SPHERE_CARD_RADIUS;
+    return [
+      Math.sin(longitude) * horizontalRadius,
+      Math.sin(latitude) * SPHERE_CARD_RADIUS,
+      Math.cos(longitude) * horizontalRadius,
+    ];
+  }
+
+  const bands = [2, 4, 4, 2];
+  let row = 0;
+  let column = index;
+  while (column >= bands[row]) {
+    column -= bands[row];
+    row += 1;
+  }
+  const latitude = ((bands.length - 1) / 2 - row) * 0.32;
+  const longitude = Math.PI + (column - (bands[row] - 1) / 2) * 0.54;
+  const horizontalRadius = Math.cos(latitude) * SPHERE_CARD_RADIUS;
+  return [
+    Math.sin(longitude) * horizontalRadius,
+    Math.sin(latitude) * SPHERE_CARD_RADIUS,
+    Math.cos(longitude) * horizontalRadius,
+  ];
 }
 
 function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly PlaybookItem[]) {
@@ -155,7 +165,7 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
   return 18.5 + Math.min(6, Math.max(0, Math.ceil(playbooks.length / 6) - 2) * 0.65);
 }
 
-const SPHERE_CAMERA_DISTANCE = 0.75;
+const SPHERE_CAMERA_DISTANCE = 1.25;
 
 function cubePosition(
   playbook: PlaybookItem,
@@ -491,7 +501,12 @@ function PlaybookObject({
       return;
     }
 
-    if (isHelix || isSphere) {
+    if (isSphere) {
+      group.quaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1),
+        new THREE.Vector3(-basePosition[0], -basePosition[1], -basePosition[2]).normalize(),
+      );
+    } else if (isHelix) {
       const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
       const parent = group.parent;
       if (parent) {
@@ -520,6 +535,7 @@ function PlaybookObject({
     }
 
     const targetScale = layoutScale
+      * (isSphere ? 1 + Math.max(0, 1 - Math.hypot(basePosition[0], basePosition[1]) / 3.4) * 0.42 : 1)
       * (hovered ? 1.08 : 1)
       * (isIndex && hasQuery && !focused ? 0.82 : 1)
       * (hasSelection && !selected && mode !== "timeline" ? 0.88 : 1)
@@ -534,17 +550,20 @@ function PlaybookObject({
       ? 0.62
       : 1;
   const interactiveDim = hasSelection && !selected && mode !== "timeline";
-  const lightStage = isIndex || mode === "timeline";
+  const lightStage = isIndex || mode === "timeline" || isSphere;
   const viewOpacity = hasFocusedView && !focusedView ? 0 : opacity;
   const transparent = lightStage || isPrism || isHelix || isSphere || (isIndex && hasQuery) || interactiveDim || hasFocusedView;
-  const surfaceColor = isIndex
+  const spherePalette = ["#e5e7eb", "#fff7ed", "#dbeafe", "#fce7f3", "#e0e7ff"];
+  const surfaceColor = isSphere
+    ? spherePalette[index % spherePalette.length]
+    : isIndex
     ? lightPalette[index % lightPalette.length]
     : mode === "timeline"
       ? lightPalette[index % lightPalette.length]
       : isPrism
         ? prismPalette[index % prismPalette.length]
       : sideColor;
-  const surfaceOpacity = isIndex ? 0.7 * viewOpacity : mode === "timeline" ? 0.86 * viewOpacity : isPrism ? 0.78 * viewOpacity : viewOpacity;
+  const surfaceOpacity = isSphere ? 0.92 * viewOpacity : isIndex ? 0.7 * viewOpacity : mode === "timeline" ? 0.86 * viewOpacity : isPrism ? 0.78 * viewOpacity : viewOpacity;
   const timelineLabelTexture = useMemo(
     () => (mode === "timeline" ? makeStoryLabelTexture(playbook, index) : null),
     [index, mode, playbook],
@@ -770,7 +789,7 @@ function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
     if (mode === "sphere" && sphereIntro.current < 1) {
       sphereIntro.current = Math.min(1, sphereIntro.current + delta / 1.35);
       const eased = 1 - Math.pow(1 - sphereIntro.current, 3);
-      camera.position.set(0, 0.3 * eased, 0.2 + (SPHERE_CAMERA_DISTANCE - 0.2) * eased);
+      camera.position.set(0, 0.08 * eased, 0.2 + (SPHERE_CAMERA_DISTANCE - 0.2) * eased);
       camera.lookAt(0, 0, 0);
       if (sphereIntro.current >= 1 && controlsRef.current) {
         controlsRef.current.enabled = true;
@@ -1012,20 +1031,15 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
   }
 
   if (mode === "sphere") {
-    const trackCount = getSphereTrackCount(playbooks.length);
     return (
       <>
         <mesh renderOrder={0}>
           <sphereGeometry args={[SPHERE_SURFACE_RADIUS, 32, 24]} />
-          <meshBasicMaterial color="#1f2d5a" transparent opacity={0.08} side={THREE.BackSide} depthWrite={false} toneMapped={false} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.2} side={THREE.BackSide} depthWrite={false} toneMapped={false} />
         </mesh>
-        <mesh renderOrder={0}>
-          <sphereGeometry args={[SPHERE_SURFACE_RADIUS, 32, 24]} />
-          <meshBasicMaterial color="#9bb5ff" transparent opacity={0.16} wireframe side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
-        </mesh>
-        <pointLight position={[0, 0, -1.4]} color="#8ab4ff" intensity={10} distance={9} />
-        <pointLight position={[-2.4, 0.8, -2.4]} color="#ff6b9d" intensity={8} distance={8} />
-        <pointLight position={[2.4, -0.8, -2.4]} color="#65d6ff" intensity={8} distance={8} />
+        <pointLight position={[0, 0, -1.4]} color="#fff1c7" intensity={5} distance={9} />
+        <pointLight position={[-2.4, 0.8, -2.4]} color="#ffc5d7" intensity={5} distance={8} />
+        <pointLight position={[2.4, -0.8, -2.4]} color="#bdeaff" intensity={5} distance={8} />
       </>
     );
   }
@@ -1190,7 +1204,9 @@ function ComparisonStage({
           ? "#080612"
           : mode === "helix"
             ? "#071526"
-          : "#0e1324";
+            : mode === "sphere"
+              ? "#f3f2ef"
+              : "#0e1324";
   const keyLightColor = mode === "solar"
     ? "#ffd0e5"
     : mode === "index"
@@ -1201,15 +1217,17 @@ function ComparisonStage({
           ? "#d4c4ff"
           : mode === "helix"
             ? "#c6f4ff"
-            : "#d6e4ff";
+            : mode === "sphere"
+              ? "#fffaf2"
+              : "#d6e4ff";
   const lightStage = mode === "index" || mode === "timeline";
 
   return (
     <>
       {!lightStage ? <color attach="background" args={[stageBackground]} /> : null}
-      <ambientLight intensity={lightStage ? 1.45 : mode === "prism" ? 0.72 : mode === "helix" ? 0.82 : mode === "sphere" ? 0.68 : mode === "orbit" ? 0.8 : 0.7} />
+      <ambientLight intensity={lightStage ? 1.45 : mode === "sphere" ? 1.18 : mode === "prism" ? 0.72 : mode === "helix" ? 0.82 : mode === "orbit" ? 0.8 : 0.7} />
       <directionalLight position={[-5, 8, 8]} color={keyLightColor} intensity={mode === "prism" ? 3.5 : 3.7} castShadow={shadowsEnabled} />
-      <pointLight position={[0, 0, 4]} color={mode === "solar" ? "#ff83bd" : mode === "orbit" ? "#a881ff" : mode === "timeline" ? "#ff9edc" : mode === "index" ? "#8bdcff" : mode === "helix" ? "#65d6ff" : "#9f87ff"} intensity={lightStage ? 9 : mode === "solar" || mode === "orbit" ? 10 : 7} distance={14} />
+      <pointLight position={[0, 0, 4]} color={mode === "solar" ? "#ff83bd" : mode === "orbit" ? "#a881ff" : mode === "timeline" ? "#ff9edc" : mode === "index" ? "#8bdcff" : mode === "helix" ? "#65d6ff" : mode === "sphere" ? "#ffd5e1" : "#9f87ff"} intensity={lightStage ? 9 : mode === "sphere" ? 6 : mode === "solar" || mode === "orbit" ? 10 : 7} distance={14} />
       {mode === "index" ? <pointLight position={[-5, 2, 2]} color="#ff9fcf" intensity={8} distance={12} /> : null}
       {mode === "timeline" ? <pointLight position={[5, -2, 1]} color="#9e8cff" intensity={8} distance={12} /> : null}
       <StageEffects mode={mode} />
@@ -1314,7 +1332,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 스테이지">
         <Canvas
           key={mode}
-          camera={{ position: mode === "sphere" ? [0, 0.1, 0.2] : [0, 0.45, getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 58 : 38 }}
+          camera={{ position: mode === "sphere" ? [0, 0.1, 0.2] : [0, 0.45, getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 62 : 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false }}
           shadows={playbooks.length <= 24}
