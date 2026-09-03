@@ -94,20 +94,32 @@ function getHelixPosition(index: number, playbookCount: number): Vec3 {
   ];
 }
 
+function getSphereTrackCount(playbookCount: number) {
+  return Math.min(3, Math.max(2, Math.ceil(playbookCount / 8)));
+}
+
+function getSphereTrackPoint(track: number, trackCount: number, progress: number): Vec3 {
+  const radius = 4.35;
+  const latitude = -0.22 + progress * 0.44;
+  const longitude = (track - (trackCount - 1) / 2) * 0.09 + Math.sin(latitude * Math.PI * 2) * 0.1;
+  const horizontalRadius = Math.cos(latitude) * radius;
+  return [
+    Math.sin(longitude) * horizontalRadius,
+    Math.sin(latitude) * radius - 0.9,
+    -Math.cos(longitude) * horizontalRadius,
+  ];
+}
+
 function getSpherePosition(index: number, playbookCount: number): Vec3 {
-  const sphereRadius = 3.8;
-  const trackCount = Math.min(3, Math.max(2, Math.ceil(playbookCount / 5)));
+  const trackCount = getSphereTrackCount(playbookCount);
   const itemsPerTrack = Math.ceil(playbookCount / trackCount);
   const track = index % trackCount;
   const step = Math.floor(index / trackCount);
-  const latitude = -Math.PI * 0.62
-    + (step / Math.max(1, itemsPerTrack - 1)) * Math.PI * 1.24;
-  const trackOffset = (track - (trackCount - 1) / 2) * 0.92;
-  return [
-    trackOffset + Math.sin(latitude) * 0.52,
-    Math.sin(latitude) * sphereRadius * 0.52,
-    -3.45 - Math.cos(latitude) * 0.36 + 0.18,
-  ];
+  return getSphereTrackPoint(
+    track,
+    trackCount,
+    step / Math.max(1, itemsPerTrack - 1),
+  );
 }
 
 function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly PlaybookItem[]) {
@@ -141,7 +153,7 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
   return 18.5 + Math.min(6, Math.max(0, Math.ceil(playbooks.length / 6) - 2) * 0.65);
 }
 
-const SPHERE_CAMERA_DISTANCE = 1.1;
+const SPHERE_CAMERA_DISTANCE = 0.75;
 
 function cubePosition(
   playbook: PlaybookItem,
@@ -450,9 +462,9 @@ function PlaybookObject({
   const isPrism = mode === "prism";
   const isHelix = mode === "helix";
   const isSphere = mode === "sphere";
-  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.52 : 0.9;
+  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.3 : 0.9;
   const curvedCardGeometry = useMemo(
-    () => makeCurvedCardGeometry(isSphere ? 1.4 : 2.5, isSphere ? 0.72 : 1.5),
+    () => makeCurvedCardGeometry(isSphere ? 1.3 : 2.5, isSphere ? 0.68 : 1.5),
     [isSphere],
   );
   const baseRotation = useMemo<Vec3>(
@@ -477,10 +489,16 @@ function PlaybookObject({
       return;
     }
 
-    if (isHelix) {
+    if (isHelix || isSphere) {
       const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
-      group.lookAt(cameraPosition);
-      group.rotateY(Math.PI);
+      const parent = group.parent;
+      if (parent) {
+        parent.worldToLocal(cameraPosition);
+        group.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1),
+          cameraPosition.sub(group.position).normalize(),
+        );
+      }
     }
 
     const interactionPosition = new THREE.Vector3(basePosition[0], basePosition[1], basePosition[2]);
@@ -600,18 +618,19 @@ function PlaybookObject({
     if (isHelix || isSphere) {
       return (
         <>
-          <mesh geometry={curvedCardGeometry} position={[0, 0, -0.055]} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+          <mesh geometry={curvedCardGeometry} position={[0, 0, -0.055]} renderOrder={5} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
             <meshStandardMaterial
               color={surfaceColor}
               transparent
               opacity={0.86 * viewOpacity}
               roughness={0.2}
               metalness={0.24}
+              depthWrite={false}
               side={THREE.DoubleSide}
             />
           </mesh>
-          <mesh geometry={curvedCardGeometry} position={[0, 0, 0.015]}>
-            <meshBasicMaterial map={texture} transparent opacity={viewOpacity} toneMapped={false} side={THREE.DoubleSide} />
+          <mesh geometry={curvedCardGeometry} position={[0, 0, 0.015]} renderOrder={20}>
+            <meshBasicMaterial map={texture} transparent opacity={viewOpacity} toneMapped={false} depthTest={false} depthWrite={false} side={THREE.DoubleSide} />
           </mesh>
         </>
       );
@@ -748,7 +767,7 @@ function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
       sphereIntro.current = Math.min(1, sphereIntro.current + delta / 1.35);
       const eased = 1 - Math.pow(1 - sphereIntro.current, 3);
       camera.position.set(0, 0.3 * eased, 0.2 + (SPHERE_CAMERA_DISTANCE - 0.2) * eased);
-      camera.lookAt(0, 0, 0);
+      camera.lookAt(0, 0.55, 0);
       if (sphereIntro.current >= 1 && controlsRef.current) {
         controlsRef.current.enabled = true;
         controlsRef.current.update();
@@ -989,32 +1008,42 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
   }
 
   if (mode === "sphere") {
-    const sphereRadius = 3.8;
-    const trackCount = Math.min(3, Math.max(2, Math.ceil(playbooks.length / 5)));
+    const trackCount = getSphereTrackCount(playbooks.length);
+    const rings: Array<{ rotation: Vec3; color: string }> = [
+      { rotation: [0, 0, 0], color: "#b7c8ff" },
+      { rotation: [Math.PI * 0.5, 0, 0], color: "#65d6ff" },
+      { rotation: [0, Math.PI * 0.5, 0], color: "#ff9fcf" },
+    ];
     return (
       <>
-        <mesh>
-          <sphereGeometry args={[5.55, 32, 24]} />
-          <meshBasicMaterial color="#8ab4ff" transparent opacity={0.035} wireframe toneMapped={false} />
+        <mesh renderOrder={0}>
+          <sphereGeometry args={[5.35, 32, 24]} />
+          <meshBasicMaterial color="#1f2d5a" transparent opacity={0.1} side={THREE.BackSide} depthWrite={false} toneMapped={false} />
         </mesh>
+        <mesh renderOrder={0}>
+          <sphereGeometry args={[5.37, 32, 24]} />
+          <meshBasicMaterial color="#8ab4ff" transparent opacity={0.08} wireframe side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+        </mesh>
+        {rings.map((ring) => (
+          <mesh key={ring.color} rotation={ring.rotation} renderOrder={1}>
+            <torusGeometry args={[5.18, 0.028, 8, 128]} />
+            <meshBasicMaterial color={ring.color} transparent opacity={0.38} toneMapped={false} depthWrite={false} />
+          </mesh>
+        ))}
         {Array.from({ length: trackCount }, (_, index) => {
-          const trackOffset = (index - (trackCount - 1) / 2) * 0.92;
           const curve = new THREE.CatmullRomCurve3(Array.from({ length: 96 }, (_, pointIndex) => {
-            const progress = pointIndex / 95;
-            const latitude = -Math.PI * 0.62 + progress * Math.PI * 1.24;
-            return new THREE.Vector3(
-              trackOffset + Math.sin(latitude) * 0.52,
-              Math.sin(latitude) * sphereRadius * 0.52,
-              -3.45 - Math.cos(latitude) * 0.36,
-            );
+            return new THREE.Vector3(...getSphereTrackPoint(index, trackCount, pointIndex / 95));
           }));
           return (
-            <mesh key={index}>
-              <tubeGeometry args={[curve, 128, 0.022, 8, false]} />
-              <meshBasicMaterial color={index % 2 ? "#65d6ff" : "#ff9fcf"} transparent opacity={0.62} toneMapped={false} />
+            <mesh key={index} renderOrder={2}>
+              <tubeGeometry args={[curve, 128, 0.032, 8, false]} />
+              <meshBasicMaterial color={["#65d6ff", "#ff9fcf", "#ffd166", "#a78bfa"][index % 4]} transparent opacity={0.82} toneMapped={false} depthWrite={false} />
             </mesh>
           );
         })}
+        <pointLight position={[0, 0, -1.4]} color="#8ab4ff" intensity={10} distance={9} />
+        <pointLight position={[-2.4, 0.8, -2.4]} color="#ff6b9d" intensity={8} distance={8} />
+        <pointLight position={[2.4, -0.8, -2.4]} color="#65d6ff" intensity={8} distance={8} />
       </>
     );
   }
@@ -1303,7 +1332,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 스테이지">
         <Canvas
           key={mode}
-          camera={{ position: mode === "sphere" ? [0, 0.1, 0.2] : [0, 0.45, getCameraDistance(mode, playbooks)], fov: 38 }}
+          camera={{ position: mode === "sphere" ? [0, 0.1, 0.2] : [0, 0.45, getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 58 : 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: false }}
           shadows={playbooks.length <= 24}
