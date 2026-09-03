@@ -83,7 +83,7 @@ function getOrbitPosition(index: number): Vec3 {
 
 const HELIX_TURNS = 2.35;
 const HELIX_TOTAL_ANGLE = Math.PI * 2 * HELIX_TURNS;
-const HELIX_PITCH_PER_RADIAN = 0.88;
+const HELIX_PITCH_PER_RADIAN = 0.9;
 const HELIX_RAIL_RADII = [3.7, 4.22] as const;
 
 function getHelixPoint(railIndex: number, angle: number): Vec3 {
@@ -99,10 +99,11 @@ function getHelixPoint(railIndex: number, angle: number): Vec3 {
 
 function getHelixPosition(index: number, playbookCount: number): Vec3 {
   const railIndex = index % HELIX_RAIL_RADII.length;
-  const railCount = Math.ceil((playbookCount - railIndex) / HELIX_RAIL_RADII.length);
-  const railSlot = Math.floor(index / HELIX_RAIL_RADII.length);
-  const normalizedSlot = railCount <= 1 ? 0.5 : railSlot / (railCount - 1);
-  const angle = (normalizedSlot - 0.5) * HELIX_TOTAL_ANGLE;
+  // Keep the original visual rhythm: cards are spaced by the global story
+  // order, then alternated across the two rails instead of stacking at the
+  // same height on each rail.
+  const midpoint = (playbookCount - 1) / 2;
+  const angle = (index - midpoint) * (HELIX_TOTAL_ANGLE / Math.max(1, playbookCount - 1));
   return getHelixPoint(railIndex, angle);
 }
 
@@ -968,12 +969,13 @@ function HelixMotionGroup({ enabled, focusActive, children }: { enabled: boolean
       if (focusActive) {
         scrollTarget.current = 0;
       }
-      ref.current.position.y = THREE.MathUtils.damp(ref.current.position.y, scrollTarget.current, 5, delta);
+      const nextPositionY = THREE.MathUtils.damp(ref.current.position.y, scrollTarget.current, 5, delta);
+      ref.current.position.y = nextPositionY;
       // A point at angle θ reaches y = 0 when scroll = -pitch * θ.
       // With the camera-near phase on +Z, rotating by -θ puts that point on x = 0, so the two values
-      // must be coupled instead of using an arbitrary visual multiplier.
-      const centeredRotation = scrollTarget.current / HELIX_PITCH_PER_RADIAN;
-      ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, centeredRotation, 4, delta);
+      // must be coupled to the actual damped translation, not to a separate
+      // lagging target, or the scroll motion visibly loses phase.
+      ref.current.rotation.y = nextPositionY / HELIX_PITCH_PER_RADIAN;
     }
   });
 
