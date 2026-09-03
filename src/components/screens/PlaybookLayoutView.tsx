@@ -96,13 +96,20 @@ function getHelixPosition(index: number, playbookCount: number): Vec3 {
 
 const SPHERE_SURFACE_RADIUS = 3.05;
 const SPHERE_CARD_RADIUS = 2.88;
+const SPHERE_SLOTS: ReadonlyArray<readonly [number, number]> = [
+  [0, 0],
+  [0.46, -0.78], [0.46, -0.26], [0.46, 0.26], [0.46, 0.78],
+  [0, -0.92], [0, 0.92],
+  [-0.46, -0.78], [-0.46, -0.26], [-0.46, 0.26], [-0.46, 0.78],
+  [-0.78, 0],
+];
 
 function getSphereColumns(playbookCount: number) {
   return Math.min(6, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, playbookCount)))));
 }
 
 function getSpherePosition(index: number, playbookCount: number): Vec3 {
-  if (playbookCount !== 12) {
+  if (playbookCount !== SPHERE_SLOTS.length) {
     const columns = getSphereColumns(playbookCount);
     const rows = Math.ceil(playbookCount / columns);
     const column = index % columns;
@@ -117,15 +124,8 @@ function getSpherePosition(index: number, playbookCount: number): Vec3 {
     ];
   }
 
-  const bands = [2, 4, 4, 2];
-  let row = 0;
-  let column = index;
-  while (column >= bands[row]) {
-    column -= bands[row];
-    row += 1;
-  }
-  const latitude = ((bands.length - 1) / 2 - row) * 0.32;
-  const longitude = Math.PI + (column - (bands[row] - 1) / 2) * 0.54;
+  const [latitude, longitudeOffset] = SPHERE_SLOTS[index];
+  const longitude = Math.PI + longitudeOffset;
   const horizontalRadius = Math.cos(latitude) * SPHERE_CARD_RADIUS;
   return [
     Math.sin(longitude) * horizontalRadius,
@@ -474,7 +474,7 @@ function PlaybookObject({
   const isPrism = mode === "prism";
   const isHelix = mode === "helix";
   const isSphere = mode === "sphere";
-  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.52 : 0.9;
+  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.5 : 0.9;
   const curvedCardGeometry = useMemo(
     () => makeCurvedCardGeometry(isSphere ? 1.8 : 2.5, isSphere ? 0.9 : 1.5),
     [isSphere],
@@ -535,7 +535,7 @@ function PlaybookObject({
     }
 
     const targetScale = layoutScale
-      * (isSphere ? 1 + Math.max(0, 1 - Math.hypot(basePosition[0], basePosition[1]) / 3.4) * 0.42 : 1)
+      * (isSphere ? 1 + Math.max(0, 1 - Math.hypot(basePosition[0], basePosition[1]) / 2.7) * 0.65 : 1)
       * (hovered ? 1.08 : 1)
       * (isIndex && hasQuery && !focused ? 0.82 : 1)
       * (hasSelection && !selected && mode !== "timeline" ? 0.88 : 1)
