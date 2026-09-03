@@ -793,11 +793,63 @@ function CoreCube({ mode }: { mode: PlaybookLayoutMode }) {
   );
 }
 
-function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
+function OrbitController({ mode, sphereGroupRef }: { mode: PlaybookLayoutMode; sphereGroupRef: React.RefObject<THREE.Group> }) {
   const { camera, gl } = useThree();
   const controlsRef = useRef<OrbitControls | null>(null);
+  const sphereRotationTarget = useRef(new THREE.Vector2());
+  const sphereRotation = useRef(new THREE.Vector2());
+  const sphereFovTarget = useRef(68);
 
   useEffect(() => {
+    if (mode === "sphere") {
+      let pointerStart: { x: number; y: number } | null = null;
+      const handlePointerDown = (event: PointerEvent) => {
+        pointerStart = { x: event.clientX, y: event.clientY };
+      };
+      const handlePointerMove = (event: PointerEvent) => {
+        if (!pointerStart) {
+          return;
+        }
+        const deltaX = event.clientX - pointerStart.x;
+        const deltaY = event.clientY - pointerStart.y;
+        if (Math.hypot(deltaX, deltaY) > CARD_DRAG_THRESHOLD) {
+          lastCanvasDragAt = performance.now();
+        }
+        sphereRotationTarget.current.y -= deltaX * 0.0045;
+        sphereRotationTarget.current.x = THREE.MathUtils.clamp(
+          sphereRotationTarget.current.x + deltaY * 0.0045,
+          -1.15,
+          1.15,
+        );
+        pointerStart = { x: event.clientX, y: event.clientY };
+      };
+      const handlePointerUp = () => {
+        pointerStart = null;
+      };
+      const handleWheel = (event: WheelEvent) => {
+        event.preventDefault();
+        sphereFovTarget.current = THREE.MathUtils.clamp(
+          sphereFovTarget.current + event.deltaY * 0.025,
+          50,
+          84,
+        );
+      };
+
+      gl.domElement.addEventListener("pointerdown", handlePointerDown);
+      gl.domElement.addEventListener("pointermove", handlePointerMove);
+      gl.domElement.addEventListener("pointerup", handlePointerUp);
+      gl.domElement.addEventListener("pointercancel", handlePointerUp);
+      gl.domElement.addEventListener("wheel", handleWheel, { passive: false });
+
+      return () => {
+        gl.domElement.removeEventListener("pointerdown", handlePointerDown);
+        gl.domElement.removeEventListener("pointermove", handlePointerMove);
+        gl.domElement.removeEventListener("pointerup", handlePointerUp);
+        gl.domElement.removeEventListener("pointercancel", handlePointerUp);
+        gl.domElement.removeEventListener("wheel", handleWheel);
+      };
+    }
+
     const controls = new OrbitControls(camera, gl.domElement);
     let pointerStart: { x: number; y: number } | null = null;
     const handlePointerDown = (event: PointerEvent) => {
@@ -816,13 +868,13 @@ function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
     controls.enablePan = false;
     controls.enableZoom = mode !== "helix";
     controls.zoomSpeed = 0.8;
-    controls.minDistance = mode === "sphere" ? 0.3 : 10;
-    controls.maxDistance = mode === "sphere" ? 1.8 : 28;
-    controls.rotateSpeed = mode === "sphere" ? 0.42 : 0.55;
-    controls.minPolarAngle = mode === "sphere" ? 0.05 : Math.PI * 0.32;
-    controls.maxPolarAngle = mode === "sphere" ? Math.PI - 0.05 : Math.PI * 0.68;
+    controls.minDistance = 10;
+    controls.maxDistance = 28;
+    controls.rotateSpeed = 0.55;
+    controls.minPolarAngle = Math.PI * 0.32;
+    controls.maxPolarAngle = Math.PI * 0.68;
     controls.enabled = true;
-    controls.target.set(0, 0, mode === "sphere" ? -1 : 0);
+    controls.target.set(0, 0, 0);
     controls.update();
     controlsRef.current = controls;
     gl.domElement.addEventListener("pointerdown", handlePointerDown);
@@ -841,6 +893,24 @@ function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
   }, [camera, gl, mode]);
 
   useFrame((_, delta) => {
+    if (mode === "sphere") {
+      const sphereGroup = sphereGroupRef.current;
+      if (sphereGroup) {
+        sphereRotation.current.x = THREE.MathUtils.damp(sphereRotation.current.x, sphereRotationTarget.current.x, 7, delta);
+        sphereRotation.current.y = THREE.MathUtils.damp(sphereRotation.current.y, sphereRotationTarget.current.y, 7, delta);
+        sphereGroup.rotation.x = sphereRotation.current.x;
+        sphereGroup.rotation.y = sphereRotation.current.y;
+      }
+      camera.position.set(0, 0, 0.1);
+      camera.lookAt(0, 0, -1);
+      const nextFov = THREE.MathUtils.damp(camera.fov, sphereFovTarget.current, 5, delta);
+      if (Math.abs(nextFov - camera.fov) > 0.01) {
+        camera.fov = nextFov;
+        camera.updateProjectionMatrix();
+      }
+      return;
+    }
+
     // OrbitControls owns mouse drag rotation; damping keeps the release motion smooth.
     controlsRef.current?.update(delta);
   });
@@ -1311,6 +1381,7 @@ function ComparisonStage({
               : "#d6e4ff";
   const lightStage = mode === "index" || mode === "timeline";
   const transparentStage = mode === "sphere";
+  const sphereGroupRef = useRef<THREE.Group>(null);
 
   return (
     <>
@@ -1334,7 +1405,7 @@ function ComparisonStage({
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
         <StageGuides mode={mode} playbooks={playbooks} />
-        <group>
+        <group ref={sphereGroupRef}>
           <CoreCube mode={mode} />
           {renderItems.map(({ playbook, index }) => (
             <PlaybookObject
@@ -1358,7 +1429,7 @@ function ComparisonStage({
           ))}
         </group>
       </HelixMotionGroup>
-      <OrbitController mode={mode} />
+      <OrbitController mode={mode} sphereGroupRef={sphereGroupRef} />
     </>
   );
 }
