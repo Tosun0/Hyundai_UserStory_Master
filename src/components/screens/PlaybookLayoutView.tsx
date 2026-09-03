@@ -552,14 +552,14 @@ function PlaybookObject({
       const sphereRight = new THREE.Vector3().crossVectors(sphereUp, sphereNormal).normalize();
       group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(sphereRight, sphereUp, sphereNormal));
     } else if (isHelix) {
-      const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
       const parent = group.parent;
       if (parent) {
-        parent.worldToLocal(cameraPosition);
-        group.quaternion.setFromUnitVectors(
-          new THREE.Vector3(0, 0, 1),
-          cameraPosition.sub(group.position).normalize(),
-        );
+        // Keep the thumbnail's +Z normal aligned with the camera's +Z axis
+        // in the card parent's local space. This remains stable while the
+        // entire helix rotates, so cards never expose their back surface.
+        const parentWorldQuaternion = parent.getWorldQuaternion(new THREE.Quaternion());
+        const cameraWorldQuaternion = camera.getWorldQuaternion(new THREE.Quaternion());
+        group.quaternion.copy(parentWorldQuaternion.invert().multiply(cameraWorldQuaternion));
       }
     }
 
