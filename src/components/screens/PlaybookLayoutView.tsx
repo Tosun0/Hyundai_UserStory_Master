@@ -98,15 +98,17 @@ function getSphereTrackCount(playbookCount: number) {
   return Math.min(4, Math.max(3, Math.ceil(playbookCount / 5)));
 }
 
-function getSphereTrackPoint(track: number, trackCount: number, progress: number): Vec3 {
-  const radius = 4.55;
-  const latitude = (track - (trackCount - 1) / 2) * 0.42;
+const SPHERE_SURFACE_RADIUS = 5.35;
+const SPHERE_CARD_RADIUS = 5.24;
+
+function getSphereTrackPoint(track: number, trackCount: number, progress: number, radius = SPHERE_CARD_RADIUS): Vec3 {
+  const latitude = (track - (trackCount - 1) / 2) * (Math.PI / 6);
   const arc = -1.08 + progress * 2.16;
   const horizontalRadius = Math.cos(latitude) * radius;
   return [
     Math.sin(arc) * horizontalRadius,
     Math.sin(latitude) * radius,
-    -Math.cos(arc) * horizontalRadius - 0.35,
+    -Math.cos(arc) * horizontalRadius,
   ];
 }
 
@@ -1011,38 +1013,16 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
 
   if (mode === "sphere") {
     const trackCount = getSphereTrackCount(playbooks.length);
-    const rings: Array<{ rotation: Vec3; color: string }> = [
-      { rotation: [0, 0, 0], color: "#b7c8ff" },
-      { rotation: [Math.PI * 0.5, 0, 0], color: "#65d6ff" },
-      { rotation: [0, Math.PI * 0.5, 0], color: "#ff9fcf" },
-    ];
     return (
       <>
         <mesh renderOrder={0}>
-          <sphereGeometry args={[5.35, 32, 24]} />
-          <meshBasicMaterial color="#1f2d5a" transparent opacity={0.1} side={THREE.BackSide} depthWrite={false} toneMapped={false} />
+          <sphereGeometry args={[SPHERE_SURFACE_RADIUS, 32, 24]} />
+          <meshBasicMaterial color="#1f2d5a" transparent opacity={0.08} side={THREE.BackSide} depthWrite={false} toneMapped={false} />
         </mesh>
         <mesh renderOrder={0}>
-          <sphereGeometry args={[5.37, 32, 24]} />
-          <meshBasicMaterial color="#8ab4ff" transparent opacity={0.08} wireframe side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+          <sphereGeometry args={[SPHERE_SURFACE_RADIUS, 32, 24]} />
+          <meshBasicMaterial color="#9bb5ff" transparent opacity={0.16} wireframe side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
         </mesh>
-        {rings.map((ring) => (
-          <mesh key={ring.color} rotation={ring.rotation} renderOrder={1}>
-            <torusGeometry args={[5.18, 0.028, 8, 128]} />
-            <meshBasicMaterial color={ring.color} transparent opacity={0.38} toneMapped={false} depthWrite={false} />
-          </mesh>
-        ))}
-        {Array.from({ length: trackCount }, (_, index) => {
-          const curve = new THREE.CatmullRomCurve3(Array.from({ length: 96 }, (_, pointIndex) => {
-            return new THREE.Vector3(...getSphereTrackPoint(index, trackCount, pointIndex / 95));
-          }));
-          return (
-            <mesh key={index} renderOrder={2}>
-              <tubeGeometry args={[curve, 128, 0.032, 8, false]} />
-              <meshBasicMaterial color={["#65d6ff", "#ff9fcf", "#ffd166", "#a78bfa"][index % 4]} transparent opacity={0.82} toneMapped={false} depthWrite={false} />
-            </mesh>
-          );
-        })}
         <pointLight position={[0, 0, -1.4]} color="#8ab4ff" intensity={10} distance={9} />
         <pointLight position={[-2.4, 0.8, -2.4]} color="#ff6b9d" intensity={8} distance={8} />
         <pointLight position={[2.4, -0.8, -2.4]} color="#65d6ff" intensity={8} distance={8} />
