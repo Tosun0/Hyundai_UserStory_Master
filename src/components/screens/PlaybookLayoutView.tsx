@@ -516,15 +516,29 @@ function PlaybookObject({
       // The camera is inside the sphere, so every card faces the center rather
       // than the outside surface. The focused card turns toward the camera.
       const sphereNormal = new THREE.Vector3(-basePosition[0], -basePosition[1], -basePosition[2]).normalize();
+      const sphereUp = new THREE.Vector3(0, 1, 0);
       if (hasFocusedView && focusedView) {
-        const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
-        group.parent?.worldToLocal(cameraPosition);
+        const cameraWorldPosition = camera.getWorldPosition(new THREE.Vector3());
+        const cameraUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.getWorldQuaternion(new THREE.Quaternion()));
+        const parent = group.parent;
+        const cameraPosition = parent?.worldToLocal(cameraWorldPosition.clone()) ?? cameraWorldPosition;
+        const upPoint = parent?.worldToLocal(cameraWorldPosition.clone().add(cameraUp)) ?? cameraWorldPosition.clone().add(cameraUp);
         sphereNormal.copy(cameraPosition.sub(group.position).normalize());
+        sphereUp.copy(upPoint.sub(cameraPosition).projectOnPlane(sphereNormal).normalize());
+      } else {
+        // setFromUnitVectors leaves roll underconstrained. Projecting the
+        // sphere's up axis onto the card tangent keeps thumbnails upright while
+        // the sphere rotates around the viewer.
+        if (Math.abs(sphereUp.dot(sphereNormal)) > 0.96) {
+          sphereUp.set(1, 0, 0);
+        }
+        sphereUp.addScaledVector(sphereNormal, -sphereUp.dot(sphereNormal)).normalize();
       }
-      group.quaternion.setFromUnitVectors(
-        new THREE.Vector3(0, 0, 1),
-        sphereNormal,
-      );
+      if (sphereUp.lengthSq() < 0.01) {
+        sphereUp.set(1, 0, 0).addScaledVector(sphereNormal, -sphereNormal.x).normalize();
+      }
+      const sphereRight = new THREE.Vector3().crossVectors(sphereUp, sphereNormal).normalize();
+      group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(sphereRight, sphereUp, sphereNormal));
     } else if (isHelix) {
       const cameraPosition = camera.getWorldPosition(new THREE.Vector3());
       const parent = group.parent;
