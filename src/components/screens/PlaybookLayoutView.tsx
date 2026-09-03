@@ -104,10 +104,6 @@ const SPHERE_SLOTS: ReadonlyArray<readonly [number, number]> = [
   [-0.62, 0.22], [-0.18, 0.28], [0.62, 0.22],
   [-0.62, -0.22], [0.18, -0.28], [0.62, -0.22],
   [-0.4, -0.58], [0.4, -0.58],
-  [-0.3, 0.44], [0.3, 0.44],
-  [-0.36, 0], [0.36, 0],
-  [-0.3, -0.44], [0.3, -0.44],
-  [-0.78, 0.48], [0.78, -0.48],
 ];
 
 function getSphereColumns(playbookCount: number) {
@@ -115,7 +111,7 @@ function getSphereColumns(playbookCount: number) {
 }
 
 function getSpherePosition(index: number, playbookCount: number): Vec3 {
-  if (playbookCount !== SPHERE_SLOTS.length) {
+  if (playbookCount !== SPHERE_SLOTS.length || index >= SPHERE_SLOTS.length) {
     const columns = getSphereColumns(playbookCount);
     const rows = Math.ceil(playbookCount / columns);
     const column = index % columns;
@@ -173,6 +169,7 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
 }
 
 const SPHERE_CAMERA_DISTANCE = 12.5;
+const CARD_DRAG_THRESHOLD = 8;
 
 function cubePosition(
   playbook: PlaybookItem,
@@ -203,7 +200,7 @@ function cubePosition(
   }
 
   if (mode === "sphere") {
-    return getSpherePosition(index, SPHERE_SLOTS.length);
+    return getSpherePosition(index, visiblePlaybooks.length);
   }
 
   const columns = Math.min(5, Math.max(4, visiblePlaybooks.length));
@@ -449,7 +446,6 @@ function PlaybookObject({
   focusedView,
   hasFocusedView,
   onFocusPlaybook,
-  decorative = false,
 }: {
   playbook: PlaybookItem;
   index: number;
@@ -466,9 +462,10 @@ function PlaybookObject({
   focusedView: boolean;
   hasFocusedView: boolean;
   onFocusPlaybook: (playbook: PlaybookItem) => void;
-  decorative?: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
+  const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressClickRef = useRef(false);
   const { camera } = useThree();
   const basePosition = useMemo(
     () => cubePosition(playbook, index, mode, visiblePlaybooks),
@@ -483,7 +480,7 @@ function PlaybookObject({
   const isPrism = mode === "prism";
   const isHelix = mode === "helix";
   const isSphere = mode === "sphere";
-  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? (decorative ? 0.38 : 0.5) : 0.9;
+  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.5 : 0.9;
   const cardGeometry = useMemo(
     () => isSphere ? new THREE.PlaneGeometry(1.8, 0.9) : makeCurvedCardGeometry(2.5, 1.5),
     [isSphere],
@@ -547,7 +544,7 @@ function PlaybookObject({
     }
 
     const targetScale = layoutScale
-      * (isSphere ? (!decorative && index === 0 ? 1.36 : 1) : 1)
+      * (isSphere && index === 0 ? 1.36 : 1)
       * (hovered ? 1.08 : 1)
       * (isIndex && hasQuery && !focused ? 0.82 : 1)
       * (hasSelection && !selected && mode !== "timeline" ? 0.88 : 1)
@@ -563,7 +560,7 @@ function PlaybookObject({
       : 1;
   const interactiveDim = hasSelection && !selected && mode !== "timeline";
   const lightStage = isIndex || mode === "timeline" || isSphere;
-  const viewOpacity = hasFocusedView && !focusedView ? 0 : decorative && isSphere ? 0.55 * opacity : opacity;
+  const viewOpacity = hasFocusedView && !focusedView ? 0 : opacity;
   const transparent = lightStage || isPrism || isHelix || isSphere || (isIndex && hasQuery) || interactiveDim || hasFocusedView;
   const spherePalette = ["#e8edf4", "#fff1e7", "#e6f2fb", "#f8e7ed", "#ece9fb"];
   const surfaceColor = isSphere
@@ -715,15 +712,40 @@ function PlaybookObject({
       ref={groupRef}
       position={basePosition}
       rotation={baseRotation}
-      onClick={decorative ? undefined : (event) => {
+      onPointerDown={(event) => {
         event.stopPropagation();
+        pointerDownRef.current = { x: event.clientX, y: event.clientY };
+        suppressClickRef.current = false;
+      }}
+      onPointerMove={(event) => {
+        const start = pointerDownRef.current;
+        if (!start) {
+          return;
+        }
+        if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > CARD_DRAG_THRESHOLD) {
+          suppressClickRef.current = true;
+        }
+      }}
+      onPointerUp={() => {
+        pointerDownRef.current = null;
+      }}
+      onPointerCancel={() => {
+        pointerDownRef.current = null;
+        suppressClickRef.current = true;
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (suppressClickRef.current) {
+          suppressClickRef.current = false;
+          return;
+        }
         onFocusPlaybook(playbook);
       }}
-      onPointerEnter={decorative ? undefined : (event) => {
+      onPointerEnter={(event) => {
         event.stopPropagation();
         onHover(playbook);
       }}
-      onPointerLeave={decorative ? undefined : (event) => {
+      onPointerLeave={(event) => {
         event.stopPropagation();
         onHover(null);
       }}
@@ -733,7 +755,7 @@ function PlaybookObject({
         <boxGeometry args={[1.84, 0.055, 0.035]} />
         <meshBasicMaterial color={focused || !hasQuery ? lightPalette[index % lightPalette.length] : "#b4b9c8"} transparent opacity={opacity} />
       </mesh> : null}
-      <InfoPanel playbook={playbook} visible={!decorative && (hovered || focusedView)} />
+      <InfoPanel playbook={playbook} visible={hovered || focusedView} />
     </group>
   );
 }
@@ -1204,13 +1226,7 @@ function ComparisonStage({
     texture.needsUpdate = true;
   });
 
-  const renderItems = playbooks.length === 0
-    ? []
-    : Array.from({ length: mode === "sphere" ? SPHERE_SLOTS.length : playbooks.length }, (_, index) => ({
-      playbook: playbooks[index % playbooks.length],
-      index,
-      decorative: mode === "sphere" && index >= playbooks.length,
-    }));
+  const renderItems = playbooks.map((playbook, index) => ({ playbook, index }));
 
   const stageBackground = mode === "solar"
     ? "#160b1b"
@@ -1264,7 +1280,7 @@ function ComparisonStage({
         <StageGuides mode={mode} playbooks={playbooks} />
         <group>
           <CoreCube mode={mode} />
-          {renderItems.map(({ playbook, index, decorative }) => (
+          {renderItems.map(({ playbook, index }) => (
             <PlaybookObject
               key={`${playbook.id}-${index}`}
               playbook={playbook}
@@ -1273,16 +1289,15 @@ function ComparisonStage({
               visiblePlaybooks={playbooks}
               shadowsEnabled={shadowsEnabled}
               texture={textures[index % textures.length]}
-              hovered={!decorative && hoveredId === playbook.id}
-              focused={!decorative && focusedIds.has(playbook.id)}
+              hovered={hoveredId === playbook.id}
+              focused={focusedIds.has(playbook.id)}
               hasQuery={hasQuery}
-              selected={!decorative && hoveredId === playbook.id}
-              hasSelection={!decorative && hoveredId !== null}
-              focusedView={!decorative && focusedViewId === playbook.id}
-              hasFocusedView={!decorative && focusedViewId !== null}
+              selected={hoveredId === playbook.id}
+              hasSelection={hoveredId !== null}
+              focusedView={focusedViewId === playbook.id}
+              hasFocusedView={focusedViewId !== null}
               onHover={handleHover}
               onFocusPlaybook={handleFocusPlaybook}
-              decorative={decorative}
             />
           ))}
         </group>
@@ -1324,7 +1339,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
         : mode === "helix"
           ? "스크롤로 세로 소용돌이를 오르내리며 플레이북을 만납니다"
           : mode === "sphere"
-            ? "구체 안쪽 카메라에서 내부 스플라인을 따라 플레이북을 만납니다"
+            ? "구면 표면을 따라 썸네일이 하나의 플레이북 글로브를 이룹니다"
         : mode === "timeline"
           ? "스토리를 순서와 레일 단위로 빠르게 훑습니다"
           : "그룹과 스토리가 동심 궤도로 분리됩니다";
