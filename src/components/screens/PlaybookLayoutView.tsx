@@ -105,7 +105,7 @@ function getSphereTrackPoint(track: number, trackCount: number, progress: number
   const horizontalRadius = Math.cos(latitude) * radius;
   return [
     Math.sin(longitude) * horizontalRadius,
-    Math.sin(latitude) * radius - 0.9,
+    Math.sin(latitude) * radius,
     -Math.cos(longitude) * horizontalRadius,
   ];
 }
@@ -748,7 +748,9 @@ function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
     controls.zoomSpeed = 0.8;
     controls.minDistance = mode === "sphere" ? 0.35 : 10;
     controls.maxDistance = mode === "sphere" ? 4.6 : 28;
-    controls.rotateSpeed = 0.55;
+    // The camera is inside Sphere, so OrbitControls' outside-facing drag
+    // convention feels inverted on both axes for this view.
+    controls.rotateSpeed = mode === "sphere" ? -0.55 : 0.55;
     controls.minPolarAngle = Math.PI * 0.32;
     controls.maxPolarAngle = Math.PI * 0.68;
     controls.enabled = mode !== "sphere";
@@ -767,7 +769,7 @@ function OrbitController({ mode }: { mode: PlaybookLayoutMode }) {
       sphereIntro.current = Math.min(1, sphereIntro.current + delta / 1.35);
       const eased = 1 - Math.pow(1 - sphereIntro.current, 3);
       camera.position.set(0, 0.3 * eased, 0.2 + (SPHERE_CAMERA_DISTANCE - 0.2) * eased);
-      camera.lookAt(0, 0.55, 0);
+      camera.lookAt(0, 0, 0);
       if (sphereIntro.current >= 1 && controlsRef.current) {
         controlsRef.current.enabled = true;
         controlsRef.current.update();
