@@ -95,18 +95,18 @@ function getHelixPosition(index: number, playbookCount: number): Vec3 {
 }
 
 function getSphereTrackCount(playbookCount: number) {
-  return Math.min(3, Math.max(2, Math.ceil(playbookCount / 8)));
+  return Math.min(4, Math.max(3, Math.ceil(playbookCount / 5)));
 }
 
 function getSphereTrackPoint(track: number, trackCount: number, progress: number): Vec3 {
-  const radius = 4.35;
-  const latitude = -0.22 + progress * 0.44;
-  const longitude = (track - (trackCount - 1) / 2) * 0.09 + Math.sin(latitude * Math.PI * 2) * 0.1;
+  const radius = 4.55;
+  const latitude = (track - (trackCount - 1) / 2) * 0.42;
+  const arc = -1.08 + progress * 2.16;
   const horizontalRadius = Math.cos(latitude) * radius;
   return [
-    Math.sin(longitude) * horizontalRadius,
+    Math.sin(arc) * horizontalRadius,
     Math.sin(latitude) * radius,
-    -Math.cos(longitude) * horizontalRadius,
+    -Math.cos(arc) * horizontalRadius - 0.35,
   ];
 }
 
@@ -462,9 +462,9 @@ function PlaybookObject({
   const isPrism = mode === "prism";
   const isHelix = mode === "helix";
   const isSphere = mode === "sphere";
-  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.3 : 0.9;
+  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.52 : 0.9;
   const curvedCardGeometry = useMemo(
-    () => makeCurvedCardGeometry(isSphere ? 1.3 : 2.5, isSphere ? 0.68 : 1.5),
+    () => makeCurvedCardGeometry(isSphere ? 1.8 : 2.5, isSphere ? 0.9 : 1.5),
     [isSphere],
   );
   const baseRotation = useMemo<Vec3>(
