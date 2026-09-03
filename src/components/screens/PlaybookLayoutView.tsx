@@ -829,7 +829,7 @@ function OrbitController({ mode, sphereGroupRef }: { mode: PlaybookLayoutMode; s
         if (Math.hypot(deltaX, deltaY) > CARD_DRAG_THRESHOLD) {
           lastCanvasDragAt = performance.now();
         }
-        sphereRotationTarget.current.y += deltaX * 0.0045;
+        sphereRotationTarget.current.y -= deltaX * 0.0045;
         sphereRotationTarget.current.x = THREE.MathUtils.clamp(
           sphereRotationTarget.current.x - deltaY * 0.0045,
           -1.15,
