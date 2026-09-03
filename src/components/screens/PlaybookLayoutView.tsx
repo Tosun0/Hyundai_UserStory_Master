@@ -104,6 +104,10 @@ const SPHERE_SLOTS: ReadonlyArray<readonly [number, number]> = [
   [-0.62, 0.22], [-0.18, 0.28], [0.62, 0.22],
   [-0.62, -0.22], [0.18, -0.28], [0.62, -0.22],
   [-0.4, -0.58], [0.4, -0.58],
+  [-0.3, 0.44], [0.3, 0.44],
+  [-0.36, 0], [0.36, 0],
+  [-0.3, -0.44], [0.3, -0.44],
+  [-0.78, 0.48], [0.78, -0.48],
 ];
 
 function getSphereColumns(playbookCount: number) {
@@ -199,7 +203,7 @@ function cubePosition(
   }
 
   if (mode === "sphere") {
-    return getSpherePosition(index, visiblePlaybooks.length);
+    return getSpherePosition(index, SPHERE_SLOTS.length);
   }
 
   const columns = Math.min(5, Math.max(4, visiblePlaybooks.length));
@@ -445,6 +449,7 @@ function PlaybookObject({
   focusedView,
   hasFocusedView,
   onFocusPlaybook,
+  decorative = false,
 }: {
   playbook: PlaybookItem;
   index: number;
@@ -461,6 +466,7 @@ function PlaybookObject({
   focusedView: boolean;
   hasFocusedView: boolean;
   onFocusPlaybook: (playbook: PlaybookItem) => void;
+  decorative?: boolean;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
@@ -477,7 +483,7 @@ function PlaybookObject({
   const isPrism = mode === "prism";
   const isHelix = mode === "helix";
   const isSphere = mode === "sphere";
-  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.5 : 0.9;
+  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? (decorative ? 0.38 : 0.5) : 0.9;
   const cardGeometry = useMemo(
     () => isSphere ? new THREE.PlaneGeometry(1.8, 0.9) : makeCurvedCardGeometry(2.5, 1.5),
     [isSphere],
@@ -541,7 +547,7 @@ function PlaybookObject({
     }
 
     const targetScale = layoutScale
-      * (isSphere ? (index === 0 ? 1.36 : 1) : 1)
+      * (isSphere ? (!decorative && index === 0 ? 1.36 : 1) : 1)
       * (hovered ? 1.08 : 1)
       * (isIndex && hasQuery && !focused ? 0.82 : 1)
       * (hasSelection && !selected && mode !== "timeline" ? 0.88 : 1)
@@ -557,7 +563,7 @@ function PlaybookObject({
       : 1;
   const interactiveDim = hasSelection && !selected && mode !== "timeline";
   const lightStage = isIndex || mode === "timeline" || isSphere;
-  const viewOpacity = hasFocusedView && !focusedView ? 0 : opacity;
+  const viewOpacity = hasFocusedView && !focusedView ? 0 : decorative && isSphere ? 0.55 * opacity : opacity;
   const transparent = lightStage || isPrism || isHelix || isSphere || (isIndex && hasQuery) || interactiveDim || hasFocusedView;
   const spherePalette = ["#e8edf4", "#fff1e7", "#e6f2fb", "#f8e7ed", "#ece9fb"];
   const surfaceColor = isSphere
@@ -709,15 +715,15 @@ function PlaybookObject({
       ref={groupRef}
       position={basePosition}
       rotation={baseRotation}
-      onClick={(event) => {
+      onClick={decorative ? undefined : (event) => {
         event.stopPropagation();
         onFocusPlaybook(playbook);
       }}
-      onPointerEnter={(event) => {
+      onPointerEnter={decorative ? undefined : (event) => {
         event.stopPropagation();
         onHover(playbook);
       }}
-      onPointerLeave={(event) => {
+      onPointerLeave={decorative ? undefined : (event) => {
         event.stopPropagation();
         onHover(null);
       }}
@@ -727,7 +733,7 @@ function PlaybookObject({
         <boxGeometry args={[1.84, 0.055, 0.035]} />
         <meshBasicMaterial color={focused || !hasQuery ? lightPalette[index % lightPalette.length] : "#b4b9c8"} transparent opacity={opacity} />
       </mesh> : null}
-      <InfoPanel playbook={playbook} visible={hovered || focusedView} />
+      <InfoPanel playbook={playbook} visible={!decorative && (hovered || focusedView)} />
     </group>
   );
 }
@@ -1198,6 +1204,14 @@ function ComparisonStage({
     texture.needsUpdate = true;
   });
 
+  const renderItems = playbooks.length === 0
+    ? []
+    : Array.from({ length: mode === "sphere" ? SPHERE_SLOTS.length : playbooks.length }, (_, index) => ({
+      playbook: playbooks[index % playbooks.length],
+      index,
+      decorative: mode === "sphere" && index >= playbooks.length,
+    }));
+
   const stageBackground = mode === "solar"
     ? "#160b1b"
     : mode === "index"
@@ -1250,24 +1264,25 @@ function ComparisonStage({
         <StageGuides mode={mode} playbooks={playbooks} />
         <group>
           <CoreCube mode={mode} />
-          {playbooks.map((playbook, index) => (
+          {renderItems.map(({ playbook, index, decorative }) => (
             <PlaybookObject
-              key={playbook.id}
+              key={`${playbook.id}-${index}`}
               playbook={playbook}
               index={index}
               mode={mode}
               visiblePlaybooks={playbooks}
               shadowsEnabled={shadowsEnabled}
-              texture={textures[index]}
-              hovered={hoveredId === playbook.id}
-              focused={focusedIds.has(playbook.id)}
+              texture={textures[index % textures.length]}
+              hovered={!decorative && hoveredId === playbook.id}
+              focused={!decorative && focusedIds.has(playbook.id)}
               hasQuery={hasQuery}
-              selected={hoveredId === playbook.id}
-              hasSelection={hoveredId !== null}
-              focusedView={focusedViewId === playbook.id}
-              hasFocusedView={focusedViewId !== null}
+              selected={!decorative && hoveredId === playbook.id}
+              hasSelection={!decorative && hoveredId !== null}
+              focusedView={!decorative && focusedViewId === playbook.id}
+              hasFocusedView={!decorative && focusedViewId !== null}
               onHover={handleHover}
               onFocusPlaybook={handleFocusPlaybook}
+              decorative={decorative}
             />
           ))}
         </group>
