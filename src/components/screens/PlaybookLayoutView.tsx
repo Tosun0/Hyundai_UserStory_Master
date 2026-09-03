@@ -81,17 +81,29 @@ function getOrbitPosition(index: number): Vec3 {
   ];
 }
 
-function getHelixPosition(index: number, playbookCount: number): Vec3 {
-  const turns = 2.35;
-  const midpoint = Math.floor(playbookCount / 2);
-  const angle = (index - midpoint) * (Math.PI * 2 * turns / Math.max(1, playbookCount - 1)) + Math.PI * 0.5;
-  const radius = 3.65 + (index % 3) * 0.2;
-  const vertical = (index - (playbookCount - 1) / 2) * 1.2;
+const HELIX_TURNS = 2.35;
+const HELIX_TOTAL_ANGLE = Math.PI * 2 * HELIX_TURNS;
+const HELIX_PITCH_PER_RADIAN = 0.88;
+const HELIX_RAIL_RADII = [3.7, 4.22] as const;
+
+function getHelixPoint(railIndex: number, angle: number): Vec3 {
+  const radius = HELIX_RAIL_RADII[railIndex % HELIX_RAIL_RADII.length];
+  // The front of the helix is -Z. At angle 0 every rail is exactly on
+  // the camera's screen-center line: x = 0, y = 0, z = -radius.
   return [
-    Math.cos(angle) * radius,
-    vertical,
-    Math.sin(angle) * radius - 0.12,
+    Math.sin(angle) * radius,
+    angle * HELIX_PITCH_PER_RADIAN,
+    -Math.cos(angle) * radius,
   ];
+}
+
+function getHelixPosition(index: number, playbookCount: number): Vec3 {
+  const railIndex = index % HELIX_RAIL_RADII.length;
+  const railCount = Math.ceil((playbookCount - railIndex) / HELIX_RAIL_RADII.length);
+  const railSlot = Math.floor(index / HELIX_RAIL_RADII.length);
+  const normalizedSlot = railCount <= 1 ? 0.5 : railSlot / (railCount - 1);
+  const angle = (normalizedSlot - 0.5) * HELIX_TOTAL_ANGLE;
+  return getHelixPoint(railIndex, angle);
 }
 
 const SPHERE_SURFACE_RADIUS = 7.45;
@@ -957,7 +969,11 @@ function HelixMotionGroup({ enabled, focusActive, children }: { enabled: boolean
         scrollTarget.current = 0;
       }
       ref.current.position.y = THREE.MathUtils.damp(ref.current.position.y, scrollTarget.current, 5, delta);
-      ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, scrollTarget.current * 0.24, 4, delta);
+      // A point at angle θ reaches y = 0 when scroll = -pitch * θ.
+      // Rotating by the same θ puts that point on x = 0, so the two values
+      // must be coupled instead of using an arbitrary visual multiplier.
+      const centeredRotation = -scrollTarget.current / HELIX_PITCH_PER_RADIAN;
+      ref.current.rotation.y = THREE.MathUtils.damp(ref.current.rotation.y, centeredRotation, 4, delta);
     }
   });
 
@@ -1130,21 +1146,14 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
   }
 
   if (mode === "helix") {
-    const curves = [0, Math.PI].map((phase) => new THREE.CatmullRomCurve3(Array.from({ length: 96 }, (_, index) => {
-      const progress = index / 95;
-      const angle = progress * Math.PI * 2 * 2.35 + phase;
-      return new THREE.Vector3(
-        Math.cos(angle) * 3.75,
-        (progress - 0.5) * 15.5,
-        Math.sin(angle) * 3.75 - 0.4,
-      );
+    const curves = HELIX_RAIL_RADII.map((_, railIndex) => new THREE.CatmullRomCurve3(Array.from({ length: 129 }, (_, index) => {
+      const progress = index / 128;
+      const angle = (progress - 0.5) * HELIX_TOTAL_ANGLE;
+      const [x, y, z] = getHelixPoint(railIndex, angle);
+      return new THREE.Vector3(x, y, z);
     })));
     return (
       <>
-        <mesh position={[0, 0, -0.4]}>
-          <cylinderGeometry args={[0.035, 0.035, 15.8, 12]} />
-          <meshBasicMaterial color="#d9ecff" transparent opacity={0.34} toneMapped={false} />
-        </mesh>
         <mesh>
           <tubeGeometry args={[curves[0], 160, 0.055, 8, false]} />
           <meshBasicMaterial color="#65d6ff" transparent opacity={0.72} toneMapped={false} />
