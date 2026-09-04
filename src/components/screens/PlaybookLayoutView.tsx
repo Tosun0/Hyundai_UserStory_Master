@@ -972,6 +972,21 @@ function PlaybookObject({
         const cameraWorldQuaternion = camera.getWorldQuaternion(new THREE.Quaternion());
         group.quaternion.copy(parentWorldQuaternion.invert().multiply(cameraWorldQuaternion));
       }
+    } else if (isIndex && !mapOverview) {
+      const parent = group.parent;
+      const cameraWorldPosition = camera.getWorldPosition(new THREE.Vector3());
+      const cameraPosition = parent?.worldToLocal(cameraWorldPosition.clone()) ?? cameraWorldPosition;
+      const normal = cameraPosition.sub(group.position).normalize();
+      const worldUp = new THREE.Vector3(0, 1, 0);
+      if (Math.abs(normal.dot(worldUp)) > 0.96) {
+        worldUp.set(0, 0, 1);
+      }
+      const right = new THREE.Vector3().crossVectors(worldUp, normal).normalize();
+      const up = new THREE.Vector3().crossVectors(normal, right).normalize();
+      const targetQuaternion = new THREE.Quaternion().setFromRotationMatrix(
+        new THREE.Matrix4().makeBasis(right, up, normal),
+      );
+      group.quaternion.slerp(targetQuaternion, 1 - Math.pow(0.001, delta));
     }
 
     const interactionPosition = new THREE.Vector3(basePosition[0], basePosition[1], basePosition[2]);
