@@ -76,15 +76,13 @@ function getVisiblePlaybooks(group: PlaybookAccessGroup) {
 }
 
 function getSolarPosition(index: number): Vec3 {
-  const ringIndex = Math.floor(index / 8);
+  const ringIndex = Math.min(Math.floor(index / 8), 2);
   const ringSlot = index % 8;
-  const radius = 5.45 + ringIndex * 1.65;
+  const radius = [3.25, 4.85, 6.35][ringIndex];
   const angle = (ringSlot / 8) * Math.PI * 2 + ringIndex * 0.38;
-  return [
-    Math.cos(angle) * radius,
-    Math.sin(angle) * radius * 0.62 - 0.4 - ringIndex * 0.12,
-    ((ringSlot % 3) - 1) * 0.55 - ringIndex * 0.16,
-  ];
+  const position = new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
+    .applyEuler(new THREE.Euler(Math.PI * 0.5, ringIndex * 0.22, ringIndex * 0.12));
+  return [position.x, position.y, position.z - 0.95];
 }
 
 const SOLAR_GROUP_COLORS: Record<PlaybookGroup, { primary: string; secondary: string }> = {
