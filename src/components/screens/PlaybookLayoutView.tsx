@@ -3,7 +3,7 @@ import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import type { PlaybookAccessGroup, PlaybookItem } from "../../data/playbookCatalog";
+import type { PlaybookAccessGroup, PlaybookGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { PLAYBOOK_CATALOG } from "../../data/playbookCatalog";
 
 export type PlaybookLayoutMode = "solar" | "index" | "prism" | "timeline" | "orbit" | "helix" | "sphere";
@@ -32,6 +32,121 @@ function getSolarPosition(index: number): Vec3 {
     Math.sin(angle) * radius * 0.62 - 0.4 - ringIndex * 0.12,
     ((ringSlot % 3) - 1) * 0.55 - ringIndex * 0.16,
   ];
+}
+
+const SOLAR_GROUP_COLORS: Record<PlaybookGroup, { primary: string; secondary: string }> = {
+  H: { primary: "#74a7ff", secondary: "#d7a7ff" },
+  GN8: { primary: "#ff9d72", secondary: "#ffd66e" },
+};
+
+function makeSolarCategoryTexture(group: PlaybookGroup, storyCount: number) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 260;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return null;
+  }
+
+  const colors = SOLAR_GROUP_COLORS[group];
+  const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, colors.primary);
+  gradient.addColorStop(1, colors.secondary);
+  context.fillStyle = "rgba(6, 9, 24, 0.82)";
+  context.roundRect(12, 12, canvas.width - 24, canvas.height - 24, 42);
+  context.fill();
+  context.strokeStyle = gradient;
+  context.lineWidth = 5;
+  context.stroke();
+  context.fillStyle = "#ffffff";
+  context.font = "700 78px Arial";
+  context.fillText(group === "H" ? "HYUNDAI" : "GENESIS", 54, 112);
+  context.fillStyle = "rgba(255,255,255,0.72)";
+  context.font = "500 30px Arial";
+  context.fillText(`${storyCount} STORY PLANETS`, 58, 172);
+  context.fillStyle = colors.secondary;
+  context.font = "700 24px Arial";
+  context.fillText(group === "H" ? "H SERIES" : "GN8 SERIES", 58, 214);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function SolarCategoryPlanet({
+  group,
+  storyCount,
+  selectedGroup,
+  onSelect,
+}: {
+  group: PlaybookGroup;
+  storyCount: number;
+  selectedGroup: PlaybookGroup | null;
+  onSelect: (group: PlaybookGroup) => void;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const { viewport } = useThree();
+  const texture = useMemo(() => makeSolarCategoryTexture(group, storyCount), [group, storyCount]);
+  const colors = SOLAR_GROUP_COLORS[group];
+  const isSelected = selectedGroup === group;
+  const isCompactStage = viewport.width < 9;
+
+  useEffect(() => () => texture?.dispose(), [texture]);
+
+  useFrame((_, delta) => {
+    if (!ref.current) {
+      return;
+    }
+
+    const isHidden = selectedGroup !== null && !isSelected;
+    const targetPosition = isSelected
+      ? [0, 0, -1.15]
+      : group === "H"
+        ? [isCompactStage ? -1.55 : -3.15, 0.15, -0.8]
+        : [isCompactStage ? 1.55 : 3.15, -0.15, -0.8];
+    const targetScale = isHidden ? 0.001 : isSelected ? 0.58 : isCompactStage ? 0.56 : 0.82;
+    ref.current.position.lerp(new THREE.Vector3(...targetPosition), 1 - Math.pow(0.001, delta));
+    ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
+    ref.current.rotation.y += delta * (isSelected ? 0.22 : 0.12);
+  });
+
+  return (
+    <group
+      ref={ref}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect(group);
+      }}
+    >
+      <mesh castShadow receiveShadow>
+        <sphereGeometry args={[1.75, 36, 24]} />
+        <meshStandardMaterial
+          color={colors.primary}
+          emissive={colors.secondary}
+          emissiveIntensity={1.05}
+          roughness={0.24}
+          metalness={0.3}
+        />
+      </mesh>
+      <mesh rotation={[Math.PI * 0.5, 0.2, 0.18]} scale={1.22}>
+        <torusGeometry args={[1.72, 0.045, 12, 96]} />
+        <meshBasicMaterial color={colors.secondary} transparent opacity={0.82} toneMapped={false} />
+      </mesh>
+      <mesh rotation={[0.5, -0.7, 0.2]} scale={1.08}>
+        <torusGeometry args={[1.85, 0.018, 8, 96]} />
+        <meshBasicMaterial color={colors.primary} transparent opacity={0.72} toneMapped={false} />
+      </mesh>
+      {texture ? (
+        <mesh position={[0, -2.05, 0.16]}>
+          <planeGeometry args={[4.7, 1.2]} />
+          <meshBasicMaterial map={texture} transparent toneMapped={false} />
+        </mesh>
+      ) : null}
+      <pointLight color={colors.secondary} intensity={isSelected ? 18 : 12} distance={10} />
+    </group>
+  );
 }
 
 function getIndexColumns(playbookCount: number) {
@@ -581,9 +696,19 @@ function PlaybookObject({
     }
 
     if (modeFocus && !hasFocusedView) {
+      if (mode === "orbit" || mode === "prism") {
+        // These modes are focus tools: the selected story is pulled into the
+        // viewing lane instead of only receiving a small hover offset.
+        interactionPosition.set(0, 0, mode === "orbit" ? 2.65 : 2.9);
+      } else if (mode === "solar") {
+        interactionPosition.z += 0.42;
+      }
+
       // Keep the hover cue in a shallow, shared depth band so it never jumps
       // across neighbouring cards or drops out from under the pointer.
-      if (mode === "sphere") {
+      if (mode === "orbit" || mode === "prism") {
+        interactionPosition.y += mode === "prism" ? 0.12 : 0;
+      } else if (mode === "sphere") {
         interactionPosition.add(new THREE.Vector3(-basePosition[0], -basePosition[1], -basePosition[2]).normalize().multiplyScalar(0.18));
       } else {
         interactionPosition.y += 0.1;
@@ -787,6 +912,102 @@ function PlaybookObject({
         <meshBasicMaterial color={focused || !hasQuery ? lightPalette[index % lightPalette.length] : "#b4b9c8"} transparent opacity={opacity} />
       </mesh> : null}
       <InfoPanel playbook={playbook} visible={hovered || focusedView} />
+    </group>
+  );
+}
+
+function SolarSystemStage({
+  playbooks,
+  textures,
+  selectedGroup,
+  hoveredIndex,
+  focusedIds,
+  focusedViewIndex,
+  onSelectGroup,
+  onHover,
+  onFocusPlaybook,
+}: {
+  playbooks: readonly PlaybookItem[];
+  textures: readonly THREE.Texture[];
+  selectedGroup: PlaybookGroup | null;
+  hoveredIndex: number | null;
+  focusedIds: ReadonlySet<string>;
+  focusedViewIndex: number | null;
+  onSelectGroup: (group: PlaybookGroup) => void;
+  onHover: (index: number | null) => void;
+  onFocusPlaybook: (playbook: PlaybookItem, index: number) => void;
+}) {
+  const { viewport } = useThree();
+  const storyPlaybooks = selectedGroup
+    ? playbooks.filter((playbook) => playbook.group === selectedGroup)
+    : [];
+  const shadowsEnabled = storyPlaybooks.length <= 32;
+  const isCompactStage = viewport.width < 9;
+
+  return (
+    <group>
+      <mesh
+        position={[0, 0, -8]}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (selectedGroup) {
+            onSelectGroup(selectedGroup);
+          }
+        }}
+      >
+        <planeGeometry args={[100, 100]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      <SolarCategoryPlanet group="H" storyCount={playbooks.filter((playbook) => playbook.group === "H").length} selectedGroup={selectedGroup} onSelect={onSelectGroup} />
+      <SolarCategoryPlanet group="GN8" storyCount={playbooks.filter((playbook) => playbook.group === "GN8").length} selectedGroup={selectedGroup} onSelect={onSelectGroup} />
+      {selectedGroup ? (
+        <group scale={isCompactStage ? 0.46 : 0.82}>
+          {[3.25, 4.85, 6.35].map((radius, index) => (
+            <mesh key={radius} rotation={[Math.PI * 0.5, index * 0.22, index * 0.12]} position={[0, 0, -0.95]}>
+              <torusGeometry args={[radius, index === 1 ? 0.045 : 0.025, 8, 128]} />
+              <meshBasicMaterial
+                color={SOLAR_GROUP_COLORS[selectedGroup][index % 2 ? "secondary" : "primary"]}
+                transparent
+                opacity={0.34 - index * 0.05}
+                toneMapped={false}
+              />
+            </mesh>
+          ))}
+          {storyPlaybooks.map((playbook, index) => (
+            <PlaybookObject
+              key={`${playbook.id}-${index}`}
+              playbook={playbook}
+              index={index}
+              mode="solar"
+              visiblePlaybooks={storyPlaybooks}
+              shadowsEnabled={shadowsEnabled}
+              texture={textures[index % textures.length]}
+              hovered={hoveredIndex === index}
+              focused={focusedIds.has(playbook.id)}
+              hasQuery={false}
+              selected={hoveredIndex === index}
+              hasSelection={hoveredIndex !== null}
+              focusedView={focusedViewIndex === index}
+              hasFocusedView={focusedViewIndex !== null}
+              onHover={onHover}
+              onFocusPlaybook={onFocusPlaybook}
+            />
+          ))}
+          <mesh position={[0, 0, -1.25]}>
+            <sphereGeometry args={[0.72, 24, 16]} />
+            <meshStandardMaterial
+              color={SOLAR_GROUP_COLORS[selectedGroup].primary}
+              emissive={SOLAR_GROUP_COLORS[selectedGroup].secondary}
+              emissiveIntensity={1.4}
+              transparent
+              opacity={0.82}
+              roughness={0.2}
+              metalness={0.42}
+            />
+          </mesh>
+          <pointLight color={SOLAR_GROUP_COLORS[selectedGroup].secondary} intensity={18} distance={14} />
+        </group>
+      ) : null}
     </group>
   );
 }
@@ -1027,46 +1248,7 @@ function StageParticles({ mode }: { mode: PlaybookLayoutMode }) {
   );
 }
 
-function ChromaticBloomEffect() {
-  const ref = useRef<THREE.Group>(null);
-
-  useFrame((_, delta) => {
-    if (!ref.current) {
-      return;
-    }
-
-    ref.current.rotation.z += delta * 0.045;
-  });
-
-  const petals = ["#ff6b9d", "#65d6ff", "#ffd166", "#a78bfa", "#7ee7bd", "#ff9f68"];
-
-  return (
-    <group ref={ref} position={[0, 0, -1.3]}>
-      <mesh>
-        <sphereGeometry args={[1.25, 32, 20]} />
-        <meshStandardMaterial color="#fff1c7" emissive="#ff7b7b" emissiveIntensity={1.7} roughness={0.2} metalness={0.1} />
-      </mesh>
-      {[2.1, 3.45, 4.85].map((radius, index) => (
-        <mesh key={radius} rotation={[Math.PI * 0.5, index * 0.18, index * 0.32]}>
-          <torusGeometry args={[radius, index === 1 ? 0.08 : 0.045, 12, 128]} />
-          <meshBasicMaterial color={petals[index]} transparent opacity={0.42} toneMapped={false} />
-        </mesh>
-      ))}
-      {petals.map((color, index) => {
-        const angle = (index / petals.length) * Math.PI * 2;
-        return <mesh key={color} position={[Math.cos(angle) * 2.7, Math.sin(angle) * 2.7, 0.08]} rotation={[0, 0, angle]} scale={[0.72, 1.8, 0.22]}>
-          <sphereGeometry args={[0.58, 20, 12]} />
-          <meshBasicMaterial color={color} transparent opacity={0.62} toneMapped={false} />
-        </mesh>
-      })}
-      <pointLight position={[-2.6, 1.8, 1.4]} color="#ff6b9d" intensity={16} distance={11} />
-      <pointLight position={[2.8, -1.5, 1.2]} color="#65d6ff" intensity={15} distance={11} />
-      <pointLight position={[0, 2.6, 1]} color="#ffd166" intensity={14} distance={10} />
-    </group>
-  );
-}
-
-function PrismCascadeEffect() {
+function PrismLensEffect() {
   const ref = useRef<THREE.Group>(null);
   const ribbons = useMemo(() => [
     { color: "#ff6b9d", offset: 0.35 },
@@ -1117,8 +1299,7 @@ function StageEffects({ mode }: { mode: PlaybookLayoutMode }) {
     <>
       <StageParticles mode={mode} />
       <WatercolorBackdrop mode={mode} />
-      {mode === "solar" ? <ChromaticBloomEffect /> : null}
-      {mode === "prism" ? <PrismCascadeEffect /> : null}
+      {mode === "prism" ? <PrismLensEffect /> : null}
       {mode === "orbit" ? (
         <group ref={ref} position={[0, 0, -0.5]}>
           <mesh>
@@ -1134,17 +1315,7 @@ function StageEffects({ mode }: { mode: PlaybookLayoutMode }) {
 
 function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks: readonly PlaybookItem[] }) {
   if (mode === "solar") {
-    return (
-      <>
-        {playbooks.slice(0, 16).map((_, slotIndex) => {
-          const [x, y, z] = getSolarPosition(slotIndex);
-          return <mesh key={slotIndex} position={[x * 0.68, y * 0.68, z - 0.2]} rotation={[0, 0, Math.atan2(y, x)]}>
-            <boxGeometry args={[Math.hypot(x, y) * 0.44, 0.018, 0.018]} />
-            <meshBasicMaterial color={["#ff6b9d", "#65d6ff", "#ffd166", "#a78bfa"][slotIndex % 4]} transparent opacity={0.46} toneMapped={false} />
-          </mesh>;
-        })}
-      </>
-    );
+    return null;
   }
 
   if (mode === "helix") {
@@ -1318,6 +1489,7 @@ function ComparisonStage({
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [focusedViewIndex, setFocusedViewIndex] = useState<number | null>(null);
+  const [selectedSolarGroup, setSelectedSolarGroup] = useState<PlaybookGroup | null>(null);
   const hoverClearTimer = useRef<number | null>(null);
   const handleHover = useCallback((index: number | null) => {
     if (hoverClearTimer.current !== null) {
@@ -1338,7 +1510,15 @@ function ComparisonStage({
 
   useEffect(() => {
     setFocusedViewIndex(null);
+    setHoveredIndex(null);
+    setSelectedSolarGroup(null);
   }, [mode, playbooks]);
+
+  const handleSelectSolarGroup = useCallback((group: PlaybookGroup) => {
+    setSelectedSolarGroup((currentGroup) => (currentGroup === group ? null : group));
+    setFocusedViewIndex(null);
+    setHoveredIndex(null);
+  }, []);
 
   const handleFocusPlaybook = useCallback((playbook: PlaybookItem, index: number) => {
     if (focusedViewIndex === index) {
@@ -1431,27 +1611,43 @@ function ComparisonStage({
         </mesh>
         <StageGuides mode={mode} playbooks={playbooks} />
         <group ref={sphereGroupRef}>
-          <CoreCube mode={mode} />
-          {renderItems.map(({ playbook, index }) => (
-            <PlaybookObject
-              key={`${playbook.id}-${index}`}
-              playbook={playbook}
-              index={index}
-              mode={mode}
-              visiblePlaybooks={playbooks}
-              shadowsEnabled={shadowsEnabled}
-              texture={textures[index % textures.length]}
-              hovered={hoveredIndex === index}
-              focused={focusedIds.has(playbook.id)}
-              hasQuery={hasQuery}
-              selected={hoveredIndex === index}
-              hasSelection={hoveredIndex !== null}
-              focusedView={focusedViewIndex === index}
-              hasFocusedView={focusedViewIndex !== null}
+          {mode === "solar" ? (
+            <SolarSystemStage
+              playbooks={playbooks}
+              textures={textures}
+              selectedGroup={selectedSolarGroup}
+              hoveredIndex={hoveredIndex}
+              focusedIds={focusedIds}
+              focusedViewIndex={focusedViewIndex}
+              onSelectGroup={handleSelectSolarGroup}
               onHover={handleHover}
               onFocusPlaybook={handleFocusPlaybook}
             />
-          ))}
+          ) : (
+            <>
+              <CoreCube mode={mode} />
+              {renderItems.map(({ playbook, index }) => (
+                <PlaybookObject
+                  key={`${playbook.id}-${index}`}
+                  playbook={playbook}
+                  index={index}
+                  mode={mode}
+                  visiblePlaybooks={playbooks}
+                  shadowsEnabled={shadowsEnabled}
+                  texture={textures[index % textures.length]}
+                  hovered={hoveredIndex === index}
+                  focused={focusedIds.has(playbook.id)}
+                  hasQuery={hasQuery}
+                  selected={hoveredIndex === index}
+                  hasSelection={hoveredIndex !== null}
+                  focusedView={focusedViewIndex === index}
+                  hasFocusedView={focusedViewIndex !== null}
+                  onHover={handleHover}
+                  onFocusPlaybook={handleFocusPlaybook}
+                />
+              ))}
+            </>
+          )}
         </group>
       </HelixMotionGroup>
       <OrbitController mode={mode} sphereGroupRef={sphereGroupRef} />
@@ -1470,31 +1666,31 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
   ), [allPlaybooks, normalizedQuery]);
   const playbooks = allPlaybooks;
   const title = mode === "solar"
-    ? "CHROMATIC BLOOM"
+    ? "SOLAR SYSTEM"
     : mode === "index"
       ? "STORY INDEX"
       : mode === "prism"
-        ? "PRISM CASCADE"
+        ? "PRISM LENS"
         : mode === "helix"
           ? "HELIX"
           : mode === "sphere"
             ? "SPHERE"
         : mode === "timeline"
-          ? "TIMELINE RAIL"
-          : "ORBIT RINGS";
+          ? "STORY RIBBON"
+          : "FOCUS ORBIT";
   const description = mode === "solar"
-    ? "컬러 코어와 꽃잎형 레이어가 스토리를 펼칩니다"
+    ? "H와 GN8 행성을 고르면 해당 스토리계가 중앙으로 전개됩니다"
     : mode === "index"
       ? "전체를 훑고 검색 결과를 앞으로 당겨 바로 들어갑니다"
       : mode === "prism"
-        ? "반투명 프리즘 카드가 계단형 캐스케이드로 이어집니다"
+        ? "카드를 고르면 유리층 밖으로 끌어내어 내용을 확인합니다"
         : mode === "helix"
           ? "스크롤로 세로 소용돌이를 오르내리며 플레이북을 만납니다"
           : mode === "sphere"
             ? "구 안에 서서 내부 스플라인을 따라 플레이북을 훑습니다"
         : mode === "timeline"
-          ? "스토리를 순서와 레일 단위로 빠르게 훑습니다"
-          : "그룹과 스토리가 동심 궤도로 분리됩니다";
+          ? "스토리를 한 줄의 리본처럼 훑고 현재 위치를 포커스합니다"
+          : "선택한 스토리를 중앙으로 끌어올리고 주변 궤도를 비교합니다";
 
   return (
     <main className={`playbook-layout playbook-layout--${mode}`} data-layout-mode={mode}>
