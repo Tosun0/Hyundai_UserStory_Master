@@ -617,6 +617,32 @@ function makeCurvedCardGeometry(width: number, height: number) {
   return geometry;
 }
 
+function makeRoundedMarkerGeometry(width: number, height: number, depth: number, radius: number) {
+  const shape = new THREE.Shape();
+  const halfWidth = width * 0.5;
+  const halfHeight = height * 0.5;
+  const r = Math.min(radius, halfWidth, halfHeight);
+  shape.moveTo(-halfWidth + r, -halfHeight);
+  shape.lineTo(halfWidth - r, -halfHeight);
+  shape.quadraticCurveTo(halfWidth, -halfHeight, halfWidth, -halfHeight + r);
+  shape.lineTo(halfWidth, halfHeight - r);
+  shape.quadraticCurveTo(halfWidth, halfHeight, halfWidth - r, halfHeight);
+  shape.lineTo(-halfWidth + r, halfHeight);
+  shape.quadraticCurveTo(-halfWidth, halfHeight, -halfWidth, halfHeight - r);
+  shape.lineTo(-halfWidth, -halfHeight + r);
+  shape.quadraticCurveTo(-halfWidth, -halfHeight, -halfWidth + r, -halfHeight);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    bevelEnabled: true,
+    bevelSegments: 3,
+    bevelSize: 0.035,
+    bevelThickness: 0.035,
+    depth,
+    steps: 1,
+  });
+  geometry.center();
+  return geometry;
+}
+
 function PlaybookObject({
   playbook,
   index,
@@ -670,9 +696,13 @@ function PlaybookObject({
     () => isSphere ? makeCurvedCardGeometry(2, 1.12) : makeCurvedCardGeometry(2.5, 1.5),
     [isSphere],
   );
+  const mapMarkerGeometry = useMemo(
+    () => (isIndex ? makeRoundedMarkerGeometry(2.2, 1.34, 0.22, 0.18) : null),
+    [isIndex],
+  );
   const baseRotation = useMemo<Vec3>(
     () => isIndex
-      ? [0.025 + (index % 2) * 0.018, -0.05 + (index % 3) * 0.025, 0]
+      ? [0, -0.05 + (index % 3) * 0.05, 0]
       : mode === "timeline"
         ? [0.02, index % 2 ? -0.08 : 0.08, index % 2 ? -0.04 : 0.04]
       : isSphere
@@ -683,7 +713,10 @@ function PlaybookObject({
     [basePosition, index, isHelix, isIndex, isSphere, mode],
   );
 
-  useEffect(() => () => cardGeometry.dispose(), [cardGeometry]);
+  useEffect(() => () => {
+    cardGeometry.dispose();
+    mapMarkerGeometry?.dispose();
+  }, [cardGeometry, mapMarkerGeometry]);
 
   useFrame((_, delta) => {
     const group = groupRef.current;
@@ -832,6 +865,20 @@ function PlaybookObject({
       );
     }
 
+    if (isIndex) {
+      return (
+        <>
+          <mesh geometry={mapMarkerGeometry} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
+            <meshStandardMaterial {...material()} color={surfaceColor} roughness={0.2} metalness={0.22} />
+          </mesh>
+          <mesh position={[0, 0, 0.15]}>
+            <planeGeometry args={[1.82, 0.86]} />
+            <meshBasicMaterial map={texture} transparent opacity={viewOpacity} toneMapped={false} />
+          </mesh>
+        </>
+      );
+    }
+
     if (mode === "timeline") {
       return (
         <>
@@ -955,19 +1002,15 @@ function PlaybookObject({
       }}
     >
       {renderShape()}
-      {isIndex ? <mesh position={[0, -0.57, 0.4]}>
-        <boxGeometry args={[1.84, 0.055, 0.035]} />
-        <meshBasicMaterial color={focused || !hasQuery ? lightPalette[index % lightPalette.length] : "#b4b9c8"} transparent opacity={opacity} />
-      </mesh> : null}
       {isIndex ? (
-        <group position={[0, -0.9, 0.38]}>
-          <mesh>
-            <cylinderGeometry args={[0.025, 0.025, 0.26, 8]} />
-            <meshBasicMaterial color={playbook.group === "H" ? "#5279d8" : "#d77792"} transparent opacity={0.8} />
+        <group position={[0, -0.53, 0.1]}>
+          <mesh position={[0, -0.31, 0]}>
+            <cylinderGeometry args={[0.035, 0.035, 0.62, 12]} />
+            <meshStandardMaterial color={playbook.group === "H" ? "#5279d8" : "#d77792"} emissive={playbook.group === "H" ? "#7fd8ff" : "#ff9fcf"} emissiveIntensity={0.5} roughness={0.28} metalness={0.24} />
           </mesh>
-          <mesh position={[0, -0.16, 0]}>
-            <sphereGeometry args={[0.1, 12, 8]} />
-            <meshStandardMaterial color={playbook.group === "H" ? "#5279d8" : "#d77792"} emissive={playbook.group === "H" ? "#7fd8ff" : "#ff9fcf"} emissiveIntensity={0.5} />
+          <mesh position={[0, -0.66, 0]}>
+            <cylinderGeometry args={[0.15, 0.15, 0.06, 24]} />
+            <meshStandardMaterial color={playbook.group === "H" ? "#5279d8" : "#d77792"} emissive={playbook.group === "H" ? "#7fd8ff" : "#ff9fcf"} emissiveIntensity={0.42} roughness={0.2} metalness={0.18} />
           </mesh>
         </group>
       ) : null}
@@ -1355,13 +1398,12 @@ function StoryMapBackdrop({ playbooks }: { playbooks: readonly PlaybookItem[] })
     { position: [3.5, 0, 1.7], size: [0.34, 0.08, 8.7], rotation: -0.24 },
     { position: [-1.8, 0, -2.7], size: [7.4, 0.08, 0.28], rotation: -0.1 },
   ];
-  const mapBlocks = playbooks.map((playbook, index) => {
+  const mapAnchors = playbooks.map((playbook, index) => {
     const [x, , z] = getIndexMapSlot(index, playbooks.length);
     return {
       playbook,
       position: [x, 0, z] as Vec3,
-      height: 0.34 + (index % 4) * 0.12,
-      color: ["#d6e9de", "#e5ddf4", "#f5e1cf", "#d8e8f5"][index % 4],
+      color: ["#6e9cff", "#ef7bb2", "#7fd8c1", "#f3b56b"][index % 4],
     };
   });
   const route = new THREE.CatmullRomCurve3([
@@ -1402,15 +1444,15 @@ function StoryMapBackdrop({ playbooks }: { playbooks: readonly PlaybookItem[] })
         <tubeGeometry args={[route, 96, 0.035, 8, false]} />
         <meshBasicMaterial color="#ef7bb2" transparent opacity={0.74} toneMapped={false} />
       </mesh>
-      {mapBlocks.map(({ playbook, position, height, color }) => (
-        <group key={`map-block-${playbook.id}`} position={position}>
-          <mesh position={[0, height * 0.5, 0]} castShadow receiveShadow>
-            <boxGeometry args={[1.95, height, 1.22]} />
-            <meshStandardMaterial color={color} roughness={0.58} metalness={0.08} />
+      {mapAnchors.map(({ playbook, position, color }) => (
+        <group key={`map-anchor-${playbook.id}`} position={position}>
+          <mesh position={[0, 0.03, 0]}>
+            <cylinderGeometry args={[0.56, 0.68, 0.06, 32]} />
+            <meshStandardMaterial color="#ffffff" transparent opacity={0.84} roughness={0.32} metalness={0.12} />
           </mesh>
-          <mesh position={[0, height + 0.035, 0]}>
-            <boxGeometry args={[1.66, 0.045, 0.92]} />
-            <meshBasicMaterial color="#ffffff" transparent opacity={0.3} />
+          <mesh position={[0, 0.075, 0]} rotation={[Math.PI * 0.5, 0, 0]}>
+            <torusGeometry args={[0.47, 0.035, 8, 40]} />
+            <meshBasicMaterial color={color} transparent opacity={0.9} toneMapped={false} />
           </mesh>
         </group>
       ))}
