@@ -204,6 +204,9 @@ function StoryMapDistrictRegion({
         rotation={[-Math.PI * 0.5, 0, 0]}
         onClick={(event) => {
           event.stopPropagation();
+          if (event.delta > CARD_DRAG_THRESHOLD) {
+            return;
+          }
           onSelect(group);
         }}
         onPointerEnter={(event) => {
@@ -228,6 +231,9 @@ function StoryMapDistrictRegion({
           rotation={[-Math.PI * 0.5, 0, 0]}
           onClick={(event) => {
             event.stopPropagation();
+            if (event.delta > CARD_DRAG_THRESHOLD) {
+              return;
+            }
             onSelect(group);
           }}
         >
@@ -285,6 +291,9 @@ function SolarCategoryPlanet({
       ref={ref}
       onClick={(event) => {
         event.stopPropagation();
+        if (event.delta > CARD_DRAG_THRESHOLD) {
+          return;
+        }
         onSelect(group);
       }}
     >
@@ -1681,6 +1690,9 @@ function StoryMapDistrictInfo({ group, storyCount, selectedGroup, onSelect }: { 
         <mesh
           onClick={(event) => {
             event.stopPropagation();
+            if (event.delta > CARD_DRAG_THRESHOLD) {
+              return;
+            }
             onSelect(group);
           }}
         >
@@ -2133,6 +2145,9 @@ function ComparisonStage({
           position={[0, 0, -12]}
           onClick={(event) => {
             event.stopPropagation();
+            if (event.delta > CARD_DRAG_THRESHOLD) {
+              return;
+            }
             setFocusedViewIndex(null);
             setHoveredIndex(null);
             if (mode === "index") {
