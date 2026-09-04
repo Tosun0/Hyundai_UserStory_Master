@@ -6,6 +6,12 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { PlaybookAccessGroup, PlaybookGroup, PlaybookItem } from "../../data/playbookCatalog";
 import { PLAYBOOK_CATALOG } from "../../data/playbookCatalog";
 
+const STORY_THUMBNAIL_SOURCES = PLAYBOOK_CATALOG
+  .map((playbook) => playbook.thumbnailSrc ?? playbook.fallbackThumbnailSrc ?? "")
+  .filter(Boolean);
+
+useLoader.preload(THREE.TextureLoader, STORY_THUMBNAIL_SOURCES);
+
 export type PlaybookLayoutMode = "solar" | "index" | "prism" | "timeline" | "orbit" | "helix" | "sphere";
 
 type PlaybookLayoutViewProps = {
