@@ -201,14 +201,19 @@ function getIndexColumns(playbookCount: number) {
 }
 
 function getIndexPosition(index: number, playbookCount: number): Vec3 {
+  const [x, , z] = getIndexMapSlot(index, playbookCount);
+  return [x, 1.05 + (index % 4) * 0.06, z];
+}
+
+function getIndexMapSlot(index: number, playbookCount: number): Vec3 {
   const columns = getIndexColumns(playbookCount);
   const rows = Math.ceil(playbookCount / columns);
   const column = index % columns;
   const row = Math.floor(index / columns);
   return [
     (column - (columns - 1) / 2) * 2.42,
-    ((rows - 1) / 2 - row) * 1.75 - 0.2,
-    (column % 2 ? 0.28 : -0.28) + (row % 3 - 1) * 0.1,
+    0,
+    ((rows - 1) / 2 - row) * 1.75 - 0.2 + (column % 2 ? 0.12 : -0.12),
   ];
 }
 
@@ -1344,78 +1349,78 @@ function PrismLensEffect() {
 
 function StoryMapBackdrop({ playbooks }: { playbooks: readonly PlaybookItem[] }) {
   const roadBlocks = [
-    { position: [-5.6, 1.9, -1.9], size: [13.2, 0.34, 0.08], rotation: -0.18 },
-    { position: [4.1, -1.2, -1.88], size: [10.5, 0.34, 0.08], rotation: 0.22 },
-    { position: [-0.5, 0.15, -1.86], size: [0.34, 9.6, 0.08], rotation: 0.42 },
-    { position: [3.5, 1.7, -1.84], size: [0.34, 8.7, 0.08], rotation: -0.24 },
-    { position: [-1.8, -2.7, -1.82], size: [7.4, 0.28, 0.08], rotation: -0.1 },
+    { position: [-5.6, 0, 1.9], size: [13.2, 0.08, 0.34], rotation: -0.18 },
+    { position: [4.1, 0, -1.2], size: [10.5, 0.08, 0.34], rotation: 0.22 },
+    { position: [-0.5, 0, 0.15], size: [0.34, 0.08, 9.6], rotation: 0.42 },
+    { position: [3.5, 0, 1.7], size: [0.34, 0.08, 8.7], rotation: -0.24 },
+    { position: [-1.8, 0, -2.7], size: [7.4, 0.08, 0.28], rotation: -0.1 },
   ];
   const mapBlocks = playbooks.map((playbook, index) => {
-    const [x, y] = getIndexPosition(index, playbooks.length);
+    const [x, , z] = getIndexMapSlot(index, playbooks.length);
     return {
       playbook,
-      position: [x, y, -1.58] as Vec3,
+      position: [x, 0, z] as Vec3,
       height: 0.34 + (index % 4) * 0.12,
       color: ["#d6e9de", "#e5ddf4", "#f5e1cf", "#d8e8f5"][index % 4],
     };
   });
   const route = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(-8.2, -2.5, -1.74),
-    new THREE.Vector3(-4.4, -0.1, -1.72),
-    new THREE.Vector3(-1.4, 1.9, -1.7),
-    new THREE.Vector3(2.6, 1.15, -1.68),
-    new THREE.Vector3(7.6, 2.65, -1.66),
+    new THREE.Vector3(-8.2, 0.11, -2.5),
+    new THREE.Vector3(-4.4, 0.11, -0.1),
+    new THREE.Vector3(-1.4, 0.11, 1.9),
+    new THREE.Vector3(2.6, 0.11, 1.15),
+    new THREE.Vector3(7.6, 0.11, 2.65),
   ]);
 
   return (
     <group>
-      <mesh position={[0, 0, -2.22]}>
-        <boxGeometry args={[22, 15, 0.18]} />
+      <mesh position={[0, -0.05, 0]} rotation={[-Math.PI * 0.5, 0, 0]} receiveShadow>
+        <planeGeometry args={[28, 20]} />
         <meshStandardMaterial color="#dcebe4" roughness={0.92} metalness={0.02} />
       </mesh>
-      <mesh position={[-5.8, -1.5, -2.08]} rotation={[0, 0, -0.16]}>
-        <boxGeometry args={[4.2, 2.45, 0.05]} />
+      <mesh position={[-5.8, -0.045, -1.5]} rotation={[0, 0.02, -0.16]}>
+        <boxGeometry args={[4.2, 0.06, 2.45]} />
         <meshStandardMaterial color="#bde6d3" transparent opacity={0.78} roughness={1} />
       </mesh>
-      <mesh position={[5.6, 2.25, -2.07]} rotation={[0, 0, 0.24]}>
-        <boxGeometry args={[3.8, 1.8, 0.05]} />
+      <mesh position={[5.6, -0.045, 2.25]} rotation={[0, 0.02, 0.24]}>
+        <boxGeometry args={[3.8, 0.06, 1.8]} />
         <meshStandardMaterial color="#c6e7ee" transparent opacity={0.76} roughness={1} />
       </mesh>
       {Array.from({ length: 9 }, (_, index) => (
-        <mesh key={`map-street-${index}`} position={[(index - 4) * 2.2, 0, -2.02]}>
-          <boxGeometry args={[0.025, 14.2, 0.025]} />
+        <mesh key={`map-street-${index}`} position={[(index - 4) * 2.2, -0.055, 0]}>
+          <boxGeometry args={[0.025, 0.025, 14.2]} />
           <meshBasicMaterial color="#b8d2c9" transparent opacity={0.48} />
         </mesh>
       ))}
       {roadBlocks.map((road) => (
-        <mesh key={`${road.position.join("-")}`} position={road.position as Vec3} rotation={[0, 0, road.rotation]}>
+        <mesh key={`${road.position.join("-")}`} position={[road.position[0], -0.02, road.position[2]] as Vec3} rotation={[0, road.rotation, 0]}>
           <boxGeometry args={road.size as Vec3} />
           <meshStandardMaterial color="#fbfcf8" roughness={0.86} metalness={0.02} />
         </mesh>
       ))}
-      <mesh position={[0, 0, -1.76]}>
+      <mesh position={[0, 0.13, 0]}>
         <tubeGeometry args={[route, 96, 0.035, 8, false]} />
         <meshBasicMaterial color="#ef7bb2" transparent opacity={0.74} toneMapped={false} />
       </mesh>
       {mapBlocks.map(({ playbook, position, height, color }) => (
         <group key={`map-block-${playbook.id}`} position={position}>
-          <mesh position={[0, 0, height * -0.5]}>
-            <boxGeometry args={[1.95, 1.22, height]} />
+          <mesh position={[0, height * 0.5, 0]} castShadow receiveShadow>
+            <boxGeometry args={[1.95, height, 1.22]} />
             <meshStandardMaterial color={color} roughness={0.58} metalness={0.08} />
           </mesh>
-          <mesh position={[0, 0, 0.035]}>
-            <boxGeometry args={[1.66, 0.92, 0.045]} />
+          <mesh position={[0, height + 0.035, 0]}>
+            <boxGeometry args={[1.66, 0.045, 0.92]} />
             <meshBasicMaterial color="#ffffff" transparent opacity={0.3} />
           </mesh>
         </group>
       ))}
       {[[-6.8, 2.65], [0.8, -2.8], [6.2, -2.1]].map(([x, y], index) => (
-        <group key={`map-park-${index}`} position={[x, y, -1.96]}>
+        <group key={`map-park-${index}`} position={[x, -0.02, y]}>
           <mesh>
             <cylinderGeometry args={[0.74, 0.8, 0.06, 20]} />
             <meshStandardMaterial color={index % 2 ? "#f6d9a9" : "#b7e2cf"} roughness={0.96} />
           </mesh>
-          <mesh position={[0, 0, 0.08]}>
+          <mesh position={[0, 0.08, 0]} rotation={[Math.PI * 0.5, 0, 0]}>
             <torusGeometry args={[0.5, 0.025, 8, 36]} />
             <meshBasicMaterial color="#ffffff" transparent opacity={0.52} />
           </mesh>
@@ -1711,7 +1716,7 @@ function ComparisonStage({
 
   return (
     <>
-      {!lightStage && !transparentStage ? <color attach="background" args={[stageBackground]} /> : null}
+      {!transparentStage ? <color attach="background" args={[stageBackground]} /> : null}
       <ambientLight intensity={lightStage ? 1.45 : mode === "sphere" ? 1.08 : mode === "prism" ? 0.72 : mode === "helix" ? 0.82 : mode === "orbit" ? 0.8 : 0.7} />
       <directionalLight position={[-5, 8, 8]} color={keyLightColor} intensity={mode === "prism" ? 3.5 : 3.7} castShadow={shadowsEnabled} />
       <pointLight position={[0, 0, 4]} color={mode === "solar" ? "#ff83bd" : mode === "orbit" ? "#a881ff" : mode === "timeline" ? "#ff9edc" : mode === "index" ? "#8bdcff" : mode === "helix" ? "#65d6ff" : mode === "sphere" ? "#ffd5e1" : "#9f87ff"} intensity={lightStage ? 9 : mode === "sphere" ? 6 : mode === "solar" || mode === "orbit" ? 10 : 7} distance={14} />
@@ -1853,7 +1858,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 스테이지">
         <Canvas
           key={mode}
-          camera={{ position: mode === "sphere" ? [0, 0, 0.1] : mode === "helix" ? [0, 0, getCameraDistance(mode, playbooks)] : [0, mode === "index" ? 4.2 : 0.45, getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 68 : mode === "index" ? 46 : 38 }}
+          camera={{ position: mode === "sphere" ? [0, 0, 0.1] : mode === "helix" ? [0, 0, getCameraDistance(mode, playbooks)] : [0, mode === "index" ? 10.5 : 0.45, mode === "index" ? 16.5 : getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 68 : mode === "index" ? 50 : 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: mode === "sphere" }}
           shadows={playbooks.length <= 24}
