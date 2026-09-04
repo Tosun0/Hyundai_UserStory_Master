@@ -147,7 +147,7 @@ function makeMapDistrictTexture(group: PlaybookGroup, storyCount: number, info =
   context.fillText(`${group} DISTRICT`, 42, info ? 96 : 76);
   context.fillStyle = info ? "#5d6b84" : "rgba(39, 54, 82, 0.62)";
   context.font = `700 ${info ? 30 : 24}px Arial`;
-  context.fillText(`${storyCount} STORIES  ·  SELECTED REGION`, 46, info ? 158 : 123);
+  context.fillText(`${storyCount} STORIES  ·  ${info ? "STORY DISTRICT" : "STORY AREA"}`, 46, info ? 158 : 123);
   if (info) {
     context.fillStyle = colors.primary;
     context.font = "900 23px Arial";
@@ -562,7 +562,12 @@ function cubePosition(
   }
 
   if (mode === "index") {
-    return getIndexPosition(index, visiblePlaybooks.length, mapDistrictGroup, mapOverview);
+    if (mapOverview) {
+      const districtPlaybooks = visiblePlaybooks.filter((item) => item.group === playbook.group);
+      const districtIndex = Math.max(0, districtPlaybooks.indexOf(playbook));
+      return getIndexPosition(districtIndex, districtPlaybooks.length, playbook.group, true);
+    }
+    return getIndexPosition(index, visiblePlaybooks.length, mapDistrictGroup, false);
   }
 
   if (mode === "timeline") {
@@ -1699,13 +1704,20 @@ function StoryMapBackdrop({
   const visibleMapPlaybooks = selectedGroup
     ? playbooks.filter((playbook) => playbook.group === selectedGroup)
     : playbooks;
-  const [districtOffsetX, , districtOffsetZ] = getMapDistrictOffset(selectedGroup);
+  const districtPlaybookCounts = {
+    H: visibleMapPlaybooks.filter((playbook) => playbook.group === "H").length,
+    GN8: visibleMapPlaybooks.filter((playbook) => playbook.group === "GN8").length,
+  };
   const mapAnchors = visibleMapPlaybooks.map((playbook, index) => {
-    const [x, , z] = getIndexMapSlot(index, visibleMapPlaybooks.length);
+    const districtGroup = selectedGroup ?? playbook.group;
+    const districtPlaybooks = visibleMapPlaybooks.filter((item) => item.group === districtGroup);
+    const districtIndex = Math.max(0, districtPlaybooks.indexOf(playbook));
+    const [x, , z] = getIndexMapSlot(districtIndex, districtPlaybookCounts[districtGroup]);
+    const [districtOffsetX, , districtOffsetZ] = getMapDistrictOffset(districtGroup);
     return {
       playbook,
       position: [x + districtOffsetX, 0, z + districtOffsetZ] as Vec3,
-      color: ["#6e9cff", "#ef7bb2", "#7fd8c1", "#f3b56b"][index % 4],
+      color: ["#6e9cff", "#ef7bb2", "#7fd8c1", "#f3b56b"][districtIndex % 4],
     };
   });
   const route = new THREE.CatmullRomCurve3([
