@@ -174,6 +174,7 @@ function StoryMapDistrictRegion({
   onSelect: (group: PlaybookGroup) => void;
 }) {
   const ref = useRef<THREE.Group>(null);
+  const [hovered, setHovered] = useState(false);
   const texture = useMemo(() => makeMapDistrictTexture(group, storyCount), [group, storyCount]);
   const colors = SOLAR_GROUP_COLORS[group];
   const isSelected = selectedGroup === group;
@@ -186,7 +187,7 @@ function StoryMapDistrictRegion({
       return;
     }
 
-    const targetScale = isDimmed ? 0.82 : isSelected ? 1.1 : 1;
+    const targetScale = isDimmed ? 0.82 : isSelected ? 1.1 : hovered ? 1.045 : 1;
     ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
   });
 
@@ -199,9 +200,17 @@ function StoryMapDistrictRegion({
           event.stopPropagation();
           onSelect(group);
         }}
+        onPointerEnter={(event) => {
+          event.stopPropagation();
+          setHovered(true);
+        }}
+        onPointerLeave={(event) => {
+          event.stopPropagation();
+          setHovered(false);
+        }}
       >
         <planeGeometry args={[7.3, 8.9]} />
-        <meshStandardMaterial color={colors.primary} transparent opacity={isDimmed ? 0.06 : isSelected ? 0.2 : 0.12} roughness={1} />
+        <meshStandardMaterial color={colors.primary} transparent opacity={isDimmed ? 0.06 : isSelected ? 0.2 : hovered ? 0.2 : 0.12} roughness={1} />
       </mesh>
       <mesh position={[0, 0.075, 0]} rotation={[-Math.PI * 0.5, 0, 0]}>
         <planeGeometry args={[6.8, 8.4]} />
@@ -217,7 +226,7 @@ function StoryMapDistrictRegion({
           }}
         >
           <planeGeometry args={[3.2, 0.64]} />
-          <meshBasicMaterial map={texture} transparent opacity={isDimmed ? 0.24 : 0.92} toneMapped={false} />
+          <meshBasicMaterial map={texture} transparent opacity={isDimmed ? 0.24 : hovered ? 1 : 0.92} toneMapped={false} />
         </mesh>
       ) : null}
     </group>
@@ -379,10 +388,10 @@ function getMapDistrictOffset(group: PlaybookGroup | null): Vec3 {
   return [0, 0, 0];
 }
 
-function getIndexPosition(index: number, playbookCount: number, districtGroup: PlaybookGroup | null = null): Vec3 {
+function getIndexPosition(index: number, playbookCount: number, districtGroup: PlaybookGroup | null = null, overview = false): Vec3 {
   const [x, , z] = getIndexMapSlot(index, playbookCount);
   const [offsetX, , offsetZ] = getMapDistrictOffset(districtGroup);
-  return [x + offsetX, 1.05 + (index % 4) * 0.06, z + offsetZ];
+  return [x + offsetX, overview ? 0.42 : 1.05 + (index % 4) * 0.06, z + offsetZ];
 }
 
 function getIndexMapSlot(index: number, playbookCount: number): Vec3 {
@@ -517,7 +526,7 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
 
   if (mode === "index") {
     const rows = Math.ceil(playbooks.length / getIndexColumns(playbooks.length));
-    return 17.5 + Math.min(14, Math.max(0, rows - 3) * 1.35);
+    return 20.5 + Math.min(14, Math.max(0, rows - 3) * 1.35);
   }
 
   if (mode === "timeline") {
@@ -544,6 +553,7 @@ function cubePosition(
   mode: PlaybookLayoutMode,
   visiblePlaybooks: readonly PlaybookItem[],
   mapDistrictGroup: PlaybookGroup | null = null,
+  mapOverview = false,
 ): Vec3 {
   const [, groupAxis] = playbook.cubeKey.split(",").map(Number);
 
@@ -552,7 +562,7 @@ function cubePosition(
   }
 
   if (mode === "index") {
-    return getIndexPosition(index, visiblePlaybooks.length, mapDistrictGroup);
+    return getIndexPosition(index, visiblePlaybooks.length, mapDistrictGroup, mapOverview);
   }
 
   if (mode === "timeline") {
@@ -830,6 +840,7 @@ function PlaybookObject({
   mode,
   visiblePlaybooks,
   mapDistrictGroup,
+  mapOverview,
   shadowsEnabled,
   texture,
   onHover,
@@ -847,6 +858,7 @@ function PlaybookObject({
   mode: PlaybookLayoutMode;
   visiblePlaybooks: readonly PlaybookItem[];
   mapDistrictGroup?: PlaybookGroup | null;
+  mapOverview?: boolean;
   shadowsEnabled: boolean;
   texture: THREE.Texture;
   onHover: (index: number | null) => void;
@@ -862,8 +874,8 @@ function PlaybookObject({
   const groupRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
   const basePosition = useMemo(
-    () => cubePosition(playbook, index, mode, visiblePlaybooks, mapDistrictGroup),
-    [index, mapDistrictGroup, mode, playbook, visiblePlaybooks],
+    () => cubePosition(playbook, index, mode, visiblePlaybooks, mapDistrictGroup, mapOverview),
+    [index, mapDistrictGroup, mapOverview, mode, playbook, visiblePlaybooks],
   );
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
   const prismPalette = ["#ff6b9d", "#65d6ff", "#ffd166", "#a78bfa", "#7ee7bd"];
@@ -874,7 +886,7 @@ function PlaybookObject({
   const isPrism = mode === "prism";
   const isHelix = mode === "helix";
   const isSphere = mode === "sphere";
-  const layoutScale = isIndex ? 0.86 : isPrism ? 0.88 : isSphere ? 0.58 : 0.9;
+  const layoutScale = isIndex ? (mapOverview ? (focusedView ? 0.86 : 0.4) : 0.86) : isPrism ? 0.88 : isSphere ? 0.58 : 0.9;
   const cardGeometry = useMemo(
     () => isSphere ? makeCurvedCardGeometry(2, 1.12) : makeCurvedCardGeometry(2.5, 1.5),
     [isSphere],
@@ -1048,6 +1060,21 @@ function PlaybookObject({
       );
     }
 
+    if (isIndex && mapOverview) {
+      return (
+        <>
+          <mesh position={[0, 0.035, 0]} rotation={[-Math.PI * 0.5, 0, 0]}>
+            <circleGeometry args={[0.34, 28]} />
+            <meshBasicMaterial map={texture} color="#ffffff" transparent opacity={viewOpacity} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 0.05, 0]} rotation={[Math.PI * 0.5, 0, 0]} scale={1.18}>
+            <torusGeometry args={[0.34, 0.035, 8, 28]} />
+            <meshBasicMaterial color={playbook.group === "H" ? "#5279d8" : "#d77792"} transparent opacity={0.9 * viewOpacity} toneMapped={false} />
+          </mesh>
+        </>
+      );
+    }
+
     if (isIndex) {
       return (
         <>
@@ -1185,7 +1212,7 @@ function PlaybookObject({
       }}
     >
       {renderShape()}
-      {isIndex ? (
+      {isIndex && !mapOverview ? (
         <group position={[0, -0.53, 0.1]}>
           <mesh position={[0, -0.31, 0]}>
             <cylinderGeometry args={[0.035, 0.035, 0.62, 12]} />
@@ -2101,6 +2128,7 @@ function ComparisonStage({
                   mode={mode}
                   visiblePlaybooks={renderPlaybooks}
                   mapDistrictGroup={mode === "index" ? selectedMapGroup : null}
+                  mapOverview={mode === "index" && selectedMapGroup === null}
                   shadowsEnabled={shadowsEnabled}
                   texture={textures[playbooks.indexOf(playbook) % textures.length]}
                   hovered={hoveredIndex === index}
@@ -2200,7 +2228,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 스테이지">
         <Canvas
           key={mode}
-          camera={{ position: mode === "sphere" ? [0, 0, 0.1] : mode === "helix" ? [0, 0, getCameraDistance(mode, playbooks)] : [0, mode === "index" ? 10.5 : 0.45, mode === "index" ? 16.5 : getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 68 : mode === "index" ? 50 : 38 }}
+          camera={{ position: mode === "sphere" ? [0, 0, 0.1] : mode === "helix" ? [0, 0, getCameraDistance(mode, playbooks)] : [0, mode === "index" ? 12.8 : 0.45, getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 68 : mode === "index" ? 50 : 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: mode === "sphere" }}
           shadows={playbooks.length <= 24}
