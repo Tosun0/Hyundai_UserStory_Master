@@ -561,6 +561,11 @@ function cubePosition(
   }
 
   if (mode === "index") {
+    if (mapDistrictGroup) {
+      const districtPlaybooks = visiblePlaybooks.filter((item) => item.group === mapDistrictGroup);
+      const districtIndex = Math.max(0, districtPlaybooks.indexOf(playbook));
+      return getIndexPosition(districtIndex, districtPlaybooks.length, mapDistrictGroup, false);
+    }
     if (mapOverview) {
       const districtPlaybooks = visiblePlaybooks.filter((item) => item.group === playbook.group);
       const districtIndex = Math.max(0, districtPlaybooks.indexOf(playbook));
@@ -1680,15 +1685,13 @@ function StoryMapBackdrop({
     { position: [3.5, 0, 1.7], size: [0.34, 0.08, 8.7], rotation: -0.24 },
     { position: [-1.8, 0, -2.7], size: [7.4, 0.08, 0.28], rotation: -0.1 },
   ];
-  const visibleMapPlaybooks = selectedGroup
-    ? playbooks.filter((playbook) => playbook.group === selectedGroup)
-    : playbooks;
+  const visibleMapPlaybooks = playbooks;
   const districtPlaybookCounts = {
     H: visibleMapPlaybooks.filter((playbook) => playbook.group === "H").length,
     GN8: visibleMapPlaybooks.filter((playbook) => playbook.group === "GN8").length,
   };
   const mapAnchors = visibleMapPlaybooks.map((playbook, index) => {
-    const districtGroup = selectedGroup ?? playbook.group;
+    const districtGroup = selectedGroup === playbook.group ? selectedGroup : playbook.group;
     const districtPlaybooks = visibleMapPlaybooks.filter((item) => item.group === districtGroup);
     const districtIndex = Math.max(0, districtPlaybooks.indexOf(playbook));
     const [x, , z] = getIndexMapSlot(districtIndex, districtPlaybookCounts[districtGroup]);
@@ -2051,8 +2054,6 @@ function ComparisonStage({
     ? prismGroup
       ? playbooks.filter((playbook) => playbook.group === prismGroup)
       : []
-    : mode === "index" && selectedMapGroup
-      ? playbooks.filter((playbook) => playbook.group === selectedMapGroup)
     : playbooks;
   const renderItemCount = mode === "sphere"
     ? Math.max(SPHERE_LAYOUT_COUNT, renderPlaybooks.length)
@@ -2143,8 +2144,8 @@ function ComparisonStage({
                   index={index}
                   mode={mode}
                   visiblePlaybooks={renderPlaybooks}
-                  mapDistrictGroup={mode === "index" ? selectedMapGroup : null}
-                  mapOverview={mode === "index" && selectedMapGroup === null && focusedViewIndex === null}
+                  mapDistrictGroup={mode === "index" && playbook.group === selectedMapGroup ? selectedMapGroup : null}
+                  mapOverview={mode === "index" && playbook.group !== selectedMapGroup && focusedViewIndex === null}
                   shadowsEnabled={shadowsEnabled}
                   texture={textureByPlaybookId.get(playbook.id) ?? textures[0]}
                   hovered={hoveredIndex === index}
