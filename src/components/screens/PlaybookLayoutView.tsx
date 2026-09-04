@@ -545,7 +545,6 @@ function getCameraDistance(mode: PlaybookLayoutMode, playbooks: readonly Playboo
 }
 
 const CARD_DRAG_THRESHOLD = 8;
-let lastCanvasDragAt = 0;
 
 function cubePosition(
   playbook: PlaybookItem,
@@ -1073,6 +1072,9 @@ function PlaybookObject({
             rotation={[-Math.PI * 0.5, 0, 0]}
             onClick={(event) => {
               event.stopPropagation();
+              if (event.delta > CARD_DRAG_THRESHOLD) {
+                return;
+              }
               onFocusPlaybook(playbook, index);
             }}
           >
@@ -1213,7 +1215,7 @@ function PlaybookObject({
       rotation={baseRotation}
       onClick={(event) => {
         event.stopPropagation();
-        if (performance.now() - lastCanvasDragAt < 180) {
+        if (event.delta > CARD_DRAG_THRESHOLD) {
           return;
         }
         onFocusPlaybook(playbook, index);
@@ -1421,9 +1423,6 @@ function OrbitController({ mode, sphereGroupRef }: { mode: PlaybookLayoutMode; s
         }
         const deltaX = event.clientX - pointerStart.x;
         const deltaY = event.clientY - pointerStart.y;
-        if (Math.hypot(deltaX, deltaY) > CARD_DRAG_THRESHOLD) {
-          lastCanvasDragAt = performance.now();
-        }
         sphereRotationTarget.current.y -= deltaX * 0.0045;
         sphereRotationTarget.current.x = THREE.MathUtils.clamp(
           sphereRotationTarget.current.x - deltaY * 0.0045,
@@ -1460,18 +1459,6 @@ function OrbitController({ mode, sphereGroupRef }: { mode: PlaybookLayoutMode; s
     }
 
     const controls = new OrbitControls(camera, gl.domElement);
-    let pointerStart: { x: number; y: number } | null = null;
-    const handlePointerDown = (event: PointerEvent) => {
-      pointerStart = { x: event.clientX, y: event.clientY };
-    };
-    const handlePointerMove = (event: PointerEvent) => {
-      if (pointerStart && Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > CARD_DRAG_THRESHOLD) {
-        lastCanvasDragAt = performance.now();
-      }
-    };
-    const handlePointerUp = () => {
-      pointerStart = null;
-    };
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.enablePan = mode === "index";
@@ -1487,16 +1474,8 @@ function OrbitController({ mode, sphereGroupRef }: { mode: PlaybookLayoutMode; s
     controls.target.set(0, 0, 0);
     controls.update();
     controlsRef.current = controls;
-    gl.domElement.addEventListener("pointerdown", handlePointerDown);
-    gl.domElement.addEventListener("pointermove", handlePointerMove);
-    gl.domElement.addEventListener("pointerup", handlePointerUp);
-    gl.domElement.addEventListener("pointercancel", handlePointerUp);
 
     return () => {
-      gl.domElement.removeEventListener("pointerdown", handlePointerDown);
-      gl.domElement.removeEventListener("pointermove", handlePointerMove);
-      gl.domElement.removeEventListener("pointerup", handlePointerUp);
-      gl.domElement.removeEventListener("pointercancel", handlePointerUp);
       controls.dispose();
       controlsRef.current = null;
     };
@@ -1773,7 +1752,7 @@ function StoryMapBackdrop({
         <meshBasicMaterial color="#ef7bb2" transparent opacity={0.74} toneMapped={false} />
       </mesh>
       {mapAnchors.map(({ playbook, position, color }) => (
-        <group key={`map-anchor-${playbook.id}`} position={position}>
+        <group key={`map-anchor-${playbook.id}`} position={position} raycast={() => null}>
           <mesh position={[0, 0.03, 0]}>
             <cylinderGeometry args={[0.56, 0.68, 0.06, 32]} />
             <meshStandardMaterial color="#ffffff" transparent opacity={0.84} roughness={0.32} metalness={0.12} />
