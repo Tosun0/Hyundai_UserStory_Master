@@ -75,21 +75,15 @@ function getVisiblePlaybooks(group: PlaybookAccessGroup) {
     : PLAYBOOK_CATALOG.filter((playbook) => playbook.group === group);
 }
 
-function getSolarPosition(index: number): Vec3 {
-  const ringIndex = Math.min(Math.floor(index / 8), 2);
-  const ringSlot = index % 8;
-  const radius = SOLAR_SYSTEM_ORBIT_RADII[ringIndex];
-  const angle = (ringSlot / 8) * Math.PI * 2 + ringIndex * 0.38;
-  return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius];
-}
-
 const SOLAR_GROUP_COLORS: Record<PlaybookGroup, { primary: string; secondary: string }> = {
   H: { primary: "#74a7ff", secondary: "#d7a7ff" },
   GN8: { primary: "#ff9d72", secondary: "#ffd66e" },
 };
 
-const SOLAR_SYSTEM_ORBIT_RADII = [3.25, 4.85, 6.35] as const;
-const SOLAR_SYSTEM_CENTER_Z = -1.25;
+const SOLAR_SYSTEM_ORBIT_START = 3.05;
+const SOLAR_SYSTEM_ORBIT_GAP = 1.12;
+const SOLAR_SYSTEM_CENTER_Z = -1.15;
+const SOLAR_ORBIT_ORIGIN: Vec3 = [0, 0, 0];
 
 function makeSolarCategoryTexture(group: PlaybookGroup, storyCount: number) {
   const canvas = document.createElement("canvas");
@@ -570,10 +564,6 @@ function cubePosition(
 ): Vec3 {
   const [, groupAxis] = playbook.cubeKey.split(",").map(Number);
 
-  if (mode === "solar") {
-    return getSolarPosition(index);
-  }
-
   if (mode === "index") {
     if (mapDistrictGroup) {
       const districtPlaybooks = visiblePlaybooks.filter((item) => item.group === mapDistrictGroup);
@@ -864,6 +854,7 @@ function PlaybookObject({
   visiblePlaybooks,
   mapDistrictGroup,
   mapOverview,
+  positionOverride,
   shadowsEnabled,
   texture,
   onHover,
@@ -882,6 +873,7 @@ function PlaybookObject({
   visiblePlaybooks: readonly PlaybookItem[];
   mapDistrictGroup?: PlaybookGroup | null;
   mapOverview?: boolean;
+  positionOverride?: Vec3;
   shadowsEnabled: boolean;
   texture: THREE.Texture;
   onHover: (index: number | null) => void;
@@ -897,8 +889,8 @@ function PlaybookObject({
   const groupRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
   const basePosition = useMemo(
-    () => cubePosition(playbook, index, mode, visiblePlaybooks, mapDistrictGroup, mapOverview),
-    [index, mapDistrictGroup, mapOverview, mode, playbook, visiblePlaybooks],
+    () => positionOverride ?? cubePosition(playbook, index, mode, visiblePlaybooks, mapDistrictGroup, mapOverview),
+    [index, mapDistrictGroup, mapOverview, mode, playbook, positionOverride, visiblePlaybooks],
   );
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
   const prismPalette = ["#ff6b9d", "#65d6ff", "#ffd166", "#a78bfa", "#7ee7bd"];
@@ -1283,6 +1275,81 @@ function PlaybookObject({
   );
 }
 
+function SolarStoryOrbit({
+  playbook,
+  index,
+  storyCount,
+  colors,
+  texture,
+  visiblePlaybooks,
+  hoveredIndex,
+  focusedIds,
+  focusedViewIndex,
+  shadowsEnabled,
+  onHover,
+  onFocusPlaybook,
+}: {
+  playbook: PlaybookItem;
+  index: number;
+  storyCount: number;
+  colors: { primary: string; secondary: string };
+  texture: THREE.Texture;
+  visiblePlaybooks: readonly PlaybookItem[];
+  hoveredIndex: number | null;
+  focusedIds: ReadonlySet<string>;
+  focusedViewIndex: number | null;
+  shadowsEnabled: boolean;
+  onHover: (index: number | null) => void;
+  onFocusPlaybook: (playbook: PlaybookItem, index: number) => void;
+}) {
+  const orbitRef = useRef<THREE.Group>(null);
+  const radius = SOLAR_SYSTEM_ORBIT_START + index * SOLAR_SYSTEM_ORBIT_GAP;
+  const phase = (index / Math.max(1, storyCount)) * Math.PI * 2 + (index % 2) * 0.16;
+  const speed = 0.1 + (index % 3) * 0.025;
+  const tilt: Vec3 = [
+    Math.PI * 0.5,
+    (index % 3 - 1) * 0.12,
+    (index % 2 ? 1 : -1) * 0.08,
+  ];
+
+  useFrame((_, delta) => {
+    if (orbitRef.current) {
+      orbitRef.current.rotation.z += delta * speed;
+    }
+  });
+
+  return (
+    <group position={[0, 0, SOLAR_SYSTEM_CENTER_Z]} rotation={tilt}>
+      <mesh>
+        <torusGeometry args={[radius, 0.026, 8, 128]} />
+        <meshBasicMaterial color={colors.secondary} transparent opacity={0.28} toneMapped={false} />
+      </mesh>
+      <group ref={orbitRef} rotation={[0, 0, phase]}>
+        <group position={[radius, 0, 0]}>
+          <PlaybookObject
+            playbook={playbook}
+            index={index}
+            mode="solar"
+            visiblePlaybooks={visiblePlaybooks}
+            positionOverride={SOLAR_ORBIT_ORIGIN}
+            shadowsEnabled={shadowsEnabled}
+            hovered={hoveredIndex === index}
+            focused={focusedIds.has(playbook.id)}
+            hasQuery={false}
+            selected={hoveredIndex === index}
+            hasSelection={hoveredIndex !== null}
+            focusedView={focusedViewIndex === index}
+            hasFocusedView={focusedViewIndex !== null}
+            texture={texture}
+            onHover={onHover}
+            onFocusPlaybook={onFocusPlaybook}
+          />
+        </group>
+      </group>
+    </group>
+  );
+}
+
 function SolarSystemStage({
   playbooks,
   textures,
@@ -1311,6 +1378,7 @@ function SolarSystemStage({
     : [];
   const shadowsEnabled = storyPlaybooks.length <= 32;
   const isCompactStage = viewport.width < 9;
+  const outerOrbitRadius = SOLAR_SYSTEM_ORBIT_START + Math.max(0, storyPlaybooks.length - 1) * SOLAR_SYSTEM_ORBIT_GAP;
 
   useFrame((_, delta) => {
     if (!selectedSystemRef.current) {
@@ -1321,7 +1389,10 @@ function SolarSystemStage({
       selectedSystemRef.current.scale.setScalar(0.001);
       selectedSystemRef.current.userData.initialized = true;
     }
-    const targetScale = isCompactStage ? 0.46 : 0.82;
+    const targetScale = Math.min(
+      isCompactStage ? 0.46 : 0.82,
+      (viewport.width * 0.72) / (outerOrbitRadius + 1.4),
+    );
     selectedSystemRef.current.scale.lerp(
       new THREE.Vector3(targetScale, targetScale, targetScale),
       1 - Math.pow(0.001, delta),
@@ -1364,61 +1435,23 @@ function SolarSystemStage({
       />
       {selectedGroup ? (
         <group ref={selectedSystemRef}>
-          {SOLAR_SYSTEM_ORBIT_RADII.map((radius, ringIndex) => {
-            const ringPlaybooks = storyPlaybooks.slice(ringIndex * 8, (ringIndex + 1) * 8);
-            return (
-              <group
-                key={`solar-orbit-${radius}`}
-                position={[0, 0, SOLAR_SYSTEM_CENTER_Z]}
-                rotation={[Math.PI * 0.5, ringIndex * 0.22, ringIndex * 0.12]}
-              >
-                <mesh>
-                  <torusGeometry args={[radius, ringIndex === 1 ? 0.045 : 0.025, 8, 128]} />
-                  <meshBasicMaterial
-                    color={SOLAR_GROUP_COLORS[selectedGroup][ringIndex % 2 ? "secondary" : "primary"]}
-                    transparent
-                    opacity={0.34 - ringIndex * 0.05}
-                    toneMapped={false}
-                  />
-                </mesh>
-                {ringPlaybooks.map((playbook, ringSlot) => {
-                  const index = ringIndex * 8 + ringSlot;
-                  return (
-                    <PlaybookObject
-                      key={`${playbook.id}-${index}`}
-                      playbook={playbook}
-                      index={index}
-                      mode="solar"
-                      visiblePlaybooks={storyPlaybooks}
-                      shadowsEnabled={shadowsEnabled}
-                      hovered={hoveredIndex === index}
-                      focused={focusedIds.has(playbook.id)}
-                      hasQuery={false}
-                      selected={hoveredIndex === index}
-                      hasSelection={hoveredIndex !== null}
-                      focusedView={focusedViewIndex === index}
-                      hasFocusedView={focusedViewIndex !== null}
-                      texture={textures[playbooks.indexOf(playbook)] ?? textures[0]}
-                      onHover={onHover}
-                      onFocusPlaybook={onFocusPlaybook}
-                    />
-                  );
-                })}
-              </group>
-            );
-          })}
-          <mesh position={[0, 0, SOLAR_SYSTEM_CENTER_Z]}>
-            <sphereGeometry args={[0.72, 24, 16]} />
-            <meshStandardMaterial
-              color={SOLAR_GROUP_COLORS[selectedGroup].primary}
-              emissive={SOLAR_GROUP_COLORS[selectedGroup].secondary}
-              emissiveIntensity={1.4}
-              transparent
-              opacity={0.82}
-              roughness={0.2}
-              metalness={0.42}
+          {storyPlaybooks.map((playbook, index) => (
+            <SolarStoryOrbit
+              key={`${playbook.id}-orbit`}
+              playbook={playbook}
+              index={index}
+              storyCount={storyPlaybooks.length}
+              colors={SOLAR_GROUP_COLORS[selectedGroup]}
+              texture={textures[playbooks.indexOf(playbook)] ?? textures[0]}
+              visiblePlaybooks={storyPlaybooks}
+              hoveredIndex={hoveredIndex}
+              focusedIds={focusedIds}
+              focusedViewIndex={focusedViewIndex}
+              shadowsEnabled={shadowsEnabled}
+              onHover={onHover}
+              onFocusPlaybook={onFocusPlaybook}
             />
-          </mesh>
+          ))}
           <pointLight color={SOLAR_GROUP_COLORS[selectedGroup].secondary} intensity={18} distance={14} />
         </group>
       ) : null}
