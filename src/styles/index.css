@@ -1043,6 +1043,128 @@ button {
   z-index: 1;
 }
 
+.playbook-chapter-panel {
+  position: absolute;
+  top: clamp(190px, 27vh, 260px);
+  left: clamp(18px, 4vw, 56px);
+  z-index: 4;
+  display: grid;
+  width: min(250px, calc(100vw - 36px));
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 24%);
+  border-radius: 18px;
+  background: linear-gradient(155deg, rgb(14 18 38 / 88%), rgb(23 25 51 / 72%));
+  box-shadow: 0 24px 54px rgb(0 0 0 / 24%), inset 0 1px rgb(255 255 255 / 18%);
+  color: white;
+  backdrop-filter: blur(22px) saturate(1.18);
+  pointer-events: auto;
+}
+
+.playbook-chapter-panel__eyebrow {
+  color: rgb(255 255 255 / 56%);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.playbook-chapter-panel__title {
+  margin-bottom: 4px;
+  color: #ffffff;
+  font-size: 19px;
+  letter-spacing: 0.02em;
+}
+
+.playbook-chapter-panel__cards {
+  display: grid;
+  gap: 8px;
+}
+
+.playbook-chapter-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px 1fr 18px;
+  align-items: center;
+  gap: 8px;
+  min-height: 72px;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 7%);
+  color: white;
+  text-align: left;
+  transition: transform 220ms ease, border-color 220ms ease, background 220ms ease, box-shadow 220ms ease;
+}
+
+.playbook-chapter-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--chapter-color);
+  content: "";
+  box-shadow: 0 0 18px var(--chapter-color);
+}
+
+.playbook-chapter-card:hover,
+.playbook-chapter-card:focus-visible,
+.playbook-chapter-card.is-selected {
+  border-color: color-mix(in srgb, var(--chapter-color) 72%, white);
+  background: color-mix(in srgb, var(--chapter-color) 18%, rgb(255 255 255 / 8%));
+  box-shadow: 0 0 26px color-mix(in srgb, var(--chapter-color) 28%, transparent);
+  outline: none;
+  transform: translateX(5px);
+}
+
+.playbook-chapter-card__number {
+  align-self: start;
+  color: var(--chapter-color);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.playbook-chapter-card__copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.playbook-chapter-card__copy strong {
+  overflow: hidden;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playbook-chapter-card__copy small {
+  color: rgb(255 255 255 / 58%);
+  font-size: 10px;
+}
+
+.playbook-chapter-card__copy em {
+  color: var(--chapter-color);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.playbook-chapter-card__arrow {
+  color: rgb(255 255 255 / 72%);
+  font-size: 18px;
+}
+
+.playbook-chapter-panel__hint {
+  margin-top: 4px;
+  color: rgb(255 255 255 / 42%);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+}
+
 .playbook-3d-layout__finder {
   position: absolute;
   top: clamp(146px, 20vh, 176px);
@@ -1204,6 +1326,35 @@ button {
 
   .playbook-3d-layout__header span {
     display: none;
+  }
+
+  .playbook-chapter-panel {
+    top: 164px;
+    left: 16px;
+    width: 164px;
+    padding: 11px;
+  }
+
+  .playbook-chapter-panel__title {
+    font-size: 15px;
+  }
+
+  .playbook-chapter-card {
+    grid-template-columns: 22px 1fr 14px;
+    min-height: 62px;
+    padding: 7px;
+  }
+
+  .playbook-chapter-card__copy strong {
+    font-size: 9px;
+  }
+
+  .playbook-chapter-card__copy small {
+    font-size: 8px;
+  }
+
+  .playbook-chapter-card__copy em {
+    font-size: 7px;
   }
 }
 

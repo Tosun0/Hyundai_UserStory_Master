@@ -42,7 +42,7 @@ const layoutModes: readonly { id: PlaybookLayoutMode; label: string; shortLabel:
   { id: "helix", label: "Helix", shortLabel: "Helix" },
   { id: "sphere", label: "Sphere", shortLabel: "Sphere" },
   { id: "prism", label: "Prism Lens", shortLabel: "Lens" },
-  { id: "index", label: "Story Index", shortLabel: "Index" },
+  { id: "index", label: "Story Map", shortLabel: "Map" },
   { id: "timeline", label: "Story Ribbon", shortLabel: "Ribbon" },
 ];
 

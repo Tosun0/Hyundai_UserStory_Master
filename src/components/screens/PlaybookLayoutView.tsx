@@ -14,6 +14,53 @@ type PlaybookLayoutViewProps = {
   onOpenPlaybook: (playbook: PlaybookItem) => void;
 };
 
+function PrismChapterPanel({
+  playbooks,
+  selectedGroup,
+  onSelectGroup,
+}: {
+  playbooks: readonly PlaybookItem[];
+  selectedGroup: PlaybookGroup | null;
+  onSelectGroup: (group: PlaybookGroup) => void;
+}) {
+  const chapters: readonly { group: PlaybookGroup; title: string; subtitle: string; color: string }[] = [
+    { group: "H", title: "H SERIES", subtitle: "Everyday motion", color: "#6e9cff" },
+    { group: "GN8", title: "GN8 SERIES", subtitle: "Future in motion", color: "#ff9d72" },
+  ];
+
+  return (
+    <aside className="playbook-chapter-panel" aria-label="스토리 챕터 선택">
+      <div className="playbook-chapter-panel__eyebrow">SELECT CHAPTER</div>
+      <strong className="playbook-chapter-panel__title">NEXT MAP</strong>
+      <div className="playbook-chapter-panel__cards">
+        {chapters.map((chapter, index) => {
+          const storyCount = playbooks.filter((playbook) => playbook.group === chapter.group).length;
+          const isSelected = selectedGroup === chapter.group;
+          return (
+            <button
+              key={chapter.group}
+              type="button"
+              className={`playbook-chapter-card ${isSelected ? "is-selected" : ""}`}
+              style={{ "--chapter-color": chapter.color } as React.CSSProperties}
+              onClick={() => onSelectGroup(chapter.group)}
+              aria-pressed={isSelected}
+            >
+              <span className="playbook-chapter-card__number">0{index + 1}</span>
+              <span className="playbook-chapter-card__copy">
+                <strong>{chapter.title}</strong>
+                <small>{chapter.subtitle}</small>
+                <em>{storyCount} STORIES · {isSelected ? "MAP OPEN" : "PLAY CHAPTER"}</em>
+              </span>
+              <span className="playbook-chapter-card__arrow" aria-hidden="true">↗</span>
+            </button>
+          );
+        })}
+      </div>
+      <span className="playbook-chapter-panel__hint">CHOOSE A CHAPTER TO UNLOCK THE MAP</span>
+    </aside>
+  );
+}
+
 type Vec3 = [number, number, number];
 
 function getVisiblePlaybooks(group: PlaybookAccessGroup) {
@@ -511,7 +558,7 @@ function makeWatercolorTexture(mode: PlaybookLayoutMode) {
 function WatercolorBackdrop({ mode }: { mode: PlaybookLayoutMode }) {
   const { scene } = useThree();
   const texture = useMemo(
-    () => (mode === "index" || mode === "timeline" ? makeWatercolorTexture(mode) : null),
+    () => (mode === "timeline" ? makeWatercolorTexture(mode) : null),
     [mode],
   );
 
@@ -911,6 +958,18 @@ function PlaybookObject({
         <boxGeometry args={[1.84, 0.055, 0.035]} />
         <meshBasicMaterial color={focused || !hasQuery ? lightPalette[index % lightPalette.length] : "#b4b9c8"} transparent opacity={opacity} />
       </mesh> : null}
+      {isIndex ? (
+        <group position={[0, -0.9, 0.38]}>
+          <mesh>
+            <cylinderGeometry args={[0.025, 0.025, 0.26, 8]} />
+            <meshBasicMaterial color={playbook.group === "H" ? "#5279d8" : "#d77792"} transparent opacity={0.8} />
+          </mesh>
+          <mesh position={[0, -0.16, 0]}>
+            <sphereGeometry args={[0.1, 12, 8]} />
+            <meshStandardMaterial color={playbook.group === "H" ? "#5279d8" : "#d77792"} emissive={playbook.group === "H" ? "#7fd8ff" : "#ff9fcf"} emissiveIntensity={0.5} />
+          </mesh>
+        </group>
+      ) : null}
       <InfoPanel playbook={playbook} visible={hovered || focusedView} />
     </group>
   );
@@ -1113,11 +1172,12 @@ function OrbitController({ mode, sphereGroupRef }: { mode: PlaybookLayoutMode; s
     };
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.enablePan = false;
+    controls.enablePan = mode === "index";
+    controls.screenSpacePanning = mode === "index";
     controls.enableZoom = mode !== "helix";
     controls.zoomSpeed = 0.8;
-    controls.minDistance = 10;
-    controls.maxDistance = 28;
+    controls.minDistance = mode === "index" ? 9 : 10;
+    controls.maxDistance = mode === "index" ? 34 : 28;
     controls.rotateSpeed = 0.55;
     controls.minPolarAngle = Math.PI * 0.32;
     controls.maxPolarAngle = Math.PI * 0.68;
@@ -1286,6 +1346,80 @@ function PrismLensEffect() {
   );
 }
 
+function StoryMapBackdrop() {
+  const roads = [
+    { position: [-5.6, 1.9, -2.2], size: [13, 0.09, 0.04], rotation: -0.18 },
+    { position: [4.1, -1.15, -2.2], size: [10, 0.09, 0.04], rotation: 0.22 },
+    { position: [-0.5, 0.15, -2.18], size: [0.08, 9, 0.04], rotation: 0.42 },
+    { position: [3.5, 1.7, -2.16], size: [0.08, 8, 0.04], rotation: -0.24 },
+  ];
+  const neighborhoods = [
+    { position: [-4.6, -1.7, -2.12], radius: 1.6, color: "#c8e9dc" },
+    { position: [0.4, 2.2, -2.12], radius: 1.35, color: "#d8d0f4" },
+    { position: [4.5, -2.4, -2.12], radius: 1.45, color: "#f6d8c6" },
+  ];
+
+  return (
+    <group>
+      <mesh position={[0, 0, -2.5]}>
+        <planeGeometry args={[100, 100]} />
+        <meshBasicMaterial color="#eaf3ee" depthWrite={false} />
+      </mesh>
+      {Array.from({ length: 9 }, (_, index) => (
+        <mesh key={`map-grid-x-${index}`} position={[(index - 4) * 2.2, 0, -2.38]}>
+          <boxGeometry args={[0.018, 13, 0.018]} />
+          <meshBasicMaterial color="#d0e2da" transparent opacity={0.58} />
+        </mesh>
+      ))}
+      {Array.from({ length: 7 }, (_, index) => (
+        <mesh key={`map-grid-y-${index}`} position={[0, (index - 3) * 2.1, -2.37]}>
+          <boxGeometry args={[20, 0.018, 0.018]} />
+          <meshBasicMaterial color="#d0e2da" transparent opacity={0.58} />
+        </mesh>
+      ))}
+      {roads.map((road) => (
+        <mesh key={`${road.position.join("-")}`} position={road.position as Vec3} rotation={[0, 0, road.rotation]}>
+          <boxGeometry args={road.size as Vec3} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.9} />
+        </mesh>
+      ))}
+      {neighborhoods.map((neighborhood) => (
+        <mesh key={neighborhood.position.join("-")} position={neighborhood.position as Vec3} rotation={[0, 0, Math.PI * 0.5]}>
+          <torusGeometry args={[neighborhood.radius, 0.035, 8, 64]} />
+          <meshBasicMaterial color={neighborhood.color} transparent opacity={0.7} toneMapped={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function TimelinePulseEffect() {
+  const ref = useRef<THREE.Group>(null);
+
+  useFrame((state) => {
+    if (!ref.current) {
+      return;
+    }
+
+    ref.current.position.x = Math.sin(state.clock.elapsedTime * 0.42) * 7.2;
+    ref.current.scale.y = 0.92 + Math.sin(state.clock.elapsedTime * 2.1) * 0.08;
+  });
+
+  return (
+    <group ref={ref} position={[0, 0, 1.1]}>
+      <mesh>
+        <boxGeometry args={[0.045, 9.2, 0.08]} />
+        <meshBasicMaterial color="#ff4f9a" transparent opacity={0.95} toneMapped={false} />
+      </mesh>
+      <mesh>
+        <planeGeometry args={[0.8, 9.4]} />
+        <meshBasicMaterial color="#ff9edc" transparent opacity={0.16} depthWrite={false} toneMapped={false} />
+      </mesh>
+      <pointLight color="#ff4f9a" intensity={7} distance={7} />
+    </group>
+  );
+}
+
 function StageEffects({ mode }: { mode: PlaybookLayoutMode }) {
   const ref = useRef<THREE.Group>(null);
 
@@ -1299,7 +1433,9 @@ function StageEffects({ mode }: { mode: PlaybookLayoutMode }) {
     <>
       <StageParticles mode={mode} />
       <WatercolorBackdrop mode={mode} />
+      {mode === "index" ? <StoryMapBackdrop /> : null}
       {mode === "prism" ? <PrismLensEffect /> : null}
+      {mode === "timeline" ? <TimelinePulseEffect /> : null}
       {mode === "orbit" ? (
         <group ref={ref} position={[0, 0, -0.5]}>
           <mesh>
@@ -1477,12 +1613,14 @@ function StageGuides({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks:
 function ComparisonStage({
   mode,
   playbooks,
+  prismGroup,
   onOpenPlaybook,
   focusedIds,
   hasQuery,
 }: {
   mode: PlaybookLayoutMode;
   playbooks: readonly PlaybookItem[];
+  prismGroup: PlaybookGroup | null;
   onOpenPlaybook: (playbook: PlaybookItem) => void;
   focusedIds: ReadonlySet<string>;
   hasQuery: boolean;
@@ -1512,7 +1650,7 @@ function ComparisonStage({
     setFocusedViewIndex(null);
     setHoveredIndex(null);
     setSelectedSolarGroup(null);
-  }, [mode, playbooks]);
+  }, [mode, playbooks, prismGroup]);
 
   const handleSelectSolarGroup = useCallback((group: PlaybookGroup) => {
     setSelectedSolarGroup((currentGroup) => (currentGroup === group ? null : group));
@@ -1547,13 +1685,18 @@ function ComparisonStage({
     texture.needsUpdate = true;
   });
 
+  const renderPlaybooks = mode === "prism"
+    ? prismGroup
+      ? playbooks.filter((playbook) => playbook.group === prismGroup)
+      : []
+    : playbooks;
   const renderItemCount = mode === "sphere"
-    ? Math.max(SPHERE_LAYOUT_COUNT, playbooks.length)
-    : playbooks.length;
-  const renderItems = playbooks.length === 0
+    ? Math.max(SPHERE_LAYOUT_COUNT, renderPlaybooks.length)
+    : renderPlaybooks.length;
+  const renderItems = renderPlaybooks.length === 0
     ? []
     : Array.from({ length: renderItemCount }, (_, index) => ({
-      playbook: playbooks[index % playbooks.length],
+      playbook: renderPlaybooks[index % renderPlaybooks.length],
       index,
     }));
   const shadowsEnabled = renderItems.length <= 32;
@@ -1561,7 +1704,7 @@ function ComparisonStage({
   const stageBackground = mode === "solar"
     ? "#160b1b"
     : mode === "index"
-      ? "#f5f8ff"
+      ? "#eaf3ee"
       : mode === "timeline"
         ? "#fff8f2"
         : mode === "orbit"
@@ -1632,9 +1775,9 @@ function ComparisonStage({
                   playbook={playbook}
                   index={index}
                   mode={mode}
-                  visiblePlaybooks={playbooks}
+                  visiblePlaybooks={renderPlaybooks}
                   shadowsEnabled={shadowsEnabled}
-                  texture={textures[index % textures.length]}
+                  texture={textures[playbooks.indexOf(playbook) % textures.length]}
                   hovered={hoveredIndex === index}
                   focused={focusedIds.has(playbook.id)}
                   hasQuery={hasQuery}
@@ -1658,6 +1801,7 @@ function ComparisonStage({
 export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: PlaybookLayoutViewProps) {
   const allPlaybooks = getVisiblePlaybooks(playbookGroup);
   const [query, setQuery] = useState("");
+  const [prismChapterGroup, setPrismChapterGroup] = useState<PlaybookGroup | null>(null);
   const normalizedQuery = query.trim().toLowerCase();
   const focusedIds = useMemo(() => new Set(
     allPlaybooks
@@ -1665,10 +1809,16 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
       .map((playbook) => playbook.id),
   ), [allPlaybooks, normalizedQuery]);
   const playbooks = allPlaybooks;
+
+  useEffect(() => {
+    if (mode !== "prism") {
+      setPrismChapterGroup(null);
+    }
+  }, [mode]);
   const title = mode === "solar"
     ? "SOLAR SYSTEM"
     : mode === "index"
-      ? "STORY INDEX"
+      ? "STORY MAP"
       : mode === "prism"
         ? "PRISM LENS"
         : mode === "helix"
@@ -1681,7 +1831,7 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
   const description = mode === "solar"
     ? "H와 GN8 행성을 고르면 해당 스토리계가 중앙으로 전개됩니다"
     : mode === "index"
-      ? "전체를 훑고 검색 결과를 앞으로 당겨 바로 들어갑니다"
+      ? "지도를 이동하고 확대하며 스토리 클러스터에서 개별 이야기로 내려갑니다"
       : mode === "prism"
         ? "카드를 고르면 유리층 밖으로 끌어내어 내용을 확인합니다"
         : mode === "helix"
@@ -1714,17 +1864,24 @@ export function PlaybookLayoutView({ mode, playbookGroup, onOpenPlaybook }: Play
           />
         </label>
       ) : null}
+      {mode === "prism" ? (
+        <PrismChapterPanel
+          playbooks={playbooks}
+          selectedGroup={prismChapterGroup}
+          onSelectGroup={setPrismChapterGroup}
+        />
+      ) : null}
       <div className="playbook-3d-layout__canvas" aria-label="tosun 3D 비교 스테이지">
         <Canvas
           key={mode}
-          camera={{ position: mode === "sphere" ? [0, 0, 0.1] : mode === "helix" ? [0, 0, getCameraDistance(mode, playbooks)] : [0, 0.45, getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 68 : 38 }}
+          camera={{ position: mode === "sphere" ? [0, 0, 0.1] : mode === "helix" ? [0, 0, getCameraDistance(mode, playbooks)] : [0, mode === "index" ? 0.15 : 0.45, getCameraDistance(mode, playbooks)], fov: mode === "sphere" ? 68 : mode === "index" ? 42 : 38 }}
           dpr={[1, 2]}
           gl={{ antialias: true, alpha: mode === "sphere" }}
           shadows={playbooks.length <= 24}
           fallback={<div className="playbook-3d-layout__fallback">3D 화면을 불러오는 중입니다.</div>}
           onPointerMissed={() => undefined}
         >
-          <ComparisonStage mode={mode} playbooks={playbooks} focusedIds={focusedIds} hasQuery={mode === "index" && Boolean(normalizedQuery)} onOpenPlaybook={onOpenPlaybook} />
+          <ComparisonStage mode={mode} playbooks={playbooks} prismGroup={mode === "prism" ? prismChapterGroup : null} focusedIds={focusedIds} hasQuery={mode === "index" && Boolean(normalizedQuery)} onOpenPlaybook={onOpenPlaybook} />
         </Canvas>
       </div>
     </main>
