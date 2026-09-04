@@ -1391,7 +1391,7 @@ function SolarSystemStage({
               hasSelection={hoveredIndex !== null}
               focusedView={focusedViewIndex === index}
               hasFocusedView={focusedViewIndex !== null}
-              texture={storyTextures[index % storyTextures.length]}
+              texture={textures[playbooks.indexOf(playbook)] ?? textures[0]}
               onHover={onHover}
               onFocusPlaybook={onFocusPlaybook}
             />
