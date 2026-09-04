@@ -78,17 +78,18 @@ function getVisiblePlaybooks(group: PlaybookAccessGroup) {
 function getSolarPosition(index: number): Vec3 {
   const ringIndex = Math.min(Math.floor(index / 8), 2);
   const ringSlot = index % 8;
-  const radius = [3.25, 4.85, 6.35][ringIndex];
+  const radius = SOLAR_SYSTEM_ORBIT_RADII[ringIndex];
   const angle = (ringSlot / 8) * Math.PI * 2 + ringIndex * 0.38;
-  const position = new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius)
-    .applyEuler(new THREE.Euler(Math.PI * 0.5, ringIndex * 0.22, ringIndex * 0.12));
-  return [position.x, position.y, position.z - 0.95];
+  return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius];
 }
 
 const SOLAR_GROUP_COLORS: Record<PlaybookGroup, { primary: string; secondary: string }> = {
   H: { primary: "#74a7ff", secondary: "#d7a7ff" },
   GN8: { primary: "#ff9d72", secondary: "#ffd66e" },
 };
+
+const SOLAR_SYSTEM_ORBIT_RADII = [3.25, 4.85, 6.35] as const;
+const SOLAR_SYSTEM_CENTER_Z = -1.25;
 
 function makeSolarCategoryTexture(group: PlaybookGroup, storyCount: number) {
   const canvas = document.createElement("canvas");
@@ -1363,38 +1364,50 @@ function SolarSystemStage({
       />
       {selectedGroup ? (
         <group ref={selectedSystemRef}>
-          {[3.25, 4.85, 6.35].map((radius, index) => (
-            <mesh key={radius} rotation={[Math.PI * 0.5, index * 0.22, index * 0.12]} position={[0, 0, -0.95]}>
-              <torusGeometry args={[radius, index === 1 ? 0.045 : 0.025, 8, 128]} />
-              <meshBasicMaterial
-                color={SOLAR_GROUP_COLORS[selectedGroup][index % 2 ? "secondary" : "primary"]}
-                transparent
-                opacity={0.34 - index * 0.05}
-                toneMapped={false}
-              />
-            </mesh>
-          ))}
-          {storyPlaybooks.map((playbook, index) => (
-            <PlaybookObject
-              key={`${playbook.id}-${index}`}
-              playbook={playbook}
-              index={index}
-              mode="solar"
-              visiblePlaybooks={storyPlaybooks}
-              shadowsEnabled={shadowsEnabled}
-              hovered={hoveredIndex === index}
-              focused={focusedIds.has(playbook.id)}
-              hasQuery={false}
-              selected={hoveredIndex === index}
-              hasSelection={hoveredIndex !== null}
-              focusedView={focusedViewIndex === index}
-              hasFocusedView={focusedViewIndex !== null}
-              texture={textures[playbooks.indexOf(playbook)] ?? textures[0]}
-              onHover={onHover}
-              onFocusPlaybook={onFocusPlaybook}
-            />
-          ))}
-          <mesh position={[0, 0, -1.25]}>
+          {SOLAR_SYSTEM_ORBIT_RADII.map((radius, ringIndex) => {
+            const ringPlaybooks = storyPlaybooks.slice(ringIndex * 8, (ringIndex + 1) * 8);
+            return (
+              <group
+                key={`solar-orbit-${radius}`}
+                position={[0, 0, SOLAR_SYSTEM_CENTER_Z]}
+                rotation={[Math.PI * 0.5, ringIndex * 0.22, ringIndex * 0.12]}
+              >
+                <mesh>
+                  <torusGeometry args={[radius, ringIndex === 1 ? 0.045 : 0.025, 8, 128]} />
+                  <meshBasicMaterial
+                    color={SOLAR_GROUP_COLORS[selectedGroup][ringIndex % 2 ? "secondary" : "primary"]}
+                    transparent
+                    opacity={0.34 - ringIndex * 0.05}
+                    toneMapped={false}
+                  />
+                </mesh>
+                {ringPlaybooks.map((playbook, ringSlot) => {
+                  const index = ringIndex * 8 + ringSlot;
+                  return (
+                    <PlaybookObject
+                      key={`${playbook.id}-${index}`}
+                      playbook={playbook}
+                      index={index}
+                      mode="solar"
+                      visiblePlaybooks={storyPlaybooks}
+                      shadowsEnabled={shadowsEnabled}
+                      hovered={hoveredIndex === index}
+                      focused={focusedIds.has(playbook.id)}
+                      hasQuery={false}
+                      selected={hoveredIndex === index}
+                      hasSelection={hoveredIndex !== null}
+                      focusedView={focusedViewIndex === index}
+                      hasFocusedView={focusedViewIndex !== null}
+                      texture={textures[playbooks.indexOf(playbook)] ?? textures[0]}
+                      onHover={onHover}
+                      onFocusPlaybook={onFocusPlaybook}
+                    />
+                  );
+                })}
+              </group>
+            );
+          })}
+          <mesh position={[0, 0, SOLAR_SYSTEM_CENTER_Z]}>
             <sphereGeometry args={[0.72, 24, 16]} />
             <meshStandardMaterial
               color={SOLAR_GROUP_COLORS[selectedGroup].primary}
