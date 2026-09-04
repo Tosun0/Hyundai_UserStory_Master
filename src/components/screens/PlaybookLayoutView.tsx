@@ -1999,7 +1999,7 @@ function ComparisonStage({
     if (mode !== "index") {
       setSelectedMapGroup(null);
     }
-  }, [mode, playbooks, prismGroup]);
+  }, [mode, prismGroup]);
 
   const handleSelectSolarGroup = useCallback((group: PlaybookGroup) => {
     setSelectedSolarGroup((currentGroup) => (currentGroup === group ? null : group));
@@ -2128,7 +2128,7 @@ function ComparisonStage({
                   mode={mode}
                   visiblePlaybooks={renderPlaybooks}
                   mapDistrictGroup={mode === "index" ? selectedMapGroup : null}
-                  mapOverview={mode === "index" && selectedMapGroup === null}
+                  mapOverview={mode === "index" && selectedMapGroup === null && focusedViewIndex === null}
                   shadowsEnabled={shadowsEnabled}
                   texture={textures[playbooks.indexOf(playbook) % textures.length]}
                   hovered={hoveredIndex === index}
