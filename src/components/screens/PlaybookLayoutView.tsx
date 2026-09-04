@@ -1063,6 +1063,17 @@ function PlaybookObject({
     if (isIndex && mapOverview) {
       return (
         <>
+          <mesh
+            position={[0, 0.028, 0]}
+            rotation={[-Math.PI * 0.5, 0, 0]}
+            onClick={(event) => {
+              event.stopPropagation();
+              onFocusPlaybook(playbook, index);
+            }}
+          >
+            <circleGeometry args={[0.62, 28]} />
+            <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+          </mesh>
           <mesh position={[0, 0.035, 0]} rotation={[-Math.PI * 0.5, 0, 0]}>
             <circleGeometry args={[0.34, 28]} />
             <meshBasicMaterial map={texture} color="#ffffff" transparent opacity={viewOpacity} toneMapped={false} />
