@@ -1110,9 +1110,10 @@ function PlaybookObject({
           <mesh geometry={mapMarkerGeometry} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
             <meshStandardMaterial {...material()} color={surfaceColor} roughness={0.2} metalness={0.22} />
           </mesh>
-          <sprite position={[0, 0, 0.22]} scale={[1.82, 0.86, 1]} renderOrder={30}>
-            <spriteMaterial map={texture} transparent opacity={viewOpacity} toneMapped={false} depthTest={false} depthWrite={false} />
-          </sprite>
+          <mesh position={[0, 0, 0.22]} renderOrder={30}>
+            <planeGeometry args={[1.82, 0.86]} />
+            <meshBasicMaterial map={texture} transparent opacity={viewOpacity} toneMapped={false} depthTest={false} depthWrite={false} side={THREE.DoubleSide} />
+          </mesh>
         </>
       );
     }
