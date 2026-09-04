@@ -187,7 +187,7 @@ function StoryMapDistrictRegion({
       return;
     }
 
-    const targetScale = isDimmed ? 0.82 : isSelected ? 1.1 : hovered ? 1.045 : 1;
+    const targetScale = isDimmed ? 0.94 : isSelected ? 1.1 : hovered ? 1.045 : 1;
     ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
   });
 
@@ -210,11 +210,11 @@ function StoryMapDistrictRegion({
         }}
       >
         <planeGeometry args={[7.3, 8.9]} />
-        <meshStandardMaterial color={colors.primary} transparent opacity={isDimmed ? 0.06 : isSelected ? 0.2 : hovered ? 0.2 : 0.12} roughness={1} />
+        <meshStandardMaterial color={colors.primary} transparent opacity={isDimmed ? 0.1 : isSelected ? 0.2 : hovered ? 0.2 : 0.12} roughness={1} />
       </mesh>
       <mesh position={[0, 0.075, 0]} rotation={[-Math.PI * 0.5, 0, 0]}>
         <planeGeometry args={[6.8, 8.4]} />
-        <meshBasicMaterial color={colors.secondary} transparent opacity={isDimmed ? 0.03 : 0.08} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial color={colors.secondary} transparent opacity={isDimmed ? 0.06 : 0.08} depthWrite={false} toneMapped={false} />
       </mesh>
       {texture ? (
         <mesh
@@ -226,7 +226,7 @@ function StoryMapDistrictRegion({
           }}
         >
           <planeGeometry args={[3.2, 0.64]} />
-          <meshBasicMaterial map={texture} transparent opacity={isDimmed ? 0.24 : hovered ? 1 : 0.92} toneMapped={false} />
+          <meshBasicMaterial map={texture} transparent opacity={isDimmed ? 0.72 : hovered ? 1 : 0.92} toneMapped={false} />
         </mesh>
       ) : null}
     </group>
@@ -1643,9 +1643,10 @@ function PrismLensEffect() {
   );
 }
 
-function StoryMapDistrictInfo({ group, storyCount, onExit }: { group: PlaybookGroup; storyCount: number; onExit: () => void }) {
+function StoryMapDistrictInfo({ group, storyCount, selectedGroup, onSelect }: { group: PlaybookGroup; storyCount: number; selectedGroup: PlaybookGroup | null; onSelect: (group: PlaybookGroup) => void }) {
   const ref = useRef<THREE.Group>(null);
   const texture = useMemo(() => makeMapDistrictTexture(group, storyCount, true), [group, storyCount]);
+  const isSelected = selectedGroup === group;
 
   useEffect(() => () => texture?.dispose(), [texture]);
 
@@ -1658,7 +1659,8 @@ function StoryMapDistrictInfo({ group, storyCount, onExit }: { group: PlaybookGr
       ref.current.scale.setScalar(0.001);
       ref.current.userData.initialized = true;
     }
-    ref.current.scale.lerp(new THREE.Vector3(1, 1, 1), 1 - Math.pow(0.001, delta));
+    const targetScale = isSelected ? 1.05 : 0.86;
+    ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
   });
 
   return (
@@ -1667,11 +1669,11 @@ function StoryMapDistrictInfo({ group, storyCount, onExit }: { group: PlaybookGr
         <mesh
           onClick={(event) => {
             event.stopPropagation();
-            onExit();
+            onSelect(group);
           }}
         >
           <planeGeometry args={[4.8, 1.34]} />
-          <meshBasicMaterial map={texture} transparent opacity={0.94} toneMapped={false} />
+          <meshBasicMaterial map={texture} transparent opacity={isSelected ? 0.98 : 0.78} toneMapped={false} />
         </mesh>
       ) : null}
     </group>
@@ -1782,13 +1784,18 @@ function StoryMapBackdrop({
           </mesh>
         </group>
       ))}
-      {selectedGroup ? (
-        <StoryMapDistrictInfo
-          group={selectedGroup}
-          storyCount={playbooks.filter((playbook) => playbook.group === selectedGroup).length}
-          onExit={() => onSelectGroup(null)}
-        />
-      ) : null}
+      <StoryMapDistrictInfo
+        group="H"
+        storyCount={playbooks.filter((playbook) => playbook.group === "H").length}
+        selectedGroup={selectedGroup}
+        onSelect={onSelectGroup}
+      />
+      <StoryMapDistrictInfo
+        group="GN8"
+        storyCount={playbooks.filter((playbook) => playbook.group === "GN8").length}
+        selectedGroup={selectedGroup}
+        onSelect={onSelectGroup}
+      />
     </group>
   );
 }
@@ -2109,6 +2116,9 @@ function ComparisonStage({
             event.stopPropagation();
             setFocusedViewIndex(null);
             setHoveredIndex(null);
+            if (mode === "index") {
+              setSelectedMapGroup(null);
+            }
           }}
         >
           <planeGeometry args={[100, 100]} />
