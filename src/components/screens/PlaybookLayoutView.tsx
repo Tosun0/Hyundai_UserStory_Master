@@ -122,14 +122,120 @@ function makeSolarCategoryTexture(group: PlaybookGroup, storyCount: number) {
   return texture;
 }
 
-function SolarCategoryPlanet({
+function makeMapDistrictTexture(group: PlaybookGroup, storyCount: number, info = false) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 900;
+  canvas.height = info ? 250 : 180;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    return null;
+  }
+
+  const colors = SOLAR_GROUP_COLORS[group];
+  const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, `${colors.primary}ee`);
+  gradient.addColorStop(1, `${colors.secondary}ee`);
+  context.fillStyle = "rgba(255, 255, 255, 0.88)";
+  context.roundRect(8, 8, canvas.width - 16, canvas.height - 16, 34);
+  context.fill();
+  context.strokeStyle = gradient;
+  context.lineWidth = 8;
+  context.stroke();
+  context.fillStyle = "#273652";
+  context.font = `900 ${info ? 62 : 48}px Arial`;
+  context.fillText(`${group} DISTRICT`, 42, info ? 96 : 76);
+  context.fillStyle = info ? "#5d6b84" : "rgba(39, 54, 82, 0.62)";
+  context.font = `700 ${info ? 30 : 24}px Arial`;
+  context.fillText(`${storyCount} STORIES  ·  SELECTED REGION`, 46, info ? 158 : 123);
+  if (info) {
+    context.fillStyle = colors.primary;
+    context.font = "900 23px Arial";
+    context.fillText("2D PLAYBOOK INFOGRAPHIC", 48, 207);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function StoryMapDistrictRegion({
   group,
   storyCount,
+  position,
   selectedGroup,
   onSelect,
 }: {
   group: PlaybookGroup;
   storyCount: number;
+  position: Vec3;
+  selectedGroup: PlaybookGroup | null;
+  onSelect: (group: PlaybookGroup) => void;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const texture = useMemo(() => makeMapDistrictTexture(group, storyCount), [group, storyCount]);
+  const colors = SOLAR_GROUP_COLORS[group];
+  const isSelected = selectedGroup === group;
+  const isDimmed = selectedGroup !== null && !isSelected;
+
+  useEffect(() => () => texture?.dispose(), [texture]);
+
+  useFrame((_, delta) => {
+    if (!ref.current) {
+      return;
+    }
+
+    const targetScale = isDimmed ? 0.82 : isSelected ? 1.1 : 1;
+    ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
+  });
+
+  return (
+    <group ref={ref} position={position}>
+      <mesh
+        position={[0, 0.02, 0]}
+        rotation={[-Math.PI * 0.5, 0, 0]}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect(group);
+        }}
+      >
+        <planeGeometry args={[7.3, 8.9]} />
+        <meshStandardMaterial color={colors.primary} transparent opacity={isDimmed ? 0.06 : isSelected ? 0.2 : 0.12} roughness={1} />
+      </mesh>
+      <mesh position={[0, 0.075, 0]} rotation={[-Math.PI * 0.5, 0, 0]}>
+        <planeGeometry args={[6.8, 8.4]} />
+        <meshBasicMaterial color={colors.secondary} transparent opacity={isDimmed ? 0.03 : 0.08} depthWrite={false} toneMapped={false} />
+      </mesh>
+      {texture ? (
+        <mesh
+          position={[0, 0.11, 0]}
+          rotation={[-Math.PI * 0.5, 0, 0]}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect(group);
+          }}
+        >
+          <planeGeometry args={[3.2, 0.64]} />
+          <meshBasicMaterial map={texture} transparent opacity={isDimmed ? 0.24 : 0.92} toneMapped={false} />
+        </mesh>
+      ) : null}
+    </group>
+  );
+}
+
+function SolarCategoryPlanet({
+  group,
+  storyCount,
+  stories,
+  storyTextures,
+  selectedGroup,
+  onSelect,
+}: {
+  group: PlaybookGroup;
+  storyCount: number;
+  stories: readonly PlaybookItem[];
+  storyTextures: readonly THREE.Texture[];
   selectedGroup: PlaybookGroup | null;
   onSelect: (group: PlaybookGroup) => void;
 }) {
@@ -151,12 +257,12 @@ function SolarCategoryPlanet({
     const targetPosition = isSelected
       ? [0, 0, -1.15]
       : group === "H"
-        ? [isCompactStage ? -1.55 : -3.15, 0.15, -0.8]
-        : [isCompactStage ? 1.55 : 3.15, -0.15, -0.8];
+        ? [isCompactStage ? -1.9 : -4.35, 0.15, -0.8]
+        : [isCompactStage ? 1.9 : 4.35, -0.15, -0.8];
     const targetScale = isHidden ? 0.001 : isSelected ? 0.58 : isCompactStage ? 0.56 : 0.82;
     ref.current.position.lerp(new THREE.Vector3(...targetPosition), 1 - Math.pow(0.001, delta));
     ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
-    ref.current.rotation.y += delta * (isSelected ? 0.22 : 0.12);
+      ref.current.rotation.y += delta * (isSelected ? 0.22 : 0.12);
   });
 
   return (
@@ -185,6 +291,7 @@ function SolarCategoryPlanet({
         <torusGeometry args={[1.85, 0.018, 8, 96]} />
         <meshBasicMaterial color={colors.primary} transparent opacity={0.72} toneMapped={false} />
       </mesh>
+      <SolarStorySatelliteCluster stories={stories} storyTextures={storyTextures} colors={colors} isSelected={isSelected} />
       {texture ? (
         <mesh position={[0, -2.05, 0.16]}>
           <planeGeometry args={[4.7, 1.2]} />
@@ -196,13 +303,86 @@ function SolarCategoryPlanet({
   );
 }
 
+function SolarStorySatelliteCluster({
+  stories,
+  storyTextures,
+  colors,
+  isSelected,
+}: {
+  stories: readonly PlaybookItem[];
+  storyTextures: readonly THREE.Texture[];
+  colors: { primary: string; secondary: string };
+  isSelected: boolean;
+}) {
+  const ref = useRef<THREE.Group>(null);
+
+  useFrame((state, delta) => {
+    if (!ref.current) {
+      return;
+    }
+
+    const targetScale = isSelected ? 0.001 : 1;
+    ref.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
+    ref.current.rotation.y += delta * 0.28;
+    ref.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.32) * 0.08;
+  });
+
+  return (
+    <group ref={ref}>
+      <mesh rotation={[Math.PI * 0.5, 0.2, 0]}>
+        <torusGeometry args={[2.55, 0.018, 8, 96]} />
+        <meshBasicMaterial color={colors.secondary} transparent opacity={0.42} toneMapped={false} />
+      </mesh>
+      {stories.map((story, index) => {
+        const angle = (index / Math.max(1, stories.length)) * Math.PI * 2;
+        const radius = 2.45 + (index % 2) * 0.38;
+        const position: Vec3 = [
+          Math.cos(angle) * radius,
+          Math.sin(angle * 1.35) * 0.62,
+          Math.sin(angle) * radius * 0.54,
+        ];
+        return (
+          <group key={`solar-satellite-${story.id}`} position={position}>
+            <mesh castShadow>
+              <sphereGeometry args={[0.28 + (index % 3) * 0.035, 20, 14]} />
+              <meshStandardMaterial
+                map={storyTextures[index % Math.max(1, storyTextures.length)]}
+                color="#ffffff"
+                emissive={colors.primary}
+                emissiveIntensity={0.2}
+                roughness={0.28}
+                metalness={0.22}
+              />
+            </mesh>
+            <mesh scale={1.22}>
+              <sphereGeometry args={[0.28 + (index % 3) * 0.035, 12, 8]} />
+              <meshBasicMaterial color={index % 2 ? colors.secondary : colors.primary} transparent opacity={0.38} wireframe toneMapped={false} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 function getIndexColumns(playbookCount: number) {
   return Math.min(8, Math.max(4, Math.ceil(Math.sqrt(Math.max(1, playbookCount) * 1.35))));
 }
 
-function getIndexPosition(index: number, playbookCount: number): Vec3 {
+function getMapDistrictOffset(group: PlaybookGroup | null): Vec3 {
+  if (group === "H") {
+    return [-4.15, 0, 0.1];
+  }
+  if (group === "GN8") {
+    return [4.15, 0, 0.1];
+  }
+  return [0, 0, 0];
+}
+
+function getIndexPosition(index: number, playbookCount: number, districtGroup: PlaybookGroup | null = null): Vec3 {
   const [x, , z] = getIndexMapSlot(index, playbookCount);
-  return [x, 1.05 + (index % 4) * 0.06, z];
+  const [offsetX, , offsetZ] = getMapDistrictOffset(districtGroup);
+  return [x + offsetX, 1.05 + (index % 4) * 0.06, z + offsetZ];
 }
 
 function getIndexMapSlot(index: number, playbookCount: number): Vec3 {
@@ -363,6 +543,7 @@ function cubePosition(
   index: number,
   mode: PlaybookLayoutMode,
   visiblePlaybooks: readonly PlaybookItem[],
+  mapDistrictGroup: PlaybookGroup | null = null,
 ): Vec3 {
   const [, groupAxis] = playbook.cubeKey.split(",").map(Number);
 
@@ -371,7 +552,7 @@ function cubePosition(
   }
 
   if (mode === "index") {
-    return getIndexPosition(index, visiblePlaybooks.length);
+    return getIndexPosition(index, visiblePlaybooks.length, mapDistrictGroup);
   }
 
   if (mode === "timeline") {
@@ -648,6 +829,7 @@ function PlaybookObject({
   index,
   mode,
   visiblePlaybooks,
+  mapDistrictGroup,
   shadowsEnabled,
   texture,
   onHover,
@@ -664,6 +846,7 @@ function PlaybookObject({
   index: number;
   mode: PlaybookLayoutMode;
   visiblePlaybooks: readonly PlaybookItem[];
+  mapDistrictGroup?: PlaybookGroup | null;
   shadowsEnabled: boolean;
   texture: THREE.Texture;
   onHover: (index: number | null) => void;
@@ -679,8 +862,8 @@ function PlaybookObject({
   const groupRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
   const basePosition = useMemo(
-    () => cubePosition(playbook, index, mode, visiblePlaybooks),
-    [index, mode, playbook, visiblePlaybooks],
+    () => cubePosition(playbook, index, mode, visiblePlaybooks, mapDistrictGroup),
+    [index, mapDistrictGroup, mode, playbook, visiblePlaybooks],
   );
   const sideColor = playbook.group === "H" ? "#6d89bd" : "#b88763";
   const prismPalette = ["#ff6b9d", "#65d6ff", "#ffd166", "#a78bfa", "#7ee7bd"];
@@ -1041,11 +1224,29 @@ function SolarSystemStage({
   onFocusPlaybook: (playbook: PlaybookItem, index: number) => void;
 }) {
   const { viewport } = useThree();
+  const selectedSystemRef = useRef<THREE.Group>(null);
   const storyPlaybooks = selectedGroup
     ? playbooks.filter((playbook) => playbook.group === selectedGroup)
     : [];
   const shadowsEnabled = storyPlaybooks.length <= 32;
   const isCompactStage = viewport.width < 9;
+
+  useFrame((_, delta) => {
+    if (!selectedSystemRef.current) {
+      return;
+    }
+
+    if (!selectedSystemRef.current.userData.initialized) {
+      selectedSystemRef.current.scale.setScalar(0.001);
+      selectedSystemRef.current.userData.initialized = true;
+    }
+    const targetScale = isCompactStage ? 0.46 : 0.82;
+    selectedSystemRef.current.scale.lerp(
+      new THREE.Vector3(targetScale, targetScale, targetScale),
+      1 - Math.pow(0.001, delta),
+    );
+    selectedSystemRef.current.rotation.y += delta * 0.08;
+  });
 
   return (
     <group>
@@ -1061,10 +1262,24 @@ function SolarSystemStage({
         <planeGeometry args={[100, 100]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      <SolarCategoryPlanet group="H" storyCount={playbooks.filter((playbook) => playbook.group === "H").length} selectedGroup={selectedGroup} onSelect={onSelectGroup} />
-      <SolarCategoryPlanet group="GN8" storyCount={playbooks.filter((playbook) => playbook.group === "GN8").length} selectedGroup={selectedGroup} onSelect={onSelectGroup} />
+      <SolarCategoryPlanet
+        group="H"
+        storyCount={playbooks.filter((playbook) => playbook.group === "H").length}
+        stories={playbooks.filter((playbook) => playbook.group === "H")}
+        storyTextures={playbooks.filter((playbook) => playbook.group === "H").map((playbook) => textures[playbooks.indexOf(playbook)])}
+        selectedGroup={selectedGroup}
+        onSelect={onSelectGroup}
+      />
+      <SolarCategoryPlanet
+        group="GN8"
+        storyCount={playbooks.filter((playbook) => playbook.group === "GN8").length}
+        stories={playbooks.filter((playbook) => playbook.group === "GN8")}
+        storyTextures={playbooks.filter((playbook) => playbook.group === "GN8").map((playbook) => textures[playbooks.indexOf(playbook)])}
+        selectedGroup={selectedGroup}
+        onSelect={onSelectGroup}
+      />
       {selectedGroup ? (
-        <group scale={isCompactStage ? 0.46 : 0.82}>
+        <group ref={selectedSystemRef}>
           {[3.25, 4.85, 6.35].map((radius, index) => (
             <mesh key={radius} rotation={[Math.PI * 0.5, index * 0.22, index * 0.12]} position={[0, 0, -0.95]}>
               <torusGeometry args={[radius, index === 1 ? 0.045 : 0.025, 8, 128]} />
@@ -1390,7 +1605,50 @@ function PrismLensEffect() {
   );
 }
 
-function StoryMapBackdrop({ playbooks }: { playbooks: readonly PlaybookItem[] }) {
+function StoryMapDistrictInfo({ group, storyCount, onExit }: { group: PlaybookGroup; storyCount: number; onExit: () => void }) {
+  const ref = useRef<THREE.Group>(null);
+  const texture = useMemo(() => makeMapDistrictTexture(group, storyCount, true), [group, storyCount]);
+
+  useEffect(() => () => texture?.dispose(), [texture]);
+
+  useFrame((_, delta) => {
+    if (!ref.current) {
+      return;
+    }
+
+    if (!ref.current.userData.initialized) {
+      ref.current.scale.setScalar(0.001);
+      ref.current.userData.initialized = true;
+    }
+    ref.current.scale.lerp(new THREE.Vector3(1, 1, 1), 1 - Math.pow(0.001, delta));
+  });
+
+  return (
+    <group ref={ref} position={[getMapDistrictOffset(group)[0], 3.1, 0.5 + getMapDistrictOffset(group)[2]]}>
+      {texture ? (
+        <mesh
+          onClick={(event) => {
+            event.stopPropagation();
+            onExit();
+          }}
+        >
+          <planeGeometry args={[4.8, 1.34]} />
+          <meshBasicMaterial map={texture} transparent opacity={0.94} toneMapped={false} />
+        </mesh>
+      ) : null}
+    </group>
+  );
+}
+
+function StoryMapBackdrop({
+  playbooks,
+  selectedGroup,
+  onSelectGroup,
+}: {
+  playbooks: readonly PlaybookItem[];
+  selectedGroup: PlaybookGroup | null;
+  onSelectGroup: (group: PlaybookGroup) => void;
+}) {
   const roadBlocks = [
     { position: [-5.6, 0, 1.9], size: [13.2, 0.08, 0.34], rotation: -0.18 },
     { position: [4.1, 0, -1.2], size: [10.5, 0.08, 0.34], rotation: 0.22 },
@@ -1398,11 +1656,15 @@ function StoryMapBackdrop({ playbooks }: { playbooks: readonly PlaybookItem[] })
     { position: [3.5, 0, 1.7], size: [0.34, 0.08, 8.7], rotation: -0.24 },
     { position: [-1.8, 0, -2.7], size: [7.4, 0.08, 0.28], rotation: -0.1 },
   ];
-  const mapAnchors = playbooks.map((playbook, index) => {
-    const [x, , z] = getIndexMapSlot(index, playbooks.length);
+  const visibleMapPlaybooks = selectedGroup
+    ? playbooks.filter((playbook) => playbook.group === selectedGroup)
+    : playbooks;
+  const [districtOffsetX, , districtOffsetZ] = getMapDistrictOffset(selectedGroup);
+  const mapAnchors = visibleMapPlaybooks.map((playbook, index) => {
+    const [x, , z] = getIndexMapSlot(index, visibleMapPlaybooks.length);
     return {
       playbook,
-      position: [x, 0, z] as Vec3,
+      position: [x + districtOffsetX, 0, z + districtOffsetZ] as Vec3,
       color: ["#6e9cff", "#ef7bb2", "#7fd8c1", "#f3b56b"][index % 4],
     };
   });
@@ -1416,6 +1678,20 @@ function StoryMapBackdrop({ playbooks }: { playbooks: readonly PlaybookItem[] })
 
   return (
     <group>
+      <StoryMapDistrictRegion
+        group="H"
+        storyCount={playbooks.filter((playbook) => playbook.group === "H").length}
+        position={[-4.15, 0, 0.1]}
+        selectedGroup={selectedGroup}
+        onSelect={onSelectGroup}
+      />
+      <StoryMapDistrictRegion
+        group="GN8"
+        storyCount={playbooks.filter((playbook) => playbook.group === "GN8").length}
+        position={[4.15, 0, 0.1]}
+        selectedGroup={selectedGroup}
+        onSelect={onSelectGroup}
+      />
       <mesh position={[0, -0.05, 0]} rotation={[-Math.PI * 0.5, 0, 0]} receiveShadow>
         <planeGeometry args={[28, 20]} />
         <meshStandardMaterial color="#dcebe4" roughness={0.92} metalness={0.02} />
@@ -1468,11 +1744,28 @@ function StoryMapBackdrop({ playbooks }: { playbooks: readonly PlaybookItem[] })
           </mesh>
         </group>
       ))}
+      {selectedGroup ? (
+        <StoryMapDistrictInfo
+          group={selectedGroup}
+          storyCount={playbooks.filter((playbook) => playbook.group === selectedGroup).length}
+          onExit={() => onSelectGroup(null)}
+        />
+      ) : null}
     </group>
   );
 }
 
-function StageEffects({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks: readonly PlaybookItem[] }) {
+function StageEffects({
+  mode,
+  playbooks,
+  selectedMapGroup,
+  onSelectMapGroup,
+}: {
+  mode: PlaybookLayoutMode;
+  playbooks: readonly PlaybookItem[];
+  selectedMapGroup: PlaybookGroup | null;
+  onSelectMapGroup: (group: PlaybookGroup) => void;
+}) {
   const ref = useRef<THREE.Group>(null);
 
   useFrame((_, delta) => {
@@ -1485,7 +1778,7 @@ function StageEffects({ mode, playbooks }: { mode: PlaybookLayoutMode; playbooks
     <>
       <StageParticles mode={mode} />
       <WatercolorBackdrop mode={mode} />
-      {mode === "index" ? <StoryMapBackdrop playbooks={playbooks} /> : null}
+      {mode === "index" ? <StoryMapBackdrop playbooks={playbooks} selectedGroup={selectedMapGroup} onSelectGroup={onSelectMapGroup} /> : null}
       {mode === "prism" ? <PrismLensEffect /> : null}
       {mode === "orbit" ? (
         <group ref={ref} position={[0, 0, -0.5]}>
@@ -1653,6 +1946,7 @@ function ComparisonStage({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [focusedViewIndex, setFocusedViewIndex] = useState<number | null>(null);
   const [selectedSolarGroup, setSelectedSolarGroup] = useState<PlaybookGroup | null>(null);
+  const [selectedMapGroup, setSelectedMapGroup] = useState<PlaybookGroup | null>(null);
   const hoverClearTimer = useRef<number | null>(null);
   const handleHover = useCallback((index: number | null) => {
     if (hoverClearTimer.current !== null) {
@@ -1675,6 +1969,9 @@ function ComparisonStage({
     setFocusedViewIndex(null);
     setHoveredIndex(null);
     setSelectedSolarGroup(null);
+    if (mode !== "index") {
+      setSelectedMapGroup(null);
+    }
   }, [mode, playbooks, prismGroup]);
 
   const handleSelectSolarGroup = useCallback((group: PlaybookGroup) => {
@@ -1714,6 +2011,8 @@ function ComparisonStage({
     ? prismGroup
       ? playbooks.filter((playbook) => playbook.group === prismGroup)
       : []
+    : mode === "index" && selectedMapGroup
+      ? playbooks.filter((playbook) => playbook.group === selectedMapGroup)
     : playbooks;
   const renderItemCount = mode === "sphere"
     ? Math.max(SPHERE_LAYOUT_COUNT, renderPlaybooks.length)
@@ -1764,7 +2063,7 @@ function ComparisonStage({
       <pointLight position={[0, 0, 4]} color={mode === "solar" ? "#ff83bd" : mode === "orbit" ? "#a881ff" : mode === "timeline" ? "#ff9edc" : mode === "index" ? "#8bdcff" : mode === "helix" ? "#65d6ff" : mode === "sphere" ? "#ffd5e1" : "#9f87ff"} intensity={lightStage ? 9 : mode === "sphere" ? 6 : mode === "solar" || mode === "orbit" ? 10 : 7} distance={14} />
       {mode === "index" ? <pointLight position={[-5, 2, 2]} color="#ff9fcf" intensity={8} distance={12} /> : null}
       {mode === "timeline" ? <pointLight position={[5, -2, 1]} color="#9e8cff" intensity={8} distance={12} /> : null}
-      <StageEffects mode={mode} playbooks={playbooks} />
+      <StageEffects mode={mode} playbooks={playbooks} selectedMapGroup={selectedMapGroup} onSelectMapGroup={setSelectedMapGroup} />
       <HelixMotionGroup enabled={mode === "helix"} focusActive={focusedViewIndex !== null}>
         <mesh
           position={[0, 0, -12]}
@@ -1801,6 +2100,7 @@ function ComparisonStage({
                   index={index}
                   mode={mode}
                   visiblePlaybooks={renderPlaybooks}
+                  mapDistrictGroup={mode === "index" ? selectedMapGroup : null}
                   shadowsEnabled={shadowsEnabled}
                   texture={textures[playbooks.indexOf(playbook) % textures.length]}
                   hovered={hoveredIndex === index}
