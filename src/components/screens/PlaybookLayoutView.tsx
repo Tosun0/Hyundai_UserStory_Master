@@ -1336,6 +1336,9 @@ function SolarSystemStage({
         position={[0, 0, -8]}
         onClick={(event) => {
           event.stopPropagation();
+          if (event.delta > CARD_DRAG_THRESHOLD) {
+            return;
+          }
           if (selectedGroup) {
             onSelectGroup(selectedGroup);
           }
