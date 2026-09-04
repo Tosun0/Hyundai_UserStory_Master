@@ -887,6 +887,7 @@ function PlaybookObject({
   onFocusPlaybook: (playbook: PlaybookItem, index: number) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
+  const indexThumbnailRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
   const basePosition = useMemo(
     () => cubePosition(playbook, index, mode, visiblePlaybooks, mapDistrictGroup, mapOverview),
@@ -1034,6 +1035,12 @@ function PlaybookObject({
       * (hasFocusedView ? (focusedView ? 1.48 : 0.001) : 1);
     group.position.lerp(interactionPosition, 1 - Math.pow(0.001, delta));
     group.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 1 - Math.pow(0.001, delta));
+
+    if (isIndex && !mapOverview && indexThumbnailRef.current) {
+      const groupWorldQuaternion = group.getWorldQuaternion(new THREE.Quaternion());
+      const cameraWorldQuaternion = camera.getWorldQuaternion(new THREE.Quaternion());
+      indexThumbnailRef.current.quaternion.copy(groupWorldQuaternion.invert().multiply(cameraWorldQuaternion));
+    }
   });
 
   const opacity = isIndex && hasQuery && !focused
@@ -1125,7 +1132,7 @@ function PlaybookObject({
           <mesh geometry={mapMarkerGeometry} castShadow={shadowsEnabled} receiveShadow={shadowsEnabled}>
             <meshStandardMaterial {...material()} color={surfaceColor} roughness={0.2} metalness={0.22} />
           </mesh>
-          <mesh position={[0, 0, 0.22]} renderOrder={30}>
+          <mesh ref={indexThumbnailRef} position={[0, 0, 0.22]} renderOrder={30}>
             <planeGeometry args={[1.82, 0.86]} />
             <meshBasicMaterial map={texture} transparent opacity={viewOpacity} toneMapped={false} depthTest={false} depthWrite={false} side={THREE.DoubleSide} />
           </mesh>
