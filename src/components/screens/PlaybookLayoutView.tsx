@@ -1342,7 +1342,6 @@ function SolarSystemStage({
               mode="solar"
               visiblePlaybooks={storyPlaybooks}
               shadowsEnabled={shadowsEnabled}
-              texture={textures[index % textures.length]}
               hovered={hoveredIndex === index}
               focused={focusedIds.has(playbook.id)}
               hasQuery={false}
@@ -1350,6 +1349,7 @@ function SolarSystemStage({
               hasSelection={hoveredIndex !== null}
               focusedView={focusedViewIndex === index}
               hasFocusedView={focusedViewIndex !== null}
+              texture={storyTextures[index % storyTextures.length]}
               onHover={onHover}
               onFocusPlaybook={onFocusPlaybook}
             />
@@ -2057,6 +2057,10 @@ function ComparisonStage({
     [playbooks],
   );
   const textures = useLoader(THREE.TextureLoader, textureSources);
+  const textureByPlaybookId = useMemo(
+    () => new Map(playbooks.map((playbook, index) => [playbook.id, textures[index]])),
+    [playbooks, textures],
+  );
 
   textures.forEach((texture) => {
     texture.colorSpace = THREE.SRGBColorSpace;
@@ -2163,7 +2167,7 @@ function ComparisonStage({
                   mapDistrictGroup={mode === "index" ? selectedMapGroup : null}
                   mapOverview={mode === "index" && selectedMapGroup === null && focusedViewIndex === null}
                   shadowsEnabled={shadowsEnabled}
-                  texture={textures[playbooks.indexOf(playbook) % textures.length]}
+                  texture={textureByPlaybookId.get(playbook.id) ?? textures[0]}
                   hovered={hoveredIndex === index}
                   focused={focusedIds.has(playbook.id)}
                   hasQuery={hasQuery}
